@@ -153,14 +153,12 @@ ${IDENTITY_ROW_CSS}
   align-items: center;
   gap: 6px;
   padding: 11px 10px 7px 14px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--fg3);
   flex: none;
 }
-.rail-count { font-family: var(--mono); font-weight: 600; }
+.rail-count { font-family: var(--mono); font-weight: 400; }
 .rail-filter-toggle {
   margin-left: auto;
   flex: none;
@@ -386,8 +384,6 @@ ${IDENTITY_ROW_CSS}
 .rail-filters .sort-label {
   margin: 2px 8px 4px;
   font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
   color: var(--fg3);
   font-family: var(--mono);
 }
@@ -416,9 +412,7 @@ ${IDENTITY_ROW_CSS}
 }
 .rail-overview .dashboard-title {
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--fg3);
 }
 .rail-overview .dashboard-scope {
@@ -451,9 +445,7 @@ ${IDENTITY_ROW_CSS}
 }
 .rail-overview .dashboard-stat-label {
   color: var(--fg3);
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-size: 11px;
 }
 .rail-overview .dashboard-tools {
   border-top: 1px solid var(--border);
@@ -519,11 +511,9 @@ ${IDENTITY_ROW_CSS}
   gap: 3px;
 }
 .rail-filters .qf-section-label {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--fg3);
   font-family: var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   margin-right: 2px;
 }
 .rail-filters .qf-chip {
@@ -1758,8 +1748,6 @@ body { overflow: hidden; }
   color: var(--red);
   font-size: 10px;
   font-family: var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 .chat-card.err { border-color: rgba(240,112,112,0.35); }
 .chat-card.running .card-title { color: var(--fg); }
@@ -1881,8 +1869,6 @@ body { overflow: hidden; }
   font-family: var(--mono);
   font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
   padding: 6px 12px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -2152,8 +2138,6 @@ body { overflow: hidden; }
 .keys-title {
   font-size: 10px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   color: var(--fg3);
   padding: 3px 7px 5px;
 }
@@ -2333,8 +2317,6 @@ body { overflow: hidden; }
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   color: var(--orange);
 }
 .continue-cwd-input {
@@ -2363,8 +2345,6 @@ body { overflow: hidden; }
 .readonly-chip {
   font-family: var(--mono);
   font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   color: var(--fg3);
   border: 1px solid var(--border);
   border-radius: 4px;

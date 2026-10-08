@@ -30,12 +30,12 @@ ${APP_TOP_CSS}
   display: flex;
   align-items: baseline;
   gap: 10px;
-  margin: 2px 0 10px;
+  margin: 6px 0 14px;
 }
 .runs-title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1.2;
   color: var(--fg);
@@ -66,22 +66,23 @@ ${APP_TOP_CSS}
   gap: 5px;
   height: 34px;
   padding: 0 10px;
-  background: var(--surface);
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 999px;
+  padding: 0 14px;
   color: var(--fg2);
   font-size: 12px;
   font-family: var(--sans);
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 .toolbar-btn:hover { color: var(--fg); border-color: rgba(255,255,255,0.14); }
 .toolbar-btn[aria-expanded="true"],
 .toolbar-btn.active {
   color: var(--fg);
-  border-color: var(--accent);
-  background: rgba(139,124,246,0.08);
+  border-color: rgba(255,255,255,0.24);
+  background: rgba(255,255,255,0.05);
 }
 .toolbar-btn.has-value { color: var(--fg); }
 .toolbar-menu {
@@ -135,12 +136,10 @@ ${APP_TOP_CSS}
   padding: 0 10px;
   min-height: 30px;
   border-bottom: 1px solid var(--border);
-  background: rgba(255,255,255,0.02);
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 400;
   color: var(--fg3);
 }
 .runs-table-cols,
@@ -199,10 +198,10 @@ ${APP_TOP_CSS}
   align-items: center;
   gap: 4px;
   min-height: 34px;
-  background: var(--surface);
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 3px 8px;
+  border-radius: 18px;
+  padding: 3px 8px 3px 12px;
   cursor: text;
   transition: border-color 0.15s;
 }
@@ -238,8 +237,8 @@ ${APP_TOP_CSS}
   gap: 4px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 3px 6px 3px 8px;
+  border-radius: 999px;
+  padding: 3px 6px 3px 9px;
   font-size: 12px;
   font-family: var(--sans);
   white-space: nowrap;
@@ -373,8 +372,7 @@ ${IDENTITY_ROW_CSS}
 .session-tools .session-tool { display: none; }
 .live-indicator {
   display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
-  font-size: 9px; font-family: var(--mono); font-weight: 700; color: var(--green);
-  text-transform: uppercase; letter-spacing: 0.5px;
+  font-size: 11px; font-family: var(--mono); font-weight: 500; color: var(--green);
 }
 .live-indicator::before {
   content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green);
@@ -551,9 +549,7 @@ ${IDENTITY_ROW_CSS}
 }
 .sort-label {
   margin: 2px 8px 4px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  font-size: 12px;
 }
 .sort-btn {
   background: none;
@@ -618,11 +614,9 @@ ${IDENTITY_ROW_CSS}
   flex: 0 0 auto;
 }
 .dashboard-title {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--fg3);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg2);
 }
 .dashboard-scope {
   font-size: 11px;
@@ -647,7 +641,7 @@ ${IDENTITY_ROW_CSS}
   min-width: 0;
 }
 .dashboard-stat-val {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--fg);
   font-variant-numeric: tabular-nums;
   font-size: 14px;
@@ -658,9 +652,8 @@ ${IDENTITY_ROW_CSS}
 }
 .dashboard-stat-label {
   color: var(--fg3);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-size: 12px;
+  font-family: var(--sans);
 }
 .dashboard-stat-growth {
   font-size: 10px;
@@ -755,11 +748,8 @@ ${IDENTITY_ROW_CSS}
   gap: 4px;
 }
 .qf-section-label {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--fg3);
-  font-family: var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   margin-right: 2px;
   white-space: nowrap;
 }
@@ -980,11 +970,7 @@ html { --session-flyout-width: min(760px, 56vw); --app-top-h: 44px; }
 }
 .session-flyout-ident { min-width: 0; }
 .session-flyout-kicker {
-  font-size: 10px;
-  font-family: var(--mono);
-  font-weight: 600;
-  letter-spacing: 0.45px;
-  text-transform: uppercase;
+  font-size: 12px;
   color: var(--fg3);
 }
 .session-flyout-title {

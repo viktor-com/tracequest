@@ -9,10 +9,10 @@ export const SESSION_VIEWER_RULES = `
   margin-bottom: 12px;
 }
 .header-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 400;
   color: var(--fg);
-  letter-spacing: -0.2px;
+  letter-spacing: -0.01em;
   margin-bottom: 16px;
   display: flex;
   align-items: baseline;
@@ -37,45 +37,45 @@ export const SESSION_VIEWER_RULES = `
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: var(--surface2);
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--fg2);
   font-size: 12px;
-  font-family: var(--mono);
-  padding: 5px 10px;
+  font-family: var(--sans);
+  padding: 5px 12px;
   cursor: pointer;
   text-decoration: none;
-  transition: all 0.12s;
+  transition: all 0.15s ease;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .export-btn:hover {
   color: var(--fg);
   border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(139, 124, 246, 0.08);
+  background: rgba(255, 255, 255, 0.05);
 }
 .md-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: var(--surface2);
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--fg2);
   font-size: 12px;
-  font-family: var(--mono);
-  padding: 5px 10px;
+  font-family: var(--sans);
+  padding: 5px 12px;
   cursor: pointer;
   text-decoration: none;
-  transition: all 0.12s;
+  transition: all 0.15s ease;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .md-btn:hover {
   color: var(--fg);
   border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(139, 124, 246, 0.08);
+  background: rgba(255, 255, 255, 0.05);
 }
 .export-btn svg, .print-btn svg, .md-btn svg, .hf-btn svg {
   width: 12px;
@@ -88,43 +88,43 @@ export const SESSION_VIEWER_RULES = `
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: var(--surface2);
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--fg2);
   font-size: 12px;
-  font-family: var(--mono);
-  padding: 5px 10px;
+  font-family: var(--sans);
+  padding: 5px 12px;
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all 0.15s ease;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .print-btn:hover {
   color: var(--fg);
   border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(139, 124, 246, 0.08);
+  background: rgba(255, 255, 255, 0.05);
 }
 .hf-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: var(--surface2);
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--fg2);
   font-size: 12px;
-  font-family: var(--mono);
-  padding: 5px 10px;
+  font-family: var(--sans);
+  padding: 5px 12px;
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all 0.15s ease;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .hf-btn:hover {
   color: var(--fg);
   border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(139, 124, 246, 0.08);
+  background: rgba(255, 255, 255, 0.05);
 }
 .hf-modal-overlay {
   position: fixed;
@@ -524,9 +524,7 @@ export const SESSION_VIEWER_RULES = `
 }
 .chapter-quality-label {
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-weight: 500;
   margin-bottom: 4px;
 }
 .chapter-quality-label.corrected { color: var(--orange); border-color: var(--orange); }
@@ -579,9 +577,7 @@ export const SESSION_VIEWER_RULES = `
 }
 .chapter-efficiency-label {
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-weight: 500;
   color: var(--orange);
 }
 .chapter-efficiency-score {
@@ -764,8 +760,7 @@ export const SESSION_VIEWER_RULES = `
 .chapter-web-type {
   font-size: 10px;
   font-family: var(--mono);
-  font-weight: 600;
-  text-transform: uppercase;
+  font-weight: 500;
   padding: 1px 5px;
   border-radius: 3px;
   margin-right: 6px;
@@ -900,9 +895,7 @@ export const SESSION_VIEWER_RULES = `
 .chapter-mcp { margin-bottom: 10px; }
 .chapter-mcp-label {
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-weight: 500;
   color: var(--fg3);
   margin-bottom: 6px;
 }
@@ -933,8 +926,6 @@ export const SESSION_VIEWER_RULES = `
   background: rgba(93, 173, 236, 0.12);
   padding: 1px 6px;
   border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
 }
 .chapter-mcp-tool {
   font-size: 12px;
@@ -2271,9 +2262,7 @@ html { scroll-behavior: smooth; }
 }
 .chapter-dep-section-title {
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-weight: 500;
   color: var(--fg3);
   margin-bottom: 4px;
 }

@@ -31,10 +31,10 @@ export const COMMAND_PALETTE_CSS = `
   align-self: center;
   display: inline-flex;
   align-items: center;
-  background: var(--surface2);
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 2px 7px;
+  border-radius: 999px;
+  padding: 3px 9px;
   color: var(--fg3);
   cursor: pointer;
   flex: none;
@@ -221,12 +221,13 @@ body.cmdk-open {
   flex: none;
   font-size: 9px;
   font-family: var(--mono);
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  color: #111;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--fg);
+  box-shadow: inset 0 0 0 999px rgba(17, 17, 19, 0.78);
   line-height: 1.3;
 }
 .cmdk-sid {
@@ -330,18 +331,18 @@ body.cmdk-open {
 }
 .tq-search-input {
   width: 216px;
-  background: var(--surface2);
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--fg);
   font-family: var(--sans);
   font-size: 12px;
   line-height: 1.4;
-  padding: 4px 48px 4px 8px;
+  padding: 5px 48px 5px 12px;
   outline: none;
 }
 .tq-search-input::placeholder { color: var(--fg3); }
-.tq-search-input:focus { border-color: var(--accent); }
+.tq-search-input:focus { border-color: rgba(255, 255, 255, 0.24); }
 .tq-search-kbd {
   position: absolute;
   right: 6px;

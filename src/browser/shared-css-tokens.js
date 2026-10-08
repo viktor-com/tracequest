@@ -6,15 +6,15 @@ export const CSS_ROOT_SHARED = `
   --surface: #19191c;
   --surface2: #222226;
   --fg: #e4e4e7;
-  --fg2: #8b8b92;
-  --fg3: #5c5c63;
-  --border: rgba(255, 255, 255, 0.06);
+  --fg2: #9d9da4;
+  --fg3: #6e6e76;
+  --border: rgba(255, 255, 255, 0.08);
   --accent: #8b7cf6;
   --red: #f07070;
   --green: #4ade80;
   --orange: #e8a44c;
   --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --mono: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'Fira Code', monospace;
+  --mono: ui-monospace, 'SF Mono', Menlo, 'Cascadia Code', 'JetBrains Mono', 'Fira Code', monospace;
 `;
 
 /** Compare / browser standalone pages only. */
@@ -53,6 +53,9 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
 `;
 
 export const CSS_BODY_SESSION = `
@@ -64,6 +67,9 @@ body {
   line-height: 1.6;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 `;
 
