@@ -26,7 +26,8 @@ its notice must be added to that file in the same commit that vendors it.
 - Explore the codebase in `bin/`, `src/`, `test/`
 - For UI changes, start with [docs/ui-style-design-guidelines.md](docs/ui-style-design-guidelines.md); use [docs/ui-design-review-note-template.md](docs/ui-design-review-note-template.md) when a UI decision needs a short review trail.
 
-See README.md for end-user documentation and usage examples.
+See [README.md](README.md) for the product overview and [docs/README.md](docs/README.md)
+for installation, usage examples and technical documentation.
 
 ## Facts-driven workflow
 

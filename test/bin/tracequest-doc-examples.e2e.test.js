@@ -1,5 +1,5 @@
 /**
- * Focused smoke for README/help standup and handoff examples.
+ * Focused smoke for CLI reference/help standup and handoff examples.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -70,9 +70,9 @@ function stripAnsi(s) {
   return s.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, "");
 }
 
-function documentedStandupHandoffExamples({ readme, help }) {
+function documentedStandupHandoffExamples({ reference, help }) {
   const commands = new Set();
-  for (const text of [readme, help]) {
+  for (const text of [reference, help]) {
     for (const line of text.split(/\r?\n/)) {
       const command = line.trim();
       if (!command.startsWith("tracequest ")) continue;
@@ -95,7 +95,7 @@ function previousWeekdayAt(hour) {
   return candidate;
 }
 
-test("README and help standup/handoff examples parse through the real bin with synthetic data", async () => {
+test("CLI reference and help standup/handoff examples parse through the real bin with synthetic data", async () => {
   const home = mkTmp("bin-e2e-doc-examples-");
   const project = "tracequest";
   const projectDir = join(home, ".claude", "projects", project);
@@ -141,8 +141,8 @@ test("README and help standup/handoff examples parse through the real bin with s
     });
 
     const { stdout: help } = await runBin(["standup", "--help"]);
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
-    const examples = documentedStandupHandoffExamples({ readme, help });
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
+    const examples = documentedStandupHandoffExamples({ reference, help });
     assert.ok(examples.length >= 12, `expected documented standup/handoff examples, got ${examples.join("\n")}`);
 
     const env = {
@@ -190,9 +190,9 @@ test("README and help standup/handoff examples parse through the real bin with s
   }
 });
 
-test("README CLI usage documents current command-specific options", async () => {
-  const readme = readFileSync(join(ROOT, "README.md"), "utf8");
-  const cliUsage = readme.match(/## CLI Usage[\s\S]*?### All Modes with Examples/)?.[0] ?? "";
+test("CLI reference documents current command-specific options", async () => {
+  const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
+  const cliUsage = reference.match(/## CLI Usage[\s\S]*?### All Modes with Examples/)?.[0] ?? "";
   const { stdout: help } = await runBin(["--help"]);
   const visibleHelp = stripAnsi(help);
 
@@ -209,10 +209,10 @@ test("README CLI usage documents current command-specific options", async () => 
     /limits Options:[\s\S]*--json[\s\S]*--host <id>/,
   ];
 
-  assert.notEqual(cliUsage, "", "README CLI Usage section should be present");
+  assert.notEqual(cliUsage, "", "CLI reference section should be present");
   for (const pattern of required) {
     assert.match(visibleHelp, pattern, `built-in help missing expected option group: ${pattern}`);
-    assert.match(cliUsage, pattern, `README CLI Usage missing expected option group: ${pattern}`);
+    assert.match(cliUsage, pattern, `CLI reference missing expected option group: ${pattern}`);
   }
 });
 
@@ -222,5 +222,5 @@ test("npm smoke:standup-handoff-examples is wired and documented", () => {
 
   assert.equal(pkg.scripts["smoke:standup-handoff-examples"], EXAMPLES_SCRIPT);
   assert.match(guide, /npm run smoke:standup-handoff-examples/);
-  assert.match(guide, /README\/help standup and handoff examples/);
+  assert.match(guide, /CLI reference\/help standup and handoff examples/);
 });

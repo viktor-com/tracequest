@@ -95,9 +95,9 @@
   id: lath
   command: test -f tests/launch-integration.md && grep -q "launch-integration.md" tests/README.md && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'tests README scenario totals match package test targets and harness rows|integration spec headers declare matching scenario counts' test/browser/browser-verification-targets.test.js
   tags: [spec, launch, launch-s6, tests, implemented]
-- label: README.md documents launching runs from the web UI — the /launch page, the Run concept (a tracequest-initiated agent execution living in a tmux window of the tracequest session), the tmux requirement with graceful degradation when tmux is absent, and the TRACEQUEST_TMUX_SESSION / TRACEQUEST_TMUX_SOCKET / TRACEQUEST_TMUX_BIN environment overrides; ~600ms snapshot polling is the shipped v1 transport, with SSE push explicitly deferred as future work
+- label: docs/cli-reference.md documents launching runs from the web UI — the /launch page, the Run concept (a tracequest-initiated agent execution living in a tmux window of the tracequest session), the tmux requirement with graceful degradation when tmux is absent, and the TRACEQUEST_TMUX_SESSION / TRACEQUEST_TMUX_SOCKET / TRACEQUEST_TMUX_BIN environment overrides; ~600ms snapshot polling is the shipped v1 transport, with SSE push explicitly deferred as future work
   id: lard
-  command: grep -q "/launch" README.md && grep -q "TRACEQUEST_TMUX_SESSION" README.md && grep -q "TRACEQUEST_TMUX_SOCKET" README.md
+  command: grep -q "/launch" docs/cli-reference.md && grep -q "TRACEQUEST_TMUX_SESSION" docs/cli-reference.md && grep -q "TRACEQUEST_TMUX_SOCKET" docs/cli-reference.md
   tags: [spec, launch, launch-s6, tests, docs, implemented]
 
 ## continue

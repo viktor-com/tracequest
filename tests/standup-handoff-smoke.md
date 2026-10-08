@@ -3,11 +3,11 @@
 ## Prerequisites
 
 - Run from the repository root with dependencies installed.
-- Use `TRACEQUEST_SKIP_LR_WATCH=1 npm run verify:standup-handoff` for the maintainer release-surface check that combines serial direct CLI command tests, the synthetic feature smoke, and README/help example smoke.
+- Use `TRACEQUEST_SKIP_LR_WATCH=1 npm run verify:standup-handoff` for the maintainer release-surface check that combines serial direct CLI command tests, the synthetic feature smoke, and CLI reference/help example smoke.
 - Use `TRACEQUEST_SKIP_LR_WATCH=1 npm run release:standup-handoff` as the release-checklist alias for the same synthetic-only gate.
 - Use `TRACEQUEST_SKIP_LR_WATCH=1 npm run test:standup-handoff-cli` for direct `cmdSearch`/`cmdStandup` coverage. It intentionally sets `--test-concurrency=1` because these in-process CLI tests patch stdout, stderr, `process.exit`, and environment variables.
 - Use `TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff`.
-- Use `TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff-examples` when you only need to verify README/help standup and handoff examples.
+- Use `TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff-examples` when you only need to verify CLI reference/help standup and handoff examples.
 - The smoke runner creates a temporary `HOME` containing only synthetic Claude JSONL sessions and deletes it on success.
 
 ## Test 1: Synthetic Handoff and Standup Paths
@@ -36,7 +36,7 @@
 1. Run `TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff-examples`.
 
 **Expectations:**
-1. README/help standup and handoff examples parse through `bin/tracequest.js`.
+1. CLI reference/help standup and handoff examples parse through `bin/tracequest.js`.
 2. The check uses synthetic sessions and fake prompt agents only.
 3. The focused command can run without the broad bin e2e suite.
 
