@@ -15,7 +15,7 @@
 # runs list
 - label: Runs list and Live rail show encoded project folders without the home prefix and with 8-character UUIDs (prettyProject), keeping the raw value as the title and as the filter value
   id: uxproj
-  command: node --input-type=module -e 'import { prettyProject as p } from "./src/filter/filter-formats.js"; const r = p("-Users-me--kandev-tasks-9131a868-bf1c-463a-aa3e-3fdd73fc9c90"); if (r !== "kandev-tasks-9131a868") { console.error(r); process.exit(1); } if (p("zeta") !== "zeta") process.exit(1);'
+  command: node --input-type=module -e 'import { prettyProject as p } from "./src/filter/filter-formats.js"; const r = p("-Users-me--kandev-tasks-9131a868-bf1c-463a-aa3e-3fdd73fc9c90"); if (r !== "kandev-tasks-9131a868") { console.error(r); process.exit(1); } if (p("zeta") !== "zeta" || p("-home-demo-code-web-dashboard") !== "web-dashboard") process.exit(1);'
   tags: [spec, ui-extra-pass, implemented]
 - label: a grade chip explains itself in its title (letter, score out of 100, and what it is computed from)
   id: uxgrade
