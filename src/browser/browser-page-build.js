@@ -65,7 +65,6 @@ ${APP_TOP_CSS}
   align-items: center;
   gap: 5px;
   height: 34px;
-  padding: 0 10px;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 999px;
