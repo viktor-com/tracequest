@@ -294,13 +294,13 @@ export const APP_TOP_CSS = `
   display: flex;
   align-items: baseline;
   gap: 10px;
-  padding: 10px 16px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--border);
   flex: none;
   background: var(--bg);
 }
-.app-wordmark { font-size: 16px; font-weight: 600; color: var(--fg); text-decoration: none; line-height: 1.2; }
-.app-wordmark:hover { color: var(--accent); }
+.app-wordmark { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; color: var(--fg); text-decoration: none; line-height: 1.2; }
+.app-wordmark:hover { color: var(--fg2); }
 .app-crumb-sep { font-size: 12px; color: var(--fg3); }
 .app-crumb { font-size: 13px; color: var(--fg3); }
 .app-live {
@@ -441,15 +441,15 @@ export const IDENTITY_ROW_CSS = `
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;
 }
 .session-source {
-  font-size: 10px; font-family: var(--mono); font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  padding: 1px 6px; border-radius: 4px; color: #111;
+  font-size: 11px; font-family: var(--mono); font-weight: 500;
+  padding: 1px 8px; border-radius: 999px; color: var(--fg);
+  /* the inline source hue becomes a quiet tint instead of a solid fill */
+  box-shadow: inset 0 0 0 999px rgba(17, 17, 19, 0.78);
 }
-@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .run-state-badge {
   display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
-  font-size: 9px; font-family: var(--mono); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.5px;
+  font-size: 11px; font-family: var(--mono); font-weight: 500;
 }
 .run-state-badge::before {
   content: ''; width: 6px; height: 6px; border-radius: 50%;
@@ -465,9 +465,9 @@ export const IDENTITY_ROW_CSS = `
 .run-state-badge[data-status="gone"] { color: var(--red); }
 .run-state-badge[data-status="gone"]::before { background: var(--red); }
 .run-origin {
-  font-size: 9px; font-family: var(--mono); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.5px; color: var(--fg3);
-  border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px;
+  font-size: 10px; font-family: var(--mono); font-weight: 500;
+  color: var(--fg3);
+  border: 1px solid var(--border); border-radius: 999px; padding: 0 7px;
   flex-shrink: 0;
 }
 .session-stats {

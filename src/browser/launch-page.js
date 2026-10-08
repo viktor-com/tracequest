@@ -20,16 +20,16 @@ export const LAUNCHER_MODAL_CSS = `
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: var(--accent);
-  color: #111;
+  background: var(--fg);
+  color: var(--bg);
   border: none;
-  border-radius: 6px;
-  padding: 4px 12px;
+  border-radius: 999px;
+  padding: 5px 14px;
   font-size: 12px;
   font-family: var(--sans);
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.12s;
+  transition: opacity 0.15s ease;
   white-space: nowrap;
 }
 .new-run-btn:hover { opacity: 0.85; }

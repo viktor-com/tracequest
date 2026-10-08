@@ -613,29 +613,29 @@ const VIEW_CONTINUE_CHIP_CSS = `<style>
   position: fixed; right: 18px; bottom: 18px; z-index: 300;
   display: flex; flex-direction: column; gap: 6px;
   width: 340px; max-width: calc(100vw - 36px);
-  padding: 9px 10px; border-radius: 14px;
-  background: var(--surface, #1a1a1e); border: 1px solid rgba(139,124,246,0.4);
-  color: var(--fg, #e8e8ea); font-family: var(--mono, monospace); font-size: 12px;
+  padding: 9px 10px 9px 14px; border-radius: 22px;
+  background: var(--surface, #1a1a1e); border: 1px solid rgba(255,255,255,0.12);
+  color: var(--fg, #e8e8ea); font-family: var(--sans, sans-serif); font-size: 13px;
   box-shadow: 0 6px 24px rgba(0,0,0,0.35);
   transition: border-color 0.12s;
 }
-.view-continue-chip:focus-within { border-color: rgba(139,124,246,0.8); }
+.view-continue-chip:focus-within { border-color: rgba(255,255,255,0.28); }
 .view-continue-chip[data-busy="true"] { opacity: 0.7; }
 .vc-msg { font-size: 11px; line-height: 1.45; color: #f0a070; overflow-wrap: anywhere; }
 .vc-msg[hidden] { display: none; }
 .vc-row { display: flex; align-items: center; gap: 8px; }
-.vc-glyph { flex: none; color: rgba(139,124,246,0.9); font-size: 11px; }
+.vc-glyph { flex: none; color: var(--fg3, #6e6e76); font-size: 11px; }
 .view-continue-input {
   flex: 1; min-width: 0; background: none; border: none; outline: none;
-  color: var(--fg, #e8e8ea); font-family: inherit; font-size: 12px;
+  color: var(--fg, #e8e8ea); font-family: inherit; font-size: 13px;
 }
 .view-continue-input::placeholder { color: rgba(232,232,234,0.45); }
 .vc-send {
   flex: none; width: 24px; height: 24px; display: inline-flex;
   align-items: center; justify-content: center; border: none; border-radius: 50%;
-  background: rgba(139,124,246,0.9); color: #111; cursor: pointer;
+  background: var(--fg, #e4e4e7); color: var(--bg, #111113); cursor: pointer;
 }
-.vc-send:hover { background: rgba(139,124,246,1); }
+.vc-send:hover { opacity: 0.85; }
 .vc-send:disabled { opacity: 0.5; cursor: default; }
 .view-continue-chip[data-mode="cwd"] { border-color: rgba(240,160,112,0.6); }
 .view-continue-chip[data-mode="cwd"] .vc-glyph { color: rgba(240,160,112,0.9); }

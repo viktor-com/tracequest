@@ -71,7 +71,7 @@ export const CORE_SHELL_JS = `
     const sourceColors = { claude: '#a78bfa', codex: '#59d4a0', cursor: '#c4e86b', 'cursor-cloud': '#4dd0e1', factory: '#e0c45e', opencode: '#6ba4e8', grok: '#f07070' };
     const srcColor = sourceColors[session.source] || '#888';
     const srcBadge = session.source && session.source !== 'claude'
-      ? h('span', { style: 'background:' + srcColor + ';color:#111;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:2px 7px;border-radius:4px;margin-left:8px;' }, session.source)
+      ? h('span', { style: 'background:' + srcColor + ';box-shadow:inset 0 0 0 999px rgba(17,17,19,0.78);color:var(--fg);font-family:var(--mono);font-size:11px;font-weight:500;padding:1px 8px;border-radius:999px;margin-left:8px;' }, session.source)
       : null;
 
     const params = new URLSearchParams(window.location.search);

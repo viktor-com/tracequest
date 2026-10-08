@@ -56,8 +56,6 @@ html { --run-analytics-width: min(620px, 46vw); }
   font-size: 10px;
   font-family: var(--mono);
   font-weight: 600;
-  letter-spacing: 0.45px;
-  text-transform: uppercase;
   color: var(--fg3);
 }
 .run-analytics-title {

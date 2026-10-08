@@ -11,7 +11,7 @@ import { INSIGHTS_RANGES } from "../insights/load.js";
 const INSIGHTS_PAGE_CSS = `
 .container { max-width: 1120px; margin: 0 auto; padding: 28px 24px 80px; }
 .ins-header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
-.ins-title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.ins-title { font-size: 24px; font-weight: 400; letter-spacing: -0.02em; }
 .ins-title a { color: var(--fg2); text-decoration: none; }
 .ins-title a:hover { color: var(--fg); }
 .ins-subtitle { color: var(--fg2); font-size: 13px; }
@@ -29,18 +29,18 @@ const INSIGHTS_PAGE_CSS = `
   font-family: var(--sans);
 }
 .ins-chip:hover { color: var(--fg); }
-.ins-chip[aria-current="true"] { color: var(--fg); border-color: var(--accent); background: var(--accent-dim); }
+.ins-chip[aria-current="true"] { color: var(--bg); border-color: var(--fg); background: var(--fg); }
 .ins-note {
   border: 1px solid var(--border); border-left: 2px solid var(--orange); border-radius: 6px;
   background: var(--surface); color: var(--fg2); padding: 9px 12px; font-size: 12.5px; margin-bottom: 18px;
 }
 .ins-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-bottom: 30px; }
 .ins-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
-.ins-tile-val { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+.ins-tile-val { font-size: 28px; font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; }
 .ins-tile-label { color: var(--fg); font-size: 12.5px; margin-top: 4px; }
 .ins-tile-sub { color: var(--fg3); font-size: 11.5px; margin-top: 2px; }
 .ins-section { margin-bottom: 34px; }
-.ins-section-title { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+.ins-section-title { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 2px; }
 .ins-section-sub { color: var(--fg2); font-size: 12.5px; margin-bottom: 12px; max-width: 760px; }
 .ins-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 26px; }
 .ins-bars { display: flex; flex-direction: column; gap: 2px; }
@@ -57,7 +57,7 @@ const INSIGHTS_PAGE_CSS = `
 .ins-bar-label::before { content: "▸"; color: var(--fg3); display: inline-block; width: 14px; font-size: 10px; }
 .ins-bar-row[open] > .ins-bar-head .ins-bar-label::before { content: "▾"; }
 .ins-bar-track { height: 10px; border-radius: 4px; background: transparent; }
-.ins-bar-fill { height: 10px; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--accent); }
+.ins-bar-fill { height: 10px; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--fg2); }
 .ins-bar-val { font-family: var(--mono); font-size: 12px; color: var(--fg); text-align: right; white-space: nowrap; }
 .ins-bar-val small { color: var(--fg3); font-size: 11px; margin-left: 6px; }
 .ins-detail { padding: 4px 10px 12px 30px; }
@@ -67,7 +67,7 @@ const INSIGHTS_PAGE_CSS = `
   display: block; text-decoration: none; color: var(--fg); border: 1px solid var(--border);
   border-radius: 6px; padding: 7px 10px; background: var(--bg);
 }
-.ins-example:hover { border-color: var(--accent); }
+.ins-example:hover { border-color: rgba(255, 255, 255, 0.24); }
 .ins-example-top { display: flex; gap: 8px; align-items: baseline; font-size: 12px; }
 .ins-example-src { font-family: var(--mono); font-size: 11px; color: var(--fg2); background: var(--surface2); border-radius: 4px; padding: 0 6px; }
 .ins-example-project { color: var(--fg2); font-family: var(--mono); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
@@ -75,7 +75,7 @@ const INSIGHTS_PAGE_CSS = `
 .ins-example-prompt { font-size: 12.5px; color: var(--fg); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ins-example-note { font-family: var(--mono); font-size: 11.5px; color: var(--fg2); margin-top: 2px; overflow-wrap: anywhere; }
 .ins-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.ins-table th { text-align: left; color: var(--fg3); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.ins-table th { text-align: left; color: var(--fg3); font-weight: 400; font-size: 12px; font-family: var(--sans); padding: 6px 8px; border-bottom: 1px solid var(--border); }
 .ins-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .ins-table td.num, .ins-table th.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
 .ins-table a { color: var(--fg); text-decoration: none; }
@@ -90,18 +90,18 @@ const INSIGHTS_PAGE_CSS = `
 .ins-cols { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding: 18px 4px 0; border-bottom: 1px solid var(--border); }
 .ins-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
 .ins-col-val { font-family: var(--mono); font-size: 11.5px; color: var(--fg2); margin-bottom: 4px; }
-.ins-col-bar { width: 100%; max-width: 72px; min-height: 2px; background: var(--accent); border-radius: 4px 4px 0 0; }
+.ins-col-bar { width: 100%; max-width: 72px; min-height: 2px; background: var(--fg2); border-radius: 4px 4px 0 0; }
 .ins-col:hover .ins-col-bar, .ins-bar-head:hover .ins-bar-fill { filter: brightness(1.2); }
 .ins-col-labels { display: flex; gap: 8px; padding: 6px 4px 0; }
 .ins-col-labels span { flex: 1; text-align: center; color: var(--fg2); font-size: 11.5px; }
 .ins-facts { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 12px; }
-.ins-fact-val { font-size: 18px; font-weight: 600; }
+.ins-fact-val { font-size: 18px; font-weight: 500; }
 .ins-fact-label { color: var(--fg2); font-size: 12px; }
 .ins-traps { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
 .ins-trap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
 .ins-trap-title { font-weight: 600; font-size: 13.5px; }
 .ins-trap-hint { color: var(--fg2); font-size: 12px; margin: 2px 0 10px; min-height: 36px; }
-.ins-trap-val { font-size: 22px; font-weight: 600; }
+.ins-trap-val { font-size: 22px; font-weight: 400; }
 .ins-trap-val small { color: var(--fg2); font-size: 12px; font-weight: 400; margin-left: 4px; }
 .ins-trap-sub { color: var(--fg2); font-size: 12px; }
 .ins-trap details { margin-top: 10px; }
