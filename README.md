@@ -1,109 +1,117 @@
 # tracequest
 
-![TraceQuest recording atlas: session history, failure classes and a turn-by-turn waveform from real Claude Code and Codex recordings](docs/assets/hero.png)
+![The TraceQuest session list, error breakdown and a per-turn token chart for one session](docs/assets/hero.png)
 
-TraceQuest reads coding-agent recordings and shows their conversations, tool calls,
-errors, activity and recorded token usage. Browse Claude Code, Codex CLI, Cursor,
-Droid/Factory, OpenCode and Grok CLI sessions. Import Cursor Cloud Agent recordings
-or collect sessions from other machines over SSH.
+TraceQuest is a local web app and CLI for reading coding-agent sessions. It shows
+each session's messages, tool calls, errors, timing and token usage. It reads
+sessions from Claude Code, Codex CLI, Cursor, Droid (Factory), OpenCode and Grok CLI.
+It can also import Cursor Cloud Agent sessions and copy sessions from other
+machines over SSH.
 
-[Try it](#try-it) · [Features](#features) · [Technical docs for your coding agent](docs/README.md)
+[Try it](#try-it) · [Features](#features) · [Documentation](docs/README.md)
 
-The images below show 26 real development recordings, anonymized and excerpted
-before capture. Names, machine labels, paths and credentials were redacted;
-recorded timestamps, tool outcomes and usage were retained. Cost figures are
-estimates from recorded usage and model prices, not subscription bills.
+The screenshots show 16 real Claude Code and Codex CLI sessions, recorded on six
+small sample projects made for these screenshots. One Codex session is also
+replayed as a running session to show live updates, so the lists count 17.
+Costs are estimated from token counts and model prices. They are not billing data.
 
 ## Features
 
-### Search and filter recordings
+### Search and filter sessions
 
-![A filter combining source:codex, errors greater than zero and search text returns 11 recordings; a magnified row shows its source, hash and prompt](docs/assets/browse.png)
+![The session list filtered to Codex sessions with errors, with the filter terms explained](docs/assets/browse.png)
 
-Search conversation text and filter by project, source, machine, model, tool,
-errors or age. The overview recalculates for the matching sessions.
+The session list searches message text. You can filter by project, source,
+machine, model, tool, error count and age. The summary row above the list shows
+totals for the sessions that match.
 
-**Open:** start the browser with `npm start`, choose **All sessions**, enter a filter
-such as `source:codex errors:>0 search`, and press **Enter**. From a source checkout,
-`node bin/tracequest.js search "cache invalidation"` searches from the terminal.
+**How to use it:** run `npm start`, open **All sessions**, type a filter such as
+`source:codex errors:>0 test` and press **Enter**. To search from the terminal,
+run `node bin/tracequest.js search "cache invalidation"`.
 [Search commands and filters](docs/cli-reference.md#cli-usage).
 
 ### Inspect a session
 
-![Activity and turn-by-turn views of one recording, with idle gaps, chapter boundaries, tool errors, retries and a self-fix](docs/assets/session.png)
+![A session's activity timeline and per-turn token chart, with chapter markers and a tool error](docs/assets/session.png)
 
-The activity timeline separates active work from idle gaps. The waveform shows
-token input and output by turn, with markers for chapters and tool errors.
-Chapters contain the original prompts, commands, outputs and retry details.
+The activity timeline shows when the agent was working and when it was idle. The
+token chart shows input and output tokens for each turn, with markers for chapter
+starts and tool errors. Each chapter lists the prompt, the commands the agent ran,
+their output and any retries.
 
-**Open:** open a recording, choose **view session**, and click a bar or chapter.
-`node bin/tracequest.js latest --open` opens a report for your latest session.
+**How to use it:** open a session and choose **view session**. Click a bar or a
+chapter to open it. `node bin/tracequest.js latest --open` opens a report for
+your most recent session.
 [Rendering and export options](docs/cli-reference.md#cli-usage).
 
-### Inspect failure patterns
+### Find out why tool calls fail
 
-![Insights from 26 recordings: 35 failed tool calls out of 1,105, with missing-file failures expanded to show their source recordings](docs/assets/insights.png)
+![Insights for 17 sessions: failed tool calls grouped by cause, and error rates per agent](docs/assets/insights.png)
 
-Insights groups failed tool calls by cause and shows error rates, retries, loops,
-active time and estimated cost. Expand a row to read the failed output and open
-its source session. Filters scope the analysis by project, source, machine or time.
-Analysis runs locally without model calls.
+Insights groups failed tool calls by cause. It also shows error rates, retries,
+loops, active time and estimated cost. Expand a row to see the failed output and
+a link to the session it came from. You can limit the figures to a project,
+source, machine or time range. The analysis runs on your machine and makes no
+model calls.
 
-**Open:** visit `/insights` on your TraceQuest server.
+**How to use it:** open `/insights` on your TraceQuest server.
 `node bin/tracequest.js insights --refresh` updates the analysis and prints a
 summary in the terminal. [Insights options](docs/cli-reference.md#cli-usage).
 
 ### Compare two sessions
 
-![Two Codex session reports with recorded duration, turns, tool calls, token usage, cache hits, errors and retries side by side](docs/assets/compare.png)
+![Two Codex sessions side by side: duration, turns, tool calls, tokens, cache hits, errors and retries](docs/assets/compare.png)
 
-Compare duration, tokens, cache usage, errors, retries, tools and chapter quality.
-Each column links to its full session. The recordings shown are different tasks;
-the comparison describes their recorded work.
+The compare view puts two sessions side by side. It shows duration, tokens,
+cache use, errors, retries, tool counts and chapter outcomes. Each column links
+to the full session.
 
-**Open:** in **All sessions**, select two row checkboxes and choose **Compare**.
-[Browser and session commands](docs/cli-reference.md#cli-usage).
+**How to use it:** in **All sessions**, tick the checkboxes of two sessions and
+choose **Compare**. [Browser and session commands](docs/cli-reference.md#cli-usage).
 
-### Read, launch and continue conversations
+### Read, start and continue conversations
 
-![The conversation dashboard beside the new-run form for selecting an installed agent, working directory and prompt](docs/assets/runs.png)
+![A Codex session open in the conversation view while it is still running](docs/assets/runs.png)
 
-Read recorded messages and tool output in the conversation view. Launch an
-installed agent from **+ New run**, send follow-ups, or continue supported
-conversations. Launching and continuing runs requires tmux. The form shown is
-unsubmitted; the conversation is a recorded session.
+The conversation view shows a session's messages and tool output, and updates
+while the agent is still working. **+ New run** starts an installed agent in a
+directory you choose. You can send follow-up messages to runs started from
+TraceQuest and continue supported sessions. Starting and continuing runs needs
+tmux.
 
-**Open:** run `npm start` and choose a conversation or **+ New run**.
-[Supported agents, continuation and setup](docs/cli-reference.md#launching-agent-runs).
+**How to use it:** run `npm start` and choose a session or **+ New run**.
+[Supported agents and setup](docs/cli-reference.md#launching-agent-runs).
 
-### Export reports and prepare handoffs
+### Export reports and write handoffs
 
-![A downloaded HTML report with print, Markdown, export and share controls, recorded usage and chapter outcomes](docs/assets/reports.png)
+![An exported HTML session report with print, Markdown, export and share buttons](docs/assets/reports.png)
 
-**Export** downloads an HTML report with its timeline and chapter navigation.
-**Markdown** exports session text. The `handoff` command searches recordings and
-returns Markdown snippets with commands for inspecting the matching sessions.
+**Export** saves a session as a single HTML file with its timeline and chapters.
+**Markdown** saves the session text. The `handoff` command searches your sessions
+and prints Markdown snippets, each with the commands to open the matching session.
 
-**Run:** open a session and choose **Export** or **Markdown**, or run
-`node bin/tracequest.js handoff "cache invalidation" --limit 5` from the checkout.
+**How to use it:** open a session and choose **Export** or **Markdown**, or run
+`node bin/tracequest.js handoff "cache invalidation" --limit 5` in the checkout.
 [Handoff and sharing options](docs/cli-reference.md#cli-usage).
 
 ### Collect sessions from several machines
 
-![A read-only hub showing analyzed recordings and collection health for two anonymized machines, with session counts and last successful pulls](docs/assets/hub.png)
+![A read-only hub listing each machine with its session count and last successful copy](docs/assets/hub.png)
 
-Collect recordings over SSH into a read-only hub. The Machines table shows each
-source's session count, newest recording, collection status and last successful
-pull. An external config file selects sources, archive paths and server address.
+A hub is a read-only TraceQuest server that copies sessions from other machines
+over SSH. The Machines table shows each machine's session count, newest session,
+collection status and last successful copy. A config file lists the machines,
+the folders to copy and the address the server listens on.
 
-**Run:** follow the [hub deployment guide](docs/hub-deployment.md) to create a
-config, import recordings and start the hub. The guide includes a local sample
-for a fresh machine. Hub mode blocks writes and redacts secret-shaped values;
-network access still needs protection because recordings contain conversation text.
+**How to use it:** follow the [hub deployment guide](docs/hub-deployment.md) to
+write a config, import sessions and start the hub. The guide includes a local
+example you can run on one machine. A hub rejects changes and hides values that
+look like secrets. Sessions still contain conversation text, so restrict who can
+reach the hub on your network.
 
 ## Try it
 
-Requires **Node.js 22.5+** and **git**.
+You need **Node.js 22.5 or later** and **git**.
 
 ```bash
 git clone https://github.com/viktor-com/tracequest.git
@@ -112,11 +120,10 @@ npm install
 npm run demo
 ```
 
-Open [localhost:7777](http://localhost:7777) to browse two bundled synthetic sample
-sessions. The demo needs no agent account or API key. Its sample sessions differ
-from the anonymized recordings illustrated above.
+Open [localhost:7777](http://localhost:7777). The demo shows two small sample
+sessions that ship with the repository. It needs no agent account or API key.
 
-To browse your own recordings, stop the demo with **Ctrl-C**, then run:
+To see your own sessions, stop the demo with **Ctrl-C** and run:
 
 ```bash
 npm start
@@ -126,17 +133,19 @@ npm start
 
 ## Data and network access
 
-Browsing and analysis read local files. TraceQuest sends no telemetry. Sharing,
-remote imports and optional usage-limit checks contact their services when
-requested. Standup summaries and launched agents use your configured agent.
+Browsing and analysis only read local files. TraceQuest sends no telemetry.
+It contacts other services only when you ask it to: sharing a session, importing
+remote sessions, or checking plan usage limits. Standup summaries and agent runs
+use the agent you have configured.
 
-The server listens on localhost by default and has no built-in login. Read the
+The server listens on localhost and has no login. Read the
 [deployment guide](docs/hub-deployment.md#access) and [security notes](SECURITY.md)
-before exposing it to a network.
+before making it reachable from other machines.
 
 ## Documentation
 
-**[Technical docs for your coding agent](docs/README.md)** — command reference,
-configuration, source paths, live-run APIs, deployment and development guides.
+**[Documentation](docs/README.md)**: command reference, configuration, session
+locations, live-run API, deployment and development guides. It is written so
+that a coding agent can follow it too.
 
 [Contribute](CONTRIBUTING.md) · [Report a bug](https://github.com/viktor-com/tracequest/issues) · [Changelog](CHANGELOG.md) · [MIT License](LICENSE)
