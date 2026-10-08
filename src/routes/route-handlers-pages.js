@@ -615,7 +615,7 @@ const VIEW_CONTINUE_CHIP_CSS = `<style>
   display: flex; flex-direction: column; gap: 6px;
   width: 340px; max-width: calc(100vw - 36px);
   padding: 9px 10px 9px 14px; border-radius: 22px;
-  background: var(--surface, #1a1a1e); border: 1px solid rgba(255,255,255,0.12);
+  background: var(--surface, #1a1a1e); border: 1px solid var(--border, rgba(255,255,255,0.12));
   color: var(--fg, #e8e8ea); font-family: var(--sans, sans-serif); font-size: 13px;
   box-shadow: 0 6px 24px rgba(0,0,0,0.35);
   transition: border-color 0.12s;
@@ -630,7 +630,7 @@ const VIEW_CONTINUE_CHIP_CSS = `<style>
   flex: 1; min-width: 0; background: none; border: none; outline: none;
   color: var(--fg, #e8e8ea); font-family: inherit; font-size: 13px;
 }
-.view-continue-input::placeholder { color: rgba(232,232,234,0.45); }
+.view-continue-input::placeholder { color: var(--fg3, rgba(232,232,234,0.45)); }
 .vc-send {
   flex: none; width: 24px; height: 24px; display: inline-flex;
   align-items: center; justify-content: center; border: none; border-radius: 50%;

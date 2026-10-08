@@ -275,7 +275,6 @@ function deltaChipHtml(label, rawA, rawB) {
  * cleaner, so the reader knows the answer before scanning sixteen rows.
  */
 export function buildCompareVerdictHtml(a, b) {
-  const parts = [];
   const ratioPhrase = (x, y, more, less) => {
     if (!x || !y || isNoiseDelta(x, y)) return null;
     const r = y / x;
@@ -283,18 +282,25 @@ export function buildCompareVerdictHtml(a, b) {
       ? (r >= 1.95 ? (Math.round(r * 10) / 10) + "× " + more : Math.round((r - 1) * 100) + "% " + more)
       : (1 / r >= 1.95 ? (Math.round((1 / r) * 10) / 10) + "× " + less : Math.round((1 - r) * 100) + "% " + less);
   };
-  const dur = ratioPhrase(a.durationMs, b.durationMs, "longer", "shorter");
+  const parts = [];
+  const dur = ratioPhrase(a.durationMs, b.durationMs, "longer", "faster");
   if (dur) parts.push("ran " + dur);
-  const cost = ratioPhrase(a.cost, b.cost, "more expensive", "cheaper");
-  if (cost) parts.push("was " + cost);
-  if (a.errors !== b.errors) parts.push("hit " + b.errors + " error" + (b.errors === 1 ? "" : "s") + " vs " + a.errors);
-  if (!parts.length) {
+  const cost = ratioPhrase(a.cost, b.cost, "more", "less");
+  if (cost) parts.push("cost " + cost);
+  const errs = a.errors !== b.errors
+    ? b.errors + " error" + (b.errors === 1 ? "" : "s") + " to its " + a.errors
+    : "";
+  const sideA = '<span class="cmp-verdict-side a">' + esc(a.id) + "</span>";
+  const sideB = '<span class="cmp-verdict-side b">' + esc(b.id) + "</span>";
+  if (!parts.length && !errs) {
     return '<p class="cmp-verdict">These runs are within 5% on time and cost and had the same number of errors.</p>';
   }
-  const list = parts.length > 1 ? parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1] : parts[0];
+  if (!parts.length) {
+    return '<p class="cmp-verdict">' + sideB + " had " + esc(b.errors + " error" + (b.errors === 1 ? "" : "s") + " to") + " " + sideA + "&#8217;s " + esc(String(a.errors)) + "; time and cost are within 5%.</p>";
+  }
   return (
-    '<p class="cmp-verdict"><span class="cmp-verdict-side b">' + esc(b.id) + "</span> " + esc(list) +
-    ' than <span class="cmp-verdict-side a">' + esc(a.id) + "</span>.</p>"
+    '<p class="cmp-verdict">' + sideB + " " + esc(parts.join(" and ")) + " than " + sideA +
+    (errs ? ", with " + esc(errs) : "") + ".</p>"
   );
 }
 

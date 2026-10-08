@@ -39,7 +39,7 @@
 # compare
 - label: compare opens with one sentence naming which run was longer, more expensive and had more errors, shows B-relative-to-A deltas (×, ÷ or %) on duration, turns, tool calls, cost and tokens, and does not colour differences under 5%
   id: uxcmp
-  command: node --input-type=module -e 'import { buildMetricTableHtml as t } from "./src/chapters/compare-metrics.js"; const n = t([["Cache hit","95%","96%","higher",0.95,0.96]]); const c = t([["Cost","$1","$3","lower",1,3]]); if (/delta-(good|bad)/.test(n)) process.exit(1); if (!c.includes("delta-good") || !c.includes("cmp-delta")) process.exit(1);' && grep -q 'export function buildCompareVerdictHtml' src/chapters/compare-metrics.js
+  command: node --input-type=module -e 'import { buildMetricTableHtml as t } from "./src/chapters/compare-metrics.js"; const n = t([["Cache hit","95%","96%","higher",0.95,0.96]]); const c = t([["Cost","$1","$3","lower",1,3]]); if (/delta-(good|bad)/.test(n)) process.exit(1); if (!c.includes("delta-good") || !c.includes("cmp-delta")) process.exit(1);' && node --input-type=module -e 'import { buildCompareVerdictHtml as v } from "./src/chapters/compare-metrics.js"; const t = v({id:"a1",durationMs:60000,cost:1,errors:7},{id:"b2",durationMs:2406000,cost:3.7,errors:21}).replace(/<[^>]+>/g,""); if (t !== "b2 ran 40.1× longer and cost 3.7× more than a1, with 21 errors to its 7.") { console.error(t); process.exit(1); }'
   tags: [spec, ui-extra-pass, implemented]
 - label: compare can swap sides with a header link or the s key, and its source badges are the shared sentence-case tinted pill, not uppercase on a solid fill
   id: uxswap
