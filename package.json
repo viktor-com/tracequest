@@ -1,0 +1,83 @@
+{
+  "name": "tracequest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Stop reading agent logs. Watch them.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viktor-com/tracequest.git"
+  },
+  "homepage": "https://github.com/viktor-com/tracequest#readme",
+  "bugs": {
+    "url": "https://github.com/viktor-com/tracequest/issues"
+  },
+  "author": "viktor-com",
+  "type": "module",
+  "exports": {
+    "./api": "./src/api/tracequest-api.js",
+    "./sessions": "./src/sessions.js",
+    "./parse": "./src/parse.js",
+    "./render": "./src/render.js"
+  },
+  "bin": {
+    "tracequest": "bin/tracequest.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "data/",
+    "presets/",
+    "sidecar/bin/",
+    "README.md",
+    "docs/hub-deployment.md",
+    "examples/hub/",
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "package.json"
+  ],
+  "scripts": {
+    "dev": "node bin/tracequest.js",
+    "serve": "node bin/tracequest.js serve",
+    "prepack": "node scripts/bundle-sidecar.mjs && node scripts/preflight-dist.mjs",
+    "prepublishOnly": "node scripts/preflight-dist.mjs --forbid-publish",
+    "prestart": "node scripts/ensure-sidecar.mjs",
+    "start": "node bin/tracequest.js serve",
+    "demo": "HOME=\"$PWD/examples/home\" TRACEQUEST_TMUX_SOCKET=tracequest-demo node bin/tracequest.js serve",
+    "test": "TRACEQUEST_SKIP_LR_WATCH=1 TRACEQUEST_SKIP_PLAYWRIGHT=1 node --test --test-concurrency=1 test/*.test.js test/**/*.test.js",
+    "test:integration": "TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/tracequest-integration.test.js test/bin/tracequest-sharing-integration.test.js test/bin/tracequest-serve-integration.test.js test/bin/tracequest-index-search-integration.test.js test/bin/tracequest-sidecar-integration.test.js test/bin/tracequest-edge-integration.test.js test/bin/tracequest-opencode-integration.test.js test/bin/tracequest-multi-source-integration.test.js test/bin/tracequest-messages-format-integration.test.js test/bin/tracequest-stress-integration.test.js test/bin/tracequest-render-messages-integration.test.js test/bin/tracequest-preset-integration.test.js test/bin/tracequest-agent-history-integration.test.js test/bin/tracequest-codex-integration.test.js test/bin/tracequest-factory-integration.test.js test/bin/tracequest-grok-integration.test.js test/bin/tracequest-large-session-integration.test.js test/bin/tracequest-livereload-integration.test.js test/bin/tracequest-cursor-cloud-import-integration.test.js test/bin/tracequest-ssh-import-integration.test.js test/bin/tracequest-usage-limits-integration.test.js test/bin/tracequest-launch-integration.test.js",
+    "test:browser": "TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/*.playwright.test.js",
+    "test:standup-handoff-cli": "TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/cli/cli-commands.test.js",
+    "smoke:standup-handoff": "node scripts/smoke-standup-handoff.mjs",
+    "smoke:standup-handoff-examples": "TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/tracequest-doc-examples.e2e.test.js",
+    "docs:ui-examples": "node scripts/refresh-ui-examples.mjs",
+    "probe:standup-agents": "node bin/tracequest.js standup --probe-agents",
+    "verify:standup-handoff": "npm run test:standup-handoff-cli && npm run smoke:standup-handoff && npm run smoke:standup-handoff-examples",
+    "release:standup-handoff": "npm run verify:standup-handoff",
+    "build:sidecar": "cd sidecar && cargo build --release",
+    "build:sidecar:bundle": "node scripts/bundle-sidecar.mjs",
+    "dist": "node scripts/pack-dist.mjs",
+    "bench": "node bench/run-all.js",
+    "bench:cold": "node bench/cold-index.js",
+    "bench:incremental": "node bench/incremental.js",
+    "bench:idle": "node bench/idle.js",
+    "bench:live": "node bench/live-stability.js",
+    "bench:correctness": "node bench/correctness.js"
+  },
+  "keywords": [
+    "claude-code",
+    "agent",
+    "visualizer",
+    "trace",
+    "session"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "playwright": "^1.52.0"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

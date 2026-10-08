@@ -1,0 +1,148 @@
+# domain
+- label: a hub is one tracequest box that pulls every listed machine's sessions with `import ssh` on a schedule and serves them read-only; a machine is "local" (the hub's own sessions, no host id) or an imported host id
+  id: hubdm
+  tags: [spec, hub-insights, domain, implemented]
+- label: an analysis record is the per-session result of analyzeSession — calls, errors, suspect, classes and one redacted example per class, retries, loops, loopCalls, stalls, stallMs, longestStall, idleMs, activeMs, traps and the dominant repo area — a small JSON-safe object carrying INSIGHTS_VERSION as v
+  id: insan
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'analyzeSession counts tool calls, errors by class, and a redacted example|analyzeSession tolerates an empty or timestamp-free session' test/insights/analyze.test.js
+  tags: [spec, hub-insights, domain, implemented]
+
+# pull-health
+- label: every real `import ssh` run writes one pull record per host to .pull-state.json in the hosts root — spec, lastAttemptAt, lastSuccessAt, ok, fetched, changed, skipped, failed, consecutiveFailures and the first line of the ssh/rsync error — a failed pull keeps the previous lastSuccessAt, --dry-run writes nothing, and the six-count summary (fact sshsm) is unchanged
+  id: hubps
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'recordPulls keeps the last attempt, last success and failure streak per host|import ssh records each host.s pull, and a dry run records nothing' test/hub/pull-state.test.js && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'summary reports checked, fetched, imported, updated, skipped, and failed counts' test/bin/tracequest-ssh-import-integration.test.js
+  tags: [spec, hub-insights, cli, implemented]
+- label: the pull record is a dotfile so listImportedHosts and discovery never treat it as a host directory
+  id: hubdf
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'recordPulls keeps the last attempt, last success and failure streak per host' test/hub/pull-state.test.js && grep -q 'PULL_STATE_FILE = ".pull-state.json"' src/hub/pull-state.js
+  tags: [spec, hub-insights, sessions, implemented]
+- label: buildHubStatus returns one row per machine — local first, then every configured, pulled or on-disk host sorted by id — with session count, newest session time, last attempt, last good pull, failure streak, error, and state local | fresh | stale (last good pull older than 24h) | failing (last pull failed) | never
+  id: hubst
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'buildHubStatus lists this machine first and labels each host fresh, stale, failing or never' test/hub/pull-state.test.js
+  tags: [spec, hub-insights, cli, implemented]
+
+# serve
+- label: `tracequest serve --bind <addr>` listens on that address only; without --bind the server listens on 127.0.0.1
+  id: hubbd
+  command: grep -q 'server.listen(port, bind, onListening)' src/server/server-http.js && grep -q 'bind = "127.0.0.1"' src/server/server-http.js && grep -q 'bind: { type: "string" }' bin/tracequest.js && grep -q -- '--bind <addr>' src/cli/cli-help.js
+  tags: [spec, hub-insights, serve, implemented]
+- label: `tracequest serve --hub` is the shared read-only mode — every text response written through send() (HTML, JSON, raw session downloads) has secret-shaped values replaced with [REDACTED], every request that is not GET or HEAD answers 403 without reaching a handler, and no tmux session is created at boot; without --hub responses are byte-identical to before
+  id: hubmd
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'hub mode redacts every text response and refuses requests that change state' test/routes/insights-routes.test.js && grep -q 'if (!opts.hub) ensureMuxSessionAtBoot()' src/server.js && grep -q 'hub: { type: "boolean" }' bin/tracequest.js
+  tags: [spec, hub-insights, serve, security, implemented]
+- label: redactText replaces vendored gitleaks rule matches, PEM private keys, bearer tokens, URL passwords, env-style SECRET/TOKEN/PASSWORD/API_KEY assignments, quoted password/secret/api_key values, JWTs and sk-/ghp_/xox provider keys with [REDACTED], and leaves ordinary prose, links and page scripts unchanged
+  id: insrd
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'redactText removes secret-shaped values and keeps the rest readable|redactText leaves ordinary text and page scripts untouched' test/insights/redact.test.js
+  tags: [spec, hub-insights, security, implemented]
+- label: in hub mode the home URL redirects to the insights page with its query intact without opening the chat surface; write requests remain forbidden and ordinary servers keep their chat home
+  id: hubhome
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --input-type=module -e 'import assert from "node:assert/strict"; import { createHandle, setHubMode } from "./src/server/server-http.js"; let called=0; const handle=createHandle({"/":(_q,r)=>{called++;r.end("chat")}}); const run=async(method)=>{let status=200,headers={},body="";await handle({url:"/?expr=project:sample-app",method},{writeHead(s,h){status=s;headers=h||{}},end(b){body=b||""}});return {status,headers,body}};setHubMode(true);const r=await run("GET");assert.equal(r.status,302);assert.equal(r.headers.Location,"/insights?expr=project:sample-app");assert.equal(called,0);assert.equal((await run("POST")).status,403);setHubMode(false);assert.equal((await run("GET")).body,"chat");'
+  tags: [spec, hub-insights, serve, implemented]
+- label: TRACEQUEST_CACHE_DIR isolates metadata, search and insights caches from other tracequest processes while leaving session storage unchanged; without it the existing home cache remains the default
+  id: hubcache
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --input-type=module -e 'import assert from "node:assert/strict"; import {indexPath} from "./src/sessions/index-writers.js";import {searchIdxPath} from "./src/sessions/search-index.js";import {insightsCachePath} from "./src/insights/store.js";const before=[indexPath(),searchIdxPath(),insightsCachePath()];process.env.TRACEQUEST_CACHE_DIR="/tmp/tracequest-isolated-cache";assert.deepEqual([indexPath(),searchIdxPath(),insightsCachePath()],["/tmp/tracequest-isolated-cache/index.json","/tmp/tracequest-isolated-cache/search.idx","/tmp/tracequest-isolated-cache/insights.json"]);delete process.env.TRACEQUEST_CACHE_DIR;assert.deepEqual([indexPath(),searchIdxPath(),insightsCachePath()],before);'
+  tags: [spec, hub-insights, serve, implemented]
+- label: Insights HTTP routes inherit the configured or CLI server filter and intersect it with page expressions, matching the session inventory scope
+  id: insflt
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test test/hub/server-filter.test.js
+  tags: [spec, hub-review, implemented]
+
+# analysis
+- label: classifyError maps one failed tool result to exactly one error class — harness-block, tool-input, edit-mismatch, disk-full, timeout, killed, missing-path, permission, command-not-found, missing-dep, git, network-auth, lint-type, test-failure, syntax, python-exception, empty-exit, nonzero-exit, or other — first match wins in that order
+  id: inscl
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'classifyError maps failed tool results to one error class' test/insights/classify.test.js
+  tags: [spec, hub-insights, analysis, implemented]
+- label: a result the parser flagged as an error that is really ordinary output (file contents, search hits, exit 0) is counted as suspect, not as an error
+  id: inssu
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'isSuspectError recognises ordinary output the parser flagged as an error' test/insights/classify.test.js && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'analyzeSession sets suspect results apart from errors' test/insights/analyze.test.js
+  tags: [spec, hub-insights, analysis, implemented]
+- label: a retry is a call identical to one that failed within the previous 20 calls; a loop is the same call 3 or more times within 12 consecutive calls, reported as loops (distinct calls), loopCalls and one example
+  id: insrt
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'analyzeSession counts retries of a failed call and loops of a repeated call' test/insights/analyze.test.js
+  tags: [spec, hub-insights, analysis, implemented]
+- label: a stall is a gap of 5 minutes or more in which the agent is the one waiting — a command, sub-agent, fetch or MCP call running (up to 6h) or the model answering a tool result (up to 30 min); every other gap of 5 minutes or more is idle, and activeMs is duration minus idle
+  id: insst
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'analyzeSession separates agent stalls from a person being away' test/insights/analyze.test.js
+  tags: [spec, hub-insights, analysis, implemented]
+- label: four recurring traps are detected per session — wrong-folder (a failed command reporting a missing repo, manifest or test path), path-bleed (a file tool or cd/git -C targeting another checkout of the same repo — sibling worktree or main clone), test-hang (a test-runner command that timed out or took 10 min or more), ci-wait (gh run/pr checks polling, with waiting time summed across polls at most 30 min apart)
+  id: instr
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'trap detectors recognise wrong folder, test runners, CI waits and sleeps|isPathBleed flags another checkout of the same repo and nothing else' test/insights/classify.test.js && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'analyzeSession measures CI waiting between polls and flags path bleed' test/insights/analyze.test.js
+  tags: [spec, hub-insights, analysis, implemented]
+- label: a session's repo area is the folder its file tools touched most, relative to the session cwd — the top-level folder, or the top two under container folders such as backend/ and frontend/
+  id: insar
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'repoArea names the folder a path belongs to' test/insights/classify.test.js
+  tags: [spec, hub-insights, analysis, implemented]
+- label: analysis records are cached in ~/.cache/tracequest/insights.json keyed by session path; refreshInsights re-analyses only sessions whose mtime changed or whose record has another INSIGHTS_VERSION, drops records for vanished sessions, and counts an unparseable session as failed without aborting
+  id: insch
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'refreshInsights analyses new and changed sessions and reuses the rest' test/insights/aggregate.test.js
+  tags: [spec, hub-insights, analysis, implemented]
+- label: Confirmed parser failures remain errors in insights even when display text starts with Script completed or is truncated; insights format version 2 and metadata index version invalidate unchanged cached records on upgrades
+  id: insup
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test test/insights/codex-outcomes.test.js
+  tags: [spec, hub-review, implemented]
+- label: Path bleed only flags a different checkout of the same repository, including custom checkout patterns; unrelated worktree repositories are excluded
+  id: inspth
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test test/insights/classify.test.js test/hub/config.test.js
+  tags: [spec, hub-review, implemented]
+
+# aggregates
+- label: aggregateInsights answers across hosts — totals (sessions, analysed, pending, hosts, calls, errors, error rate, sessions with errors, active time, tokens, estimated cost), error classes ranked by count, and error rate with top classes by harness, by repo area and by host
+  id: insag
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'aggregateInsights reports totals, error classes and breakdowns with example sessions' test/insights/aggregate.test.js
+  tags: [spec, hub-insights, aggregates, implemented]
+- label: aggregateInsights also reports retries and loops, median and p90 active time and tokens with an active-time histogram, stall count and waiting time, the ten most expensive sessions, and each trap's sessions, occurrences and waiting time
+  id: insa2
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'aggregateInsights reports retries, time, stalls, spend and traps with example sessions' test/insights/aggregate.test.js
+  tags: [spec, hub-insights, aggregates, implemented]
+- label: every insight carries up to five example sessions, worst first, each a ref of path, hash, source, host, project, a redacted prompt and a note saying why it is an example
+  id: insex
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'aggregateInsights reports totals, error classes and breakdowns with example sessions|example session refs never carry a secret from the prompt' test/insights/aggregate.test.js
+  tags: [spec, hub-insights, aggregates, security, implemented]
+- label: loadInsightsData joins discovered sessions with cached records and scopes them by expr (the dashboard filter language), host (an imported host id or "local") and days (7, 30 or 90); sessions without a record count as pending and are never parsed on request
+  id: insld
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'loadInsightsData joins sessions with cached analysis and applies expr, host and days' test/insights/aggregate.test.js && ! grep -q 'parseSession' src/insights/load.js src/routes/route-handlers-insights.js
+  tags: [spec, hub-insights, aggregates, implemented]
+- label: Insights aggregation accepts an explicit imported-host list so tests and supplied corpora do not depend on archives in the account home
+  id: inshst
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test test/insights/aggregate.test.js
+  tags: [spec, hub-review, implemented]
+
+# cli
+- label: `tracequest insights [expr] [--refresh] [--days N] [--host id] [--json]` prints totals, per-machine pull health, top error classes, error rate by harness and traps; --refresh analyses new and changed sessions first and reports analysed/unchanged/failed/removed on stderr; --json prints the same data the page uses
+  id: inscm
+  command: grep -q 'case "insights"' bin/tracequest.js && grep -q 'export async function cmdInsights' src/cli/cli-commands.js && grep -q 'insights Options:' src/cli/cli-help.js && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'loadInsightsData joins sessions with cached analysis and applies expr, host and days' test/insights/aggregate.test.js
+  tags: [spec, hub-insights, cli, implemented]
+
+# ui
+- label: GET /insights renders the insights page and GET /api/insights returns the same data as JSON, both taking expr, days and host query parameters
+  id: insap
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'GET /insights and /api/insights are registered and served from loaded data' test/routes/insights-routes.test.js
+  tags: [spec, hub-insights, ui, implemented]
+- label: the insights page shows headline tiles, the machines table, error classes, error rate by harness and by repo area, retries and loops, time per session, long stalls, most expensive sessions and recurring traps — each marked data-insight — and every insight opens onto example sessions that link to /view of that session
+  id: inspg
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'the insights page shows every insight with drill-down links to example sessions' test/routes/insights-routes.test.js
+  tags: [spec, hub-insights, ui, implemented]
+- label: the machines table shows each machine's collection state as a dot plus a label (this machine, up to date, stale, pull failing, never pulled), its session count, newest session, last good pull, and the pull error with the failure streak
+  id: inspd
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'the insights page shows per-machine pull health and escapes and redacts session text' test/routes/insights-routes.test.js
+  tags: [spec, hub-insights, ui, implemented]
+- label: the insights page is server-rendered with no script, escapes all session text, shows prompts, commands and error text only after redactText, and with no analysed sessions says how many are pending and how to refresh
+  id: inspr
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'the insights page shows per-machine pull health and escapes and redacts session text' test/routes/insights-routes.test.js && ! grep -q '<script' src/browser/insights-page.js
+  tags: [spec, hub-insights, ui, security, implemented]
+- label: the insights page uses the shared standalone tokens and an ins- selector prefix, and docs/ui-examples/insights.png and insights.webm are recorded by scripts/record-insights.mjs
+  id: insdc
+  command: grep -q 'STANDALONE_BASE_CSS' src/browser/insights-page.js && test -s docs/ui-examples/insights.png && test -s docs/ui-examples/insights.webm && test -f scripts/record-insights.mjs
+  tags: [spec, hub-insights, ui, implemented]
+
+# deployment
+- label: An explicit --config JSON file drives the hub home, archive and cache paths, SSH hosts and source paths, rsync program and serve options; relative paths resolve beside the file, CLI serve flags override config, malformed config fails before work, and no deployment configuration is bundled implicitly
+  id: hubcfg
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test test/hub/config.test.js
+  tags: [spec, hub-insights, implemented]
+- label: The hub deployment guide and example config use synthetic traces and portable paths; the insights recording uses generic worktrees and fixtures
+  id: hubdep
+  tags: [spec, hub-insights, implemented]
+- label: Repository examples and fixtures describe generic projects, users and machines; the copyright holder is identified by the public repository handle while license terms remain unchanged
+  id: hubpub
+  tags: [spec, hub-insights, implemented]

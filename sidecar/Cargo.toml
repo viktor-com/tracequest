@@ -1,0 +1,26 @@
+[package]
+name = "tracequest-sidecar"
+version = "0.1.0"
+edition = "2021"
+authors = ["av"]
+description = "High-performance sidecar for tracequest session scanning and indexing"
+license = "MIT"
+publish = false
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rayon = "1.10"
+jwalk = "0.8"
+memmap2 = "0.9"
+rusqlite = { version = "0.32", features = ["bundled"] }
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1.10"
+urlencoding = "2.1"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+opt-level = 3

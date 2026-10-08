@@ -1,0 +1,7 @@
+{
+  "home": "./home",
+  "hostsDir": "./state/hosts",
+  "cacheDir": "./state/cache",
+  "hosts": [],
+  "serve": { "hub": true, "bind": "127.0.0.1", "port": 7780 }
+}

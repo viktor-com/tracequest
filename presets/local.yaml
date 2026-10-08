@@ -1,0 +1,4 @@
+# Example local development preset
+# Usage: tracequest --preset local --serve
+
+port: 8888

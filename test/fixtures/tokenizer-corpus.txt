@@ -1,0 +1,23 @@
+indexWriters
+src/index_writers.js
+HTTPServer
+parseHTML
+snake_case_var
+camelCaseIdentifier
+XMLParser
+getHTTPResponse
+some-hyphenated-token
+path/to/some/file.ts
+hello_world
+café
+naïve
+résumé
+x
+ab
+this_is_a_very_long_token_that_exceeds_thirty_two_characters_limit
+short
+normalWord
+ALLCAPS
+mixedABCDEFGHIJtoken
+already already already
+foo/foo.foo

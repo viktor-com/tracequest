@@ -1,0 +1,10 @@
+# tracequest built-in default preset
+# This is the home for built-in configuration values.
+# Use with: tracequest --preset default --serve
+
+# Default port for `tracequest --serve`
+port: 7777
+
+# Future keys (recognized by CLI when added):
+# open: false
+# outPattern: "tracequest-{id}.html"

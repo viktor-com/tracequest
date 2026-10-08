@@ -1,0 +1,21 @@
+{
+  "pid": 23928,
+  "sessionId": "92a9bf2a-6e66-4e1c-874d-14aff93d9a4a",
+  "cwd": "/home/dev/code/sample-app/sample-app",
+  "startedAt": 1787280336178,
+  "procStart": "Fri Aug 21 02:45:35 2026",
+  "version": "2.1.238",
+  "peerProtocol": 1,
+  "peerFeatures": ["notify_idle"],
+  "kind": "interactive",
+  "entrypoint": "cli",
+  "tmux": "tracequest:@4.%4",
+  "messagingSocketPath": "/tmp/cc-socks/23928.sock",
+  "name": "sample-app-1e",
+  "nameSource": "derived",
+  "nameSince": 1787280336178,
+  "status": "idle",
+  "updatedAt": 1787280421805,
+  "statusUpdatedAt": 1787280421805,
+  "bridgeSessionId": "session_01JAY5nCAw5jEbpMbLtiqKHC"
+}

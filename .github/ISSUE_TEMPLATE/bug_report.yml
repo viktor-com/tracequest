@@ -1,0 +1,30 @@
+name: Bug report
+description: Something tracequest does wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Commands, and a minimal trace if you can share one. Scrub secrets and private paths first.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: tracequest version
+      description: Output of `tracequest --version`
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: OS, Node version and agent
+      placeholder: macOS 15, Node 22.5, Claude Code 2.0

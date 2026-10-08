@@ -1,0 +1,23 @@
+{
+  "_v": 10,
+  "session": {
+    "firstPrompt": null,
+    "model": "codex",
+    "tools": [
+      "Edit"
+    ],
+    "toolCounts": {
+      "Edit": 1
+    },
+    "chapters": 0,
+    "totalTokens": 0,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "cacheReadTokens": 0,
+    "durationMs": 7,
+    "errors": 0,
+    "files": 0,
+    "commits": 0,
+    "mtime": 0
+  }
+}

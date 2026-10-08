@@ -1,0 +1,230 @@
+
+# command-palette
+
+## shell
+- label: Cmd/Ctrl+K toggles the CommandPalette on served WebUI pages — it opens when closed and closes when already open
+  id: cpk
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Cmd/Ctrl.K toggles|toggles the palette' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: the CommandPalette is a modal dialog with a combobox input (placeholder Type a command or search...) and a grouped listbox of results
+  id: cpd
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'modal dialog with combobox' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: an empty CommandPalette query shows grouped actions prioritized by the current page, with a context chip when a run or session is open
+  id: cpe
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'empty query shows grouped|context chip' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: typing in the CommandPalette filters the grouped list; a query that matches no commands shows a no-results state plus a Search sessions fallback
+  id: cpf
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'filters the grouped list|no-results' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: Escape and clicking the CommandPalette backdrop dismiss the overlay and restore the previously focused element
+  id: cpx
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Escape and backdrop dismiss' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: while the CommandPalette is open, keyboard focus stays inside the dialog; Tab does not move focus to the page behind it
+  id: cpt
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'focus trap' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: Arrow keys move the highlighted CommandPalette result and Enter runs it
+  id: cpa
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Arrow keys move|Enter runs' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: the CommandPalette uses Tracequest --surface/--fg/--accent tokens and compact dark command-menu chrome (grouped rows, shortcut glyphs, no foreign widget skin)
+  id: cpv
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'uses Tracequest tokens' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: later CommandPalette result kinds register via window.TracequestPalette.registerProvider without replacing the shell
+  id: cpr
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'registerProvider' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: the CommandPalette is mounted on the Runs inventory, run/chat pages, compare, and served /view — not on standalone exported session HTML
+  id: cpm
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'mounted on Runs|mounted on run|mounted on compare|mounted on served /view|not on standalone export' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: Cmd/Ctrl+K is ignored during IME composition so CJK input does not toggle the CommandPalette mid-composition
+  id: cpi
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'IME composition' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: the shared app bar exposes a CommandPalette trigger whose label is Cmd+K on Mac and Ctrl+K elsewhere, and activating it opens the same overlay
+  id: cph
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'app bar exposes a CommandPalette trigger' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: the CommandPalette is a modal overlay object: a full-viewport dim/scrim recedes the page so the menu is the only lit surface, including the collapsed no-results state
+  id: cpsr
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'full-viewport dim/scrim|modal overlay object' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+
+## search
+- label: a non-empty CommandPalette query fetches GET /api/search?q= and lists the ranked session hits; an empty query does not call /api/search
+  id: cpsq
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'fetches GET /api/search|empty query does not call /api/search' test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search, implemented]
+- label: each CommandPalette session hit shows source, short session id, and prompt excerpt so the result is pickable
+  id: cpidn
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'shows source, short session id, and prompt' test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search, implemented]
+- label: CommandPalette session hits include a content snippet with the matched query term highlighted
+  id: cpsn
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'content snippet with the matched query term' test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search, implemented]
+- label: an empty CommandPalette query shows a Recent group of sessions from GET /api/sessions
+  id: cpre
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Recent group of sessions from GET /api/sessions' test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search, implemented]
+- label: typing or pasting an 8-character session hash in the CommandPalette offers an Open session item that goes to /view?id=
+  id: cpho
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern '8-character session hash|Open session item' test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search, implemented]
+- label: activating a CommandPalette session hit navigates to /view?id= of that session
+  id: cppi
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'navigates to /view' test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search, implemented]
+- label: a CommandPalette query that matches neither commands nor indexed sessions still shows the Search sessions fallback
+  id: cpns
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'neither commands nor indexed sessions|Search sessions fallback' test/browser/command-palette-search.test.js test/browser/command-palette.test.js
+  tags: [spec, command-palette, palette-search, implemented]
+- label: CommandPalette session hits keep /api/search rank order inside a Sessions group above the Search fallback
+  id: cpro
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'rank order inside a Sessions group' test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search, implemented]
+
+## pages
+- label: an empty CommandPalette query lists a Go to group of app pages: Chat (/), Runs (/sessions), Compare, rendered session, and New run
+  id: cpgo
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'empty query lists a Go to group of app pages' test/browser/command-palette-nav.test.js test/browser/command-palette.test.js
+  tags: [spec, command-palette, palette-nav, implemented]
+- label: typing a page name (chat, runs, compare, view, launch) in the CommandPalette filters to that Go to destination
+  id: cpgf
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'typing a page name' test/browser/command-palette-nav.test.js
+  tags: [spec, command-palette, palette-nav, implemented]
+- label: a g/go/goto prefix in the CommandPalette focuses Go to page destinations the way Linear focuses a result class
+  id: cpgp
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'go/goto prefix|parsePaletteQuery' test/browser/command-palette-nav.test.js test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-nav, implemented]
+- label: activating a CommandPalette Go to item navigates to that surface: Chat to /, Runs to /sessions, Compare to /compare, rendered session to /view, New run to the launcher or /?launch=1
+  id: cpgn
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'activating a CommandPalette Go to item|navigates to that surface' test/browser/command-palette-nav.test.js
+  tags: [spec, command-palette, palette-nav, implemented]
+- label: CommandPalette Go to items show G-then-letter shortcut glyphs, and G then C/R/D/V/N jumps to Chat, Runs, Compare, rendered session, or New run when the palette is closed
+  id: cpgk
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'G-then-letter|G then C' test/browser/command-palette-nav.test.js
+  tags: [spec, command-palette, palette-nav, implemented]
+- label: when a run or session is in context, the CommandPalette offers Go to this run at /run?id= or Go to this chat at /run?session=
+  id: cpgt
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Go to this run|Go to this chat' test/browser/command-palette-nav.test.js
+  tags: [spec, command-palette, palette-nav, implemented]
+- label: CommandPalette Compare and rendered-session destinations use the current or last pair/session so they land on /compare?a=&b= and /view?id= instead of bouncing to /sessions
+  id: cpgc
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Compare and rendered-session destinations|last pair' test/browser/command-palette-nav.test.js
+  tags: [spec, command-palette, palette-nav, implemented]
+
+## keyboard
+- label: while the CommandPalette combobox is focused, typing / o j k g ? and a normal letter inserts those characters into #cmdkInput
+  id: cpkey
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'typing /ojkg.x inserts those characters into #cmdkInput' test/browser/command-palette-key-capture.test.js
+  tags: [spec, command-palette, cmdk-key-capture, implemented]
+- label: while the CommandPalette is open, slash-to-search, chapter j/k/o, and G-then-letter chords do not steal printable keys from the combobox
+  id: cpnos
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'do not steal printable keys from the combobox|ignored while CommandPalette is open' test/browser/command-palette-key-capture.test.js test/render/render-interactions-nav.test.js
+  tags: [spec, command-palette, cmdk-key-capture, implemented]
+- label: CommandPalette printable-key capture holds on every served surface that mounts the palette: /sessions, /run, /view, /compare, and chat home
+  id: cpsrf
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'printable-key capture holds for CommandPalette on|open CommandPalette types' test/browser/command-palette-key-capture.test.js test/browser/command-palette.playwright.test.js
+  tags: [spec, command-palette, cmdk-key-capture, implemented]
+- label: while the CommandPalette combobox is focused, unmodified printable keydown is not stopPropagationed on #cmdkInput or #cmdkOverlay; GitHub keyDownHandler returns on isFormField(event.target) and / o j k g ? x insert into the combobox
+  id: cpdisp
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "GitHub keyDownHandler return is enough|stopPageShortcutsForPrintable is gone" test/browser/command-palette-key-capture.test.js
+  tags: [spec, command-palette, cmdk-key-capture, implemented]
+- label: Playwright Cmd+K then type /ojkg?x inserts those characters into #cmdkInput; first-key / and o insert; #workspaceSearch is not focused
+  id: cppw
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "open CommandPalette types|first-key / and o insert" test/browser/command-palette.playwright.test.js
+  tags: [spec, command-palette, cmdk-key-capture, implemented]
+- label: while the CommandPalette is open, unmodified printable keydown including / o and /ojkg?x inserts into #cmdkInput by native browser editing; capture-phase onGlobalKey does not inspect key.length === 1 or re-focus the combobox for those keys
+  id: cpnative
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "onGlobalKey does not inspect key.length === 1|native insertion types" test/browser/command-palette-key-capture.test.js
+  tags: [spec, command-palette, cmdk-key-capture, implemented]
+
+# sections
+- label: when a run or chat session is open, an empty CommandPalette query lists a This run / This session group of in-view jumps for transcript, analytics, raw terminal, and composer
+  id: cprs
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'empty query lists This run|This session group of in-view' test/browser/command-palette-sections.test.js
+  tags: [spec, command-palette, palette-sections, implemented]
+- label: typing a section name (transcript, analytics, terminal, composer) in the CommandPalette filters to that in-view jump
+  id: cprf
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'typing a section name' test/browser/command-palette-sections.test.js
+  tags: [spec, command-palette, palette-sections, implemented]
+- label: activating a CommandPalette run-section jump scrolls to or opens the matching page section (#chatThread/#chatScroll, #runAnalytics/#analyticsToggle, #terminalDetails, #composerStatus/composer card)
+  id: cprj
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'activating a CommandPalette run-section jump' test/browser/command-palette-sections.test.js
+  tags: [spec, command-palette, palette-sections, implemented]
+- label: when a rendered session is open, the CommandPalette lists each #chapter-N as an in-page destination with chapter number and prompt excerpt
+  id: cpch
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'lists each #chapter-N' test/browser/command-palette-sections.test.js
+  tags: [spec, command-palette, palette-sections, implemented]
+- label: typing a chapter number or prompt in the CommandPalette filters to that chapter jump
+  id: cpcf
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'typing a chapter number or prompt' test/browser/command-palette-sections.test.js
+  tags: [spec, command-palette, palette-sections, implemented]
+- label: activating a CommandPalette chapter item scrolls to #chapter-N, expands it, and updates the location hash
+  id: cpcj
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'activating a CommandPalette chapter item' test/browser/command-palette-sections.test.js
+  tags: [spec, command-palette, palette-sections, implemented]
+- label: a j/jump/section or ch/chapter prefix in the CommandPalette focuses in-view section and chapter destinations the way Linear focuses a result class
+  id: cpjp
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'j/jump/section or ch/chapter prefix' test/browser/command-palette-sections.test.js
+  tags: [spec, command-palette, palette-sections, implemented]
+
+# shell
+- label: the CommandPalette context chip distinguishes Run, Chat, and rendered Session so /run and /view do not share a Session chip
+  id: cpchip
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'context chip distinguishes' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+- label: an empty CommandPalette query does not list the Search sessions fallback; that row appears when the query matches no commands
+  id: cpempty
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'empty query does not list the Search sessions fallback' test/browser/command-palette.test.js
+  tags: [spec, command-palette, implemented]
+
+# pages
+- label: a CommandPalette page-name query keeps Go to destinations and does not list in-view jumps; a section-name query does the reverse
+  id: cporder
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'page-name query keeps Go to|section-name query keeps in-view' test/browser/command-palette-nav.test.js test/browser/command-palette-sections.test.js
+  tags: [spec, command-palette, palette-nav, implemented]
+- label: when a chat session is open, Go to rendered session uses that session id instead of an unrelated last /view
+  id: cpviewctx
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'rendered-session destination prefers the open session' test/browser/command-palette-nav.test.js
+  tags: [spec, command-palette, palette-nav, implemented]
+
+# search
+- label: typing in the CommandPalette filters Go to and in-view commands without waiting for /api/search
+  id: cpfast
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'does not wait for /api/search before listing commands' test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search, implemented]
+- label: a CommandPalette query fetches GET /api/search with limit=8 and snippets=0 so session hits populate from the SearchIndex without waiting on a 50-hit on-disk snippet scan
+  id: cplim
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "palette search uses limit=8 and snippets=0|limit=8&snippets=0" test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search-latency, implemented]
+- label: GET /api/search honors limit (1-50, default 50) and snippets=0: searchSessions then ranks from the SearchIndex and uses firstPrompt matches without scanSessionForQuery
+  id: cpidx
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "GET /api/search honors limit and snippets=0|searchSessions snippets:false skips disk scans" test/route-handlers-api.test.js test/sessions/scan-queries.test.js
+  tags: [spec, command-palette, palette-search-latency, implemented]
+- label: GET /api/search?catalog=1 returns compact session identities (id, source, prompt, model, project, tools) from the metadata index without scanSessionForQuery
+  id: cpcat
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "GET /api/search catalog=1 returns compact session identities" test/route-handlers-api.test.js
+  tags: [spec, command-palette, palette-search-latency, implemented]
+- label: CommandPalette preloads GET /api/search?catalog=1 and ranks typed session hits locally so the first .cmdk-hit does not wait on a 50-hit snippet scan or the 80ms search debounce
+  id: cploc
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "palette preloads the search catalog and ranks typed session hits locally" test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search-latency, implemented]
+- label: local catalog ranking matches tool names and firstPrompt so a query like Read yields pickable source/id/prompt hits
+  id: cpread
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "catalog ranking matches tool names and Read yields pickable hits" test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search-latency, implemented]
+- label: served CommandPalette pages embed the identity catalog in #tq-cmdk-catalog so the first typed key ranks locally without waiting on GET /api/search?catalog=1
+  id: cphtml
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "served pages embed the identity catalog|injectSearchCatalog embeds" test/browser/command-palette-search.test.js test/routes/route-handlers-pages.test.js
+  tags: [spec, command-palette, palette-search-latency, implemented]
+- label: CommandPalette seeds catalogCache from #tq-cmdk-catalog at boot with pickable source/id/prompt identity and does not fetch GET /api/search?catalog=1 when the page catalog is present
+  id: cpseed
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "seeds catalogCache from #tq-cmdk-catalog|unpackSearchCatalog restores pickable identity" test/browser/command-palette-search.test.js
+  tags: [spec, command-palette, palette-search-latency, implemented]

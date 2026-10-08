@@ -1,0 +1,1 @@
+{"timestamp": "2026-05-15T22:08:10.039Z", "type": "event_msg", "payload": {"type": "patch_apply_end", "call_id": "call-legacy-patch-failure", "stdout": "", "stderr": "[REDACTED]", "success": false, "changes": {}, "status": "failed"}}

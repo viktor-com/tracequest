@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    # Wall-clock perf budgets (Rust and JS) are real regression guards, but shared
+    # hosted runners are too noisy to gate correctness on them. Skip only the timing
+    # comparisons here; every functional assertion still runs. The macOS release
+    # workflow does NOT set this, so the budgets are enforced on the release build,
+    # and they are always enforced locally and in dedicated perf runs.
+    env:
+      TRACEQUEST_SKIP_PERF_ASSERTS: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run sidecar unit tests
+        run: cd sidecar && cargo test
+
+      - name: Build sidecar release binary
+        run: npm run build:sidecar
+
+      - name: Run facts check (--tags spec)
+        run: npx --yes @avcodes/facts check --tags "spec"
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run browser tests
+        run: npm run test:browser
+
+      - name: Verify standup/handoff release surface
+        run: TRACEQUEST_SKIP_LR_WATCH=1 npm run verify:standup-handoff
+
+      - name: Validate CLI
+        run: |
+          node bin/tracequest.js --version
+          node bin/tracequest.js --help
+
+  # Follows the README quickstart on a clean runner with no Rust toolchain:
+  # clone, npm install, npm run demo, and the UI serves the bundled samples.
+  quickstart:
+    strategy:
+      matrix:
+        runner: [ ubuntu-latest, macos-latest ]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Hide cargo so the JS-indexer fallback is exercised
+        run: |
+          for d in $(dirname "$(command -v cargo 2>/dev/null || echo /nonexistent/cargo)"); do
+            echo "PATH=$(echo "$PATH" | tr ':' '\n' | grep -vx "$d" | paste -sd: -)" >> "$GITHUB_ENV"
+          done
+
+      - name: npm install
+        run: npm install
+
+      - name: npm run demo serves the sample sessions on 127.0.0.1
+        run: |
+          npm run demo > demo.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:7777/api/sessions > sessions.json && break
+            sleep 1
+          done
+          cat demo.log
+          node -e 'const s=require("./sessions.json").sessions; if (s.length !== 2) throw new Error("expected 2 sample sessions, got " + s.length); console.log(s.map(x => x.project).join(", "))'
+          curl -sf http://127.0.0.1:7777/ | grep -qi "tracequest"

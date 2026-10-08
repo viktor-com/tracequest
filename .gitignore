@@ -1,0 +1,25 @@
+node_modules/
+*.html
+screenshots/
+.test-run-dashboard.sh
+.test-dashboard-out.txt
+
+# distribution tarballs
+*.tgz
+
+# staged sidecar binaries (built, not committed)
+sidecar/bin/
+
+# per-platform distribution tarballs
+dist/
+
+/examples/hub/state/
+
+# locally installed agent skills
+/.agents/
+/.claude/
+/skills-lock.json
+
+# state the demo writes into its fake HOME
+examples/home/*
+!examples/home/.claude/

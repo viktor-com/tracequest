@@ -1,0 +1,8 @@
+{"type": "response_item", "payload": {"type": "function_call", "name": "exec_command", "call_id": "negative-0", "arguments": "{\"cmd\": \"grep absent sample.txt\"}"}}
+{"type": "response_item", "payload": {"type": "function_call_output", "call_id": "negative-0", "output": "Process exited with code 1\nOutput:\n"}}
+{"type": "response_item", "payload": {"type": "function_call", "name": "exec_command", "call_id": "negative-1", "arguments": "{\"cmd\": \"test -e absent\"}"}}
+{"type": "response_item", "payload": {"type": "function_call_output", "call_id": "negative-1", "output": "Process exited with code 1\nOutput:\n"}}
+{"type": "response_item", "payload": {"type": "function_call", "name": "exec_command", "call_id": "negative-2", "arguments": "{\"cmd\": \"[ -e absent ]\"}"}}
+{"type": "response_item", "payload": {"type": "function_call_output", "call_id": "negative-2", "output": "Process exited with code 1\nOutput:\n"}}
+{"type": "response_item", "payload": {"type": "function_call", "name": "exec_command", "call_id": "negative-3", "arguments": "{\"cmd\": \"diff a b\"}"}}
+{"type": "response_item", "payload": {"type": "function_call_output", "call_id": "negative-3", "output": "Process exited with code 1\nOutput:\n"}}
