@@ -1,4 +1,5 @@
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
+import { APP_SHELL_JS } from "./app-chrome.js";
 import { esc } from "../server/server-html-helpers.js";
 import { COMPARE_PAGE_CSS } from "./compare-page-css.js";
 import {
@@ -16,6 +17,7 @@ import {
   compareViewUrl,
   buildSessionCardHtml,
   buildColHeadersHtml,
+  buildCompareVerdictHtml,
 } from "../chapters/compare-metrics.js";
 
 function compareDocument(bodyHtml) {
@@ -34,9 +36,12 @@ ${COMMAND_PALETTE_CSS}
 <body>
 <div class="container">
   <div class="cmp-header">
-    <div class="cmp-title">tracequest</div>
+    <a class="cmp-title" href="/sessions">tracequest</a>
     <div class="cmp-subtitle">session comparison</div>
-    <a class="cmp-back" href="/">&larr; back to sessions</a>
+    <div class="cmp-header-actions">
+      <a class="cmp-back" id="cmpSwap" href="#" title="Swap sides (s)" hidden>&#8646; swap A and B</a>
+      <a class="cmp-back" href="/sessions">&larr; back to sessions</a>
+    </div>
   </div>
 
   ${bodyHtml}
@@ -44,6 +49,21 @@ ${COMMAND_PALETTE_CSS}
 ${COMMAND_PALETTE_HTML}
 <script>
 ${COMMAND_PALETTE_CLIENT_JS}
+${APP_SHELL_JS}
+(function () {
+  var q = new URLSearchParams(location.search);
+  var swap = document.getElementById("cmpSwap");
+  if (!swap || !q.get("a") || !q.get("b")) return;
+  var a = q.get("a"); q.set("a", q.get("b")); q.set("b", a);
+  swap.href = "?" + q.toString();
+  swap.hidden = false;
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "s" || e.metaKey || e.ctrlKey || e.altKey) return;
+    var t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    location.href = swap.href;
+  });
+})();
 </script>
 </body>
 </html>`;
@@ -64,6 +84,7 @@ export function comparePage(sessionA, sessionB) {
   const viewUrlB = compareViewUrl(sessionB, b);
 
   return compareDocument(`
+  ${buildCompareVerdictHtml(a, b)}
   <div class="cmp-sessions">
     ${buildSessionCardHtml(a, sessionA, viewUrlA, "session-a")}
     ${buildSessionCardHtml(b, sessionB, viewUrlB, "session-b")}
@@ -101,7 +122,7 @@ export function compareLoadErrorPage({ side = "session", handle = "", status = 5
     <div class="cmp-error-status">HTTP ${esc(status)}</div>
     <div class="cmp-error-handle">${esc(displayHandle)}</div>
     <div class="cmp-error-message">${esc(message || "Unable to load session")}</div>
-    <a class="cmp-error-link" href="/">&larr; back to sessions</a>
+    <a class="cmp-error-link" href="/sessions">&larr; back to sessions</a>
   </div>
 `);
 }

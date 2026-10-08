@@ -1,6 +1,6 @@
 import { browserClientScript } from "./browser-client.js";
 import { LAUNCHER_MODAL_CSS, LAUNCHER_MODAL_HTML } from "./launch-page.js";
-import { appTopHtml, APP_TOP_CSS, IDENTITY_ROW_CSS } from "./app-chrome.js";
+import { appTopHtml, APP_TOP_CSS, IDENTITY_ROW_CSS, APP_SHELL_JS } from "./app-chrome.js";
 import { COMMAND_PALETTE_CSS, COMMAND_PALETTE_HTML } from "./command-palette.js";
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
 
@@ -160,6 +160,7 @@ ${APP_TOP_CSS}
 .session-primary { grid-column: 4; min-width: 0; max-width: 100%; width: 100%; overflow: hidden; align-items: flex-start; }
 .run-origin { align-self: flex-start; }
 .session-project { grid-column: 5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; justify-self: start; width: auto; }
+.session-row > .session-project { max-width: 100%; box-sizing: border-box; }
 .session-model { grid-column: 6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: none; }
 .session-time { grid-column: 7; }
 .session-stat.duration { grid-column: 8; }
@@ -468,6 +469,17 @@ ${IDENTITY_ROW_CSS}
 }
 .filter-legend span { color: var(--fg2); }
 .empty { color: var(--fg3); text-align: center; padding: 48px 0; font-size: 13px; }
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.empty-state p { margin: 0; }
+.empty-title { color: var(--fg); font-size: 15px; letter-spacing: -0.01em; }
+.empty-title code { font-family: var(--mono); font-size: 13px; color: var(--fg2); background: var(--surface2); padding: 1px 6px; border-radius: 4px; }
+.empty-hint { max-width: 460px; line-height: 1.5; }
+.empty-action {
+  margin-top: 6px; font: inherit; font-size: 13px; color: var(--bg); background: var(--fg);
+  border: 0; border-radius: 999px; padding: 6px 14px; cursor: pointer; transition: opacity 0.15s ease;
+}
+.empty-action:hover { opacity: 0.85; }
+.empty-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .fetch-error { color: var(--red); text-align: center; padding: 48px 16px; font-size: 13px; }
 #load-more { height: 1px; }
 
@@ -1063,6 +1075,7 @@ ${COMMAND_PALETTE_CSS}
 <body>
 ${appTopHtml({
   crumbHtml: '<span class="app-crumb">Runs</span>',
+  nav: 'runs',
   extraHtml: '\n    <div class="refresh-status" id="refreshStatus" aria-live="polite" data-state="idle" hidden></div>',
 })}
 <div class="container runs-home">
@@ -1167,6 +1180,7 @@ ${COMMAND_PALETTE_HTML}
 <script>
 `;
 const HTML_TAIL = `
+${APP_SHELL_JS}
 </script>
 </body>
 </html>`;

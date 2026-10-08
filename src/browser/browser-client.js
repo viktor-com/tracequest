@@ -1,4 +1,4 @@
-import { normalizeSortKey, sortSessionList, computeGrade, estimateCost, getModelRates, shortModel, fmtTokens, fmtCost, formatDuration, fmtMcpName, fmtPct } from "../filter/filter-formats.js";
+import { normalizeSortKey, sortSessionList, computeGrade, prettyProject, estimateCost, getModelRates, shortModel, fmtTokens, fmtCost, formatDuration, fmtMcpName, fmtPct } from "../filter/filter-formats.js";
 
 const NORMALIZE_SORT_KEY_SRC = normalizeSortKey.toString().replace(/^export /, "");
 const SORT_SESSION_LIST_SRC = sortSessionList.toString().replace(/^export /, "");
@@ -6,6 +6,7 @@ const FMT_MCP_NAME_SRC = fmtMcpName.toString().replace(/^export /, "");
 const GET_MODEL_RATES_SRC = getModelRates.toString();
 const ESTIMATE_COST_SRC = estimateCost.toString();
 const COMPUTE_GRADE_SRC = computeGrade.toString();
+const PRETTY_PROJECT_SRC = prettyProject.toString();
 const SHORT_MODEL_SRC = shortModel.toString().replace(/^export /, "");
 const FMT_TOKENS_SRC = fmtTokens.toString().replace(/^export /, "");
 const FORMAT_DURATION_SRC = formatDuration.toString().replace(/^export /, "");
@@ -81,6 +82,22 @@ ${INCLUDES_LOWER_SRC}
 ${GET_MODEL_RATES_SRC}
 ${ESTIMATE_COST_SRC}
 ${COMPUTE_GRADE_SRC}
+${PRETTY_PROJECT_SRC}
+
+/** Grade chip with its score and what drives it, so the letter is never a riddle. */
+function gradeBadgeHtml(s) {
+  var g = computeGrade(s);
+  if (!g.cls) return '<span class="session-grade-badge" hidden></span>';
+  var why = 'Grade ' + g.letter + ' \\u00b7 ' + g.score + '/100 \\u2014 from tool-call error rate, errors per chapter and cache hit rate';
+  return '<span class="session-grade-badge ' + g.cls + '" title="' + escH(why) + '">' + g.letter + '</span>';
+}
+
+/** Project chip: readable label, raw value in the title only when it differs. */
+function projectSpanHtml(raw, title) {
+  var label = prettyProject(raw);
+  var tip = title || (label !== raw ? raw : '');
+  return '<span class="session-project"' + (tip ? ' title="' + escH(tip) + '"' : '') + '>' + escH(label) + '</span>';
+}
 var currentSort = 'recent';
 var compareSet = new Set(); // stores session paths (stable across sort/filter)
 `;
@@ -722,6 +739,34 @@ function liveInfoForRun(r) {
 }
 
 /**
+ * Empty list: say why it is empty and what to do next. A filter that
+ * matches nothing offers to clear it; a machine with no recordings yet
+ * says where tracequest looks and how to start a run.
+ */
+function emptyStateHtml() {
+  var expr = filterInput.value.trim();
+  var filteredOut = expr || qfState.grade || qfState.model || qfState.source || qfState.errorsOnly || qfState.age;
+  if (filteredOut) {
+    return '<div class="empty empty-state">'
+      + '<p class="empty-title">No runs match' + (expr ? ' <code>' + escH(expr) + '</code>' : ' these filters') + '</p>'
+      + '<p class="empty-hint">Filters combine with AND. Try a shorter word, drop a filter, or widen the time range.</p>'
+      + '<button type="button" class="empty-action" data-empty-action="clear">Clear filters</button>'
+      + '</div>';
+  }
+  return '<div class="empty empty-state">'
+    + '<p class="empty-title">No runs recorded yet</p>'
+    + '<p class="empty-hint">tracequest reads sessions from Claude Code, Codex CLI, Cursor, Droid, OpenCode and Grok CLI on this machine. Run any of them, or start one here.</p>'
+    + '<button type="button" class="empty-action" data-empty-action="new-run">+ New run</button>'
+    + '</div>';
+}
+sessionsEl.addEventListener('click', function(e) {
+  var btn = e.target && e.target.closest ? e.target.closest('[data-empty-action]') : null;
+  if (!btn) return;
+  if (btn.getAttribute('data-empty-action') === 'clear') { clearAll(); filterInput.focus(); }
+  else { var nr = document.getElementById('newRunBtn'); if (nr) nr.click(); }
+});
+
+/**
  * The ONE live-agent row anatomy. Every agent row — launched run or
  * externally detected live session — renders through this single builder,
  * so origin can NEVER split the card: same state badge, identity chips
@@ -760,17 +805,11 @@ function liveAgentRowHtml(o) {
   }
   if (o.chips) html += o.chips;
   html += '</span>'
-    + '<span class="session-project"' + (o.projectTitle ? ' title="' + escH(o.projectTitle) + '"' : '') + '>' + escH(o.project) + '</span>'
+    + projectSpanHtml(o.project, o.projectTitle)
     + (o.model ? '<span class="session-model">' + escH(o.model) + '</span>' : '<span class="session-model" hidden></span>')
     + (o.timeMs ? '<span class="session-time">' + escH(timeAgo(o.timeMs)) + '</span>' : '<span class="session-time"></span>')
     + (o.stats ? sessionStatsHtml(o.stats) : '<div class="session-stats"></div>');
-  if (o.graded) {
-    var grade = computeGrade(o.graded);
-    if (grade.cls) html += '<span class="session-grade-badge ' + grade.cls + '">' + grade.letter + '</span>';
-    else html += '<span class="session-grade-badge" hidden></span>';
-  } else {
-    html += '<span class="session-grade-badge" hidden></span>';
-  }
+  html += o.graded ? gradeBadgeHtml(o.graded) : '<span class="session-grade-badge" hidden></span>';
   html += '<span class="session-tools"></span>'
     + '<span class="session-actions">' + (o.controls || '') + '</span>'
     + '</div></div>';
@@ -899,7 +938,7 @@ function render() {
     appLiveEl.hidden = !liveN;
     appLiveEl.textContent = '\\u25CF ' + liveN + ' running';
   }
-  if (!filtered.length && !runsHtml) sessionsEl.insertAdjacentHTML('afterbegin', '<div class="empty">No runs match</div>');
+  if (!filtered.length && !runsHtml) sessionsEl.insertAdjacentHTML('afterbegin', emptyStateHtml());
   renderDashboard();
   buildQfBar();
   renderPagination();
@@ -934,14 +973,12 @@ function renderRow(s, idx) {
     + '<span class="session-source" style="background:' + srcColor + '">' + escH(s.source) + (s.host ? '@' + escH(s.host) : '') + '</span>'
     + '<span class="session-id">' + escH(s.id) + '</span>'
     + '<span class="session-primary"><span class="session-prompt">' + (s.prompt ? escH(s.prompt) : '') + '</span></span>'
-    + '<span class="session-project">' + escH(s.project) + '</span>'
+    + projectSpanHtml(s.project)
     + (model ? '<span class="session-model">' + escH(model) + '</span>' : '<span class="session-model" hidden></span>')
     + '<span class="session-time">' + timeAgo(s.mtime) + '</span>'
     + '<span class="session-size">' + s.sizeKB + ' KB</span>';
   html += sessionStatsHtml(s);
-  var grade = computeGrade(s);
-  if (grade.cls) html += '<span class="session-grade-badge ' + grade.cls + '">' + grade.letter + '</span>';
-  else html += '<span class="session-grade-badge" hidden></span>';
+  html += gradeBadgeHtml(s);
   if (s.errors > 2) html += '<span class="session-badge error-badge">' + s.errors + ' errors</span>';
   if (s.commits > 0) html += '<span class="session-badge commit-badge">' + s.commits + ' commit' + (s.commits !== 1 ? 's' : '') + '</span>';
   if (s.totalTokens > 2000000) html += '<span class="session-badge cost-badge">' + fmtTokens(s.totalTokens) + '</span>';

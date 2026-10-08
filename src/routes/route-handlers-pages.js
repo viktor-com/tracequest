@@ -21,6 +21,7 @@ import { resolveSessionPathForRequest } from "../server/server-helpers.js";
 import { esc, withLiveReload } from "../server/server-html-helpers.js";
 import { hotModules, getInitialFilter, modVersion } from "../server/server-state.js";
 import { injectCommandPalette, injectSearchCatalog } from "../browser/command-palette.js";
+import { APP_SHELL_JS } from "../browser/app-chrome.js";
 import { resolveSessionsAndIndex } from "./route-cache.js";
 import { buildSearchCatalog, getSearchCatalog } from "./route-handlers-api.js";
 
@@ -798,6 +799,7 @@ body.embed-view #app { max-width: none; padding: 12px 16px 28px; }
 body.embed-view .header { padding: 10px 16px; margin-bottom: 10px; }
 body.embed-view .header-top,
 body.embed-view .header-title,
+body.embed-view .header-back,
 body.embed-view .header-actions,
 body.embed-view .view-run-chip,
 body.embed-view .view-continue-chip,
@@ -837,6 +839,10 @@ export async function handleView(_req, res, url, _deps = null) {
       html = at >= 0 ? html.slice(0, at) + chip + "\n" + html.slice(at) : html + chip;
     }
     html = await injectLivePalette(html);
+    // Marks the in-app viewer (vs an exported or shared file) so it shows "← Runs".
+    html = html.replace(/<html\b/, "<html data-tq-served");
+    const tail = html.lastIndexOf("</body>");
+    if (tail >= 0) html = html.slice(0, tail) + "<script>" + APP_SHELL_JS + "</script>\n" + html.slice(tail);
   }
   send(
     res,

@@ -62,7 +62,8 @@ Use the shared CSS custom properties instead of page-local colors whenever possi
 - Background hierarchy: `--bg` for the page, `--surface` for panels and rows, `--surface2` for hover states, inputs, nested controls, and active surfaces.
 - Text hierarchy: `--fg` for primary text, `--fg2` for secondary labels and summaries, `--fg3` for muted metadata.
 - Borders: use `--border` for normal panel and control boundaries. Strengthen borders with low-opacity white only on hover or active states.
-- Accent: `--accent` is the primary interactive accent. Use it for active filters, focused inputs, links, copied states, and chart emphasis.
+- Accent: `--accent` is the state accent. Use it for selection, focus, compare side A and chart emphasis. Primary buttons are solid ink (`--fg` fill, `--bg` text), per cursor.com/brand; decoration stays monochrome.
+- Shape: buttons, chips, search, nav items and the theme toggle are pills (`999px`). Panels keep `--radius` (10px) and tables 8px.
 - Status colors: `--green`, `--orange`, and `--red` carry semantic meaning. Avoid using them for decoration.
 - Typography: use `--sans` for prose and interface labels, `--mono` for identifiers, file paths, model names, counts, compact controls, and numeric metrics.
 
@@ -73,7 +74,7 @@ The product is dark-first. Print styles intentionally override tokens to a light
 Tracequest is an inspection tool for agent sessions. Prioritize scan density and fast comparison over marketing-style presentation.
 
 - Keep reading surfaces narrow enough for scanning: compare uses about `860px` and rendered session about `960px`. The `/` Runs home is a full-width inventory table so the list is the product, not a centered landing card feed.
-- Use compact headings. Current top-level titles are typically `15px` to `16px`; section titles are often `10px` to `12px`, uppercase, muted, and tracked.
+- Use compact headings. Current top-level titles are typically `15px` to `16px`; section titles are `12px` to `15px`, sentence case and muted (compare's section titles are the remaining uppercase exception).
 - Keep session rows and chapter rows vertically economical. Rows should reveal identity, prompt, source/model, timing, tools, cost, error, and file signals without requiring expansion.
 - Prefer progressive disclosure. Lists and chapters show summaries first, then expose details through expansion, hover, or drill-in links.
 - Preserve tabular numerals for metrics, durations, costs, token counts, grades, and counts.
@@ -93,7 +94,7 @@ Panels are quiet surfaces, not decorative cards.
 The UI voice is direct, terse, and operational.
 
 - Prefer short labels such as `tokens`, `cache`, `errors`, `commits`, `files`, `chapters`, `related chapters`, `changes`, and `searches`.
-- Use lowercase labels for small metadata and detail-section names unless matching an existing uppercase section-title pattern.
+- Use sentence-case labels for small metadata and detail-section names.
 - Use monospace for machine-readable values and compact controls: session IDs, paths, tools, filters, sort buttons, page controls, and numeric stat labels.
 - Do not add explanatory marketing copy inside workflow surfaces. The interface should expose data and controls.
 
@@ -103,7 +104,7 @@ Use the existing browser index, compare, and rendered session strings as the def
 
 - status text should be compact and state-first. Browser live and selection copy uses short phrases like `refreshing`, `stale data`, `load failed`, `No sessions match`, and `Select 2 sessions to compare`; rendered-session share states use the same direct pattern with `Uploading…`, `Shared!`, `Token required`, or a concrete service failure.
 - action labels should match the surface. Persistent page actions and route actions use clear verbs in title or sentence case, such as `Print`, `Markdown`, `Export`, `Share`, `Compare`, `Clear`, and `back to sessions`; inline filters and sort controls stay lowercase and compact, such as `recent`, `duration`, `tokens`, `errors`, `clear filters`, `show more`, and `collapse`.
-- empty and error wording should say what happened, then expose the repair handle. Empty states stay neutral (`No sessions match`). Compare and rendered route errors use `Could not load ...`, `HTTP ...`, the failed session handle or `(missing)`, the server message, and `back to sessions`; missing compare parameters name the exact query parameter (`a` or `b`).
+- empty and error wording should say what happened, then expose the repair handle and the next action. Empty states stay neutral (`No runs match <filter>` plus `Clear filters`; `No runs recorded yet` plus where tracequest looks and `+ New run`; Insights' `Nothing analysed in this scope yet` plus the exact command). Compare and rendered route errors use `Could not load ...`, `HTTP ...`, the failed session handle or `(missing)`, the server message, and `back to sessions`; missing compare parameters name the exact query parameter (`a` or `b`).
 - timestamps and session labels should preserve scan order. Browser rows identify source, session ID, project/model, then relative time like `5m ago`, `2h ago`, or `3d ago`; rendered session headers use the session hash or short ID plus exact `started` metadata; compare keeps side identity structural and labels values with the session IDs rather than prose.
 - command text and diagnostic snippets should keep raw evidence visible. Rendered detail sections use lowercase labels such as `commands`, `searches`, `changes`, `files`, `git`, `tokens`, and `thinking`; command/search rows keep the original command or query text, use check/error status marks, and collapse overflow with `… N more`, `show more`, or a truncated output block.
 - placeholders and hints should teach syntax without becoming help copy. Keep query examples in the filter placeholder or legend (`Filter — e.g. foo AND (tool:Read OR tool:Edit)`, `search chapters...`, `project:`, `source:`, `host:`, `tool:`, `model:`), and keep empty/error states reserved for the current result or route state.
@@ -138,7 +139,7 @@ Filters are compact work surfaces, not search landing pages.
 Dashboards summarize the current result set and should remain dense.
 
 - Use a single quiet panel with `--surface`, `--border`, a `10px` radius, and compact padding. The browser dashboard uses `16px 20px`; avoid larger card spacing.
-- Titles are operational labels: uppercase, muted, about `12px`, and paired with a mono scope label when the metric set is filtered.
+- Titles are operational labels: sentence case, muted, about `12px`, and paired with a mono scope label when the metric set is filtered.
 - Metric groups use responsive grids with small minimum tracks rather than fixed columns. Preserve tabular numerals, ellipsis on long values, and short uppercase labels.
 - Growth, status, and grade signals use semantic colors only: green for improvement or healthy state, red for decline or errors, orange for cost/waste/warning.
 - Tool summaries are secondary. Put them below the main stats behind a top border, as wrapping mono chips with counts at reduced opacity.
@@ -153,7 +154,7 @@ Session rows carry most of the browser experience. Keep them stable and scan-fir
 - Prompts are one-line summaries in list contexts. Use `overflow: hidden`, ellipsis, and `white-space: nowrap`; reveal longer content in detail views, not list rows.
 - Stats sit below the prompt as small mono inline groups with tabular numerals. Use existing stat semantics for errors, tokens, commits, files, duration, and cost.
 - Use a left border for row-level severity or emphasis. Error wins over commit or expensive states when multiple row statuses are present.
-- Badges should be short and machine-like. Source badges are uppercase, grade badges are bold mono, and count badges stay visually smaller than identifiers.
+- Badges should be short and machine-like. Source badges are sentence-case tinted pills, grade badges are bold mono with their score and drivers in the title, and count badges stay visually smaller than identifiers.
 - Compare checkboxes and selection controls sit outside or beside the row without changing row height or prompt alignment.
 
 ### Chapter And Detail Views
@@ -200,7 +201,7 @@ The compare page is a diagnostic worksheet, not a dashboard of independent cards
 - Preserve side identity through placement and a thin top border: session A uses `--accent`, session B uses `--orange`. Do not fill the whole panel with side color or add large A/B badges.
 - Session cards should remain parallel in information order: side label, session hash or ID, source badge, short model, prompt excerpt, then `view full session`. If one side gains a field, the other side should reserve the same structural position.
 - Keep prompts one line in the paired cards. Long prompt text belongs in the full session view; the compare page needs enough context to distinguish sessions without turning the cards into transcripts.
-- Source badges may use source-specific colors, but they stay small, uppercase, and adjacent to the session ID. They should not compete with the A/B border colors.
+- Source badges may use source-specific colors, but they stay small, sentence case, tinted rather than solid, and adjacent to the session ID. They should not compete with the A/B border colors.
 
 ### Comparative Metric Tables And Deltas
 
@@ -350,7 +351,7 @@ Status color is meaningful and should stay consistent.
 - Orange means warning, correction, moderate efficiency, cost, or second-side compare emphasis.
 - Red means error, failed, struggling, high-risk, or wasteful.
 - Purple/accent means selected, focused, copied/permalink, primary session compare side, or Tracequest brand accent.
-- Source badges can use source-specific colors, but badges should remain compact, uppercase, and high-contrast.
+- Source badges can use source-specific colors as a tint, but badges should remain compact and readable in both themes.
 
 Do not introduce unrelated semantic colors unless the UI needs a new status category that cannot be expressed by these meanings.
 

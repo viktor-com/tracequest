@@ -170,12 +170,14 @@ function usageWidgetHtml(harness, host, snapshot) {
       var reset = relativeReset(w.resetsAt, new Date());
       var meters = "";
       if (amounts) {
+        var fill = Math.max(0, Math.min(100, Number(amounts.used) || 0));
         meters =
+          '<span class="usage-bar" aria-hidden="true"><i style="width:' + fill + '%"></i></span>' +
           '<span class="usage-meter"><span class="usage-meter-val">' + amounts.used + '%</span><span class="usage-meter-label">used</span></span>' +
-          '<span class="usage-meter"><span class="usage-meter-val">' + amounts.left + '%</span><span class="usage-meter-label">left</span></span>';
+          '<span class="usage-meter usage-meter-left"><span class="usage-meter-val">' + amounts.left + '%</span><span class="usage-meter-label">left</span></span>';
       }
       body +=
-        '<div class="usage-window' + (limiting ? " is-limiting" : "") + '">' +
+        '<div class="usage-window' + (limiting ? " is-limiting" : "") + (amounts && amounts.used >= 80 ? " is-high" : "") + '">' +
         '<span class="usage-window-name">' + esc(usageWindowLabel(w.id)) + "</span>" +
         meters +
         (reset ? '<span class="usage-window-reset">' + esc(reset) + "</span>" : "") +
@@ -206,7 +208,7 @@ function paintUsageLimits(data) {
       var unauth = h.status === "unauthenticated";
       chips.push(
         '<span class="app-limit-chip' + (unauth ? " is-unauth" : "") + '"' +
-          (unauth ? "" : ' style="background:' + color + '"') +
+          ' style="--chip-hue:' + color + '"' +
           ' title="' +
           String(title).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;") +
           '">' +
@@ -273,13 +275,77 @@ export const USAGE_LIMITS_CLIENT_SRC =
  * "sessions"), the origin-agnostic live counter (#appLive, client-filled),
  * optional extra elements, and the "+ New run" launcher button.
  */
-export function appTopHtml({ crumbHtml, extraHtml = "" } = {}) {
+export const APP_NAV_CSS = `
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center; align-self: center;
+  width: 28px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: 999px;
+  background: transparent; color: var(--fg3); cursor: pointer; transition: color 0.15s ease, border-color 0.15s ease;
+}
+.theme-toggle svg { width: 14px; height: 14px; }
+/* keep the toggle beside ⌘K, after the search field the palette mounts */
+.app-top > .theme-toggle, .app-top > .cmdk-trigger, .app-top > .new-run-btn { order: 1; }
+.theme-toggle:hover { color: var(--fg); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.app-nav { display: inline-flex; align-items: center; gap: 2px; align-self: center; margin-left: 8px; }
+.app-nav-item {
+  font-size: 13px; color: var(--fg3); text-decoration: none;
+  padding: 4px 10px; border-radius: 999px; transition: color 0.15s ease, background 0.15s ease;
+}
+.app-nav-item:hover { color: var(--fg); background: var(--surface2); }
+.app-nav-item[aria-current="page"] { color: var(--fg); background: var(--surface2); }
+.app-nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (max-width: 600px) { .app-nav-item { padding: 4px 7px; } }
+`;
+
+export function appNavHtml(current) {
+  const item = (key, href, label, kbd) =>
+    `<a class="app-nav-item" href="${href}" data-nav="${key}" title="${label} (g then ${kbd})"` +
+    (current === key ? ' aria-current="page"' : "") + `>${label}</a>`;
+  return `<nav class="app-nav" aria-label="Sections">${item("chat", "/", "Chat", "c")}${item("runs", "/sessions", "Runs", "r")}${item("insights", "/insights", "Insights", "i")}</nav>`;
+}
+
+/**
+ * App shell behaviour shared by every served page: the remembered theme
+ * (system by default, then light or dark from the top-bar toggle). Section
+ * jumps stay with the CommandPalette's g-chords (g c, g r, g i).
+ */
+export const APP_SHELL_JS = `(function () {
+  var root = document.documentElement;
+  function stored() { try { return localStorage.getItem("tq-theme"); } catch (_) { return null; } }
+  function effective() {
+    var t = stored();
+    if (t === "light" || t === "dark") return t;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+  function apply() {
+    var t = stored();
+    if (t === "light" || t === "dark") root.setAttribute("data-theme", t); else root.removeAttribute("data-theme");
+    var btn = document.getElementById("themeToggle");
+    if (btn) {
+      var next = effective() === "light" ? "dark" : "light";
+      btn.setAttribute("aria-label", "Switch to " + next + " theme");
+      btn.title = "Switch to " + next + " theme";
+    }
+  }
+  apply();
+  document.addEventListener("click", function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest("#themeToggle") : null;
+    if (!btn) return;
+    var next = effective() === "light" ? "dark" : "light";
+    try { localStorage.setItem("tq-theme", next); } catch (_) {}
+    apply();
+  });
+})();`;
+
+export function appTopHtml({ crumbHtml, extraHtml = "", nav = "" } = {}) {
   return `<header class="app-top">
     <a class="app-wordmark" href="/">tracequest</a>
     <span class="app-crumb-sep">/</span>
     ${crumbHtml}
+    ${appNavHtml(nav)}
     <span class="app-live" id="appLive" hidden></span>
     <span class="app-limits" id="appLimits" hidden></span>${extraHtml}
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch theme" title="Switch theme"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z" fill="currentColor"/></svg></button>
     <button class="cmdk-trigger" id="cmdkTrigger" type="button" aria-label="Open command menu" title="Command menu">
       <kbd class="cmdk-trigger-kbd">⌘K</kbd>
     </button>
@@ -303,6 +369,12 @@ export const APP_TOP_CSS = `
 .app-wordmark:hover { color: var(--fg2); }
 .app-crumb-sep { font-size: 12px; color: var(--fg3); }
 .app-crumb { font-size: 13px; color: var(--fg3); }
+/* Section nav replaces the static crumb visually; the crumb stays for screen readers. */
+.app-top:has(.app-nav) > .app-crumb-sep,
+.app-top:has(.app-nav) > .app-crumb {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+${APP_NAV_CSS}
 .app-live {
   font-size: 11px;
   font-family: var(--mono);
@@ -323,103 +395,95 @@ export const APP_TOP_CSS = `
 .app-limits[hidden] { display: none; }
 .app-limit-chip {
   flex: none;
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
   font-family: var(--mono);
   line-height: 1.2;
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 999px;
-  color: #111;
-  white-space: nowrap;
-}
-.app-limit-chip.is-unauth {
   color: var(--fg2);
   box-shadow: inset 0 0 0 1px var(--border);
+  white-space: nowrap;
 }
+.app-limit-chip::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--chip-hue, var(--fg3));
+}
+.app-limit-chip.is-unauth { color: var(--fg3); }
+.app-limit-chip.is-unauth::before { background: transparent; box-shadow: inset 0 0 0 1px var(--fg3); }
 @media (max-width: 720px) {
   .app-limits { max-width: 42vw; }
 }
+/* Plan windows: one quiet scrollable line, not a wall of uppercase. */
 .usage-row {
   display: flex;
   flex: none;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 10px 18px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0;
   width: 100%;
   box-sizing: border-box;
-  padding: 6px 16px 8px;
+  padding: 0 12px;
+  min-height: 34px;
+  overflow-x: auto;
+  scrollbar-width: none;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   font-family: var(--mono);
+  font-size: 11px;
 }
+.usage-row::-webkit-scrollbar { display: none; }
 .usage-row[hidden] { display: none; }
 .usage-widget {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-  max-width: 100%;
-  padding-left: 8px;
-  border-left: 2px solid var(--usage-accent, var(--border));
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 8px;
+  border-left: 0;
+  white-space: nowrap;
 }
-.usage-widget.is-unauth { border-left-color: var(--border); }
-.usage-widget-head {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
+.usage-widget + .usage-widget { box-shadow: inset 1px 0 0 var(--border); padding-left: 14px; }
+.usage-widget.is-unauth { opacity: 0.7; }
+.usage-widget-head { display: inline-flex; align-items: center; gap: 6px; }
+.usage-widget-id { color: var(--fg); display: inline-flex; align-items: center; gap: 6px; }
+.usage-widget-id::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--usage-accent, var(--fg3));
 }
-.usage-widget-id {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: var(--fg);
-}
+.usage-widget.is-unauth .usage-widget-id::before { background: transparent; box-shadow: inset 0 0 0 1px var(--fg3); }
 .usage-widget-plan {
-  font-size: 10px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
   color: var(--fg3);
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.usage-window {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
+.usage-window { display: inline-flex; align-items: center; gap: 6px; }
+.usage-window-name, .usage-meter-label, .usage-window-reset { color: var(--fg3); }
+.usage-window.is-limiting .usage-window-name { color: var(--fg2); }
+.usage-meter { display: inline-flex; align-items: baseline; gap: 3px; }
+.usage-meter-left {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
 }
-.usage-window.is-limiting .usage-window-name { color: var(--fg); }
-.usage-window-name,
-.usage-meter-label,
-.usage-window-reset {
-  font-size: 10px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  color: var(--fg3);
+.usage-meter-val { color: var(--fg); font-variant-numeric: tabular-nums; }
+.usage-bar {
+  position: relative; display: inline-block; width: 36px; height: 4px;
+  border-radius: 999px; background: var(--surface2); overflow: hidden;
 }
-.usage-meter {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
+.usage-bar > i {
+  position: absolute; inset: 0 auto 0 0; border-radius: inherit;
+  background: var(--fg2); transition: width 0.3s ease;
 }
-.usage-meter-val {
-  font-size: 14px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--fg);
-  line-height: 1.2;
-}
-.usage-widget-hint {
-  margin: 0;
-  font-size: 11px;
-  color: var(--fg2);
-  font-family: var(--mono);
-}
+.usage-window.is-high .usage-bar > i { background: var(--orange); }
+.usage-window.is-high .usage-meter-val { color: var(--orange); }
+.usage-window-reset::before { content: '\u00b7 '; }
+.usage-widget-hint { margin: 0; color: var(--fg2); font-size: 11px; }
 @media (max-width: 600px) {
-  .usage-row { gap: 8px 12px; padding: 6px 12px 8px; }
-  .usage-meter-val { font-size: 13px; }
+  .usage-row { padding: 0 8px; }
 }
 `;
 
@@ -444,7 +508,7 @@ export const IDENTITY_ROW_CSS = `
   font-size: 11px; font-family: var(--mono); font-weight: 500;
   padding: 1px 8px; border-radius: 999px; color: var(--fg);
   /* the inline source hue becomes a quiet tint instead of a solid fill */
-  box-shadow: inset 0 0 0 999px rgba(17, 17, 19, 0.78);
+  box-shadow: inset 0 0 0 999px var(--chip-tint, rgba(17, 17, 19, 0.78));
 }
 @keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .run-state-badge {
@@ -480,7 +544,7 @@ export const IDENTITY_ROW_CSS = `
   color: var(--fg3);
   font-variant-numeric: tabular-nums;
 }
-.session-stat { display: inline-flex; align-items: center; gap: 3px; }
+.session-stat { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .session-stat-icon { font-size: 10px; }
 .session-stat.errors { color: var(--red); }
 .session-stat.tokens { color: var(--fg3); }

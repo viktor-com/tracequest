@@ -10,6 +10,8 @@ Tracequest has a small semantic token set in `src/browser/shared-css-tokens.js`.
 - Standalone browser and compare pages start from `STANDALONE_BASE_CSS`, with `--accent-dim` as the only standalone extra token today.
 - Rendered session pages start from `SESSION_VIEWER_BASE_CSS`, with `--green-dim`, `--red-dim`, `--orange-dim`, and `--radius` because session detail pages reuse dim status surfaces and a common panel radius heavily.
 - Print overrides live in `CSS_PRINT_ROOT_VARS`. New printable UI should read from shared tokens so print can switch to the light theme without duplicating selectors.
+- Screen light theme lives in `CSS_THEME_LIGHT` (shared-css-tokens.js). It re-points the same tokens at paper and ink. It applies when the system prefers light, unless the user picked a theme with the app-bar toggle (`html[data-theme]`, remembered as `tq-theme` in localStorage). Dark stays the default `:root`.
+- Never hard-code a dark-only fill behind text. Source and limit chips tint with `var(--chip-tint, rgba(17, 17, 19, 0.78))` so light mode can lighten the overlay. Low-opacity white hovers are acceptable only for decoration; anything that carries meaning must use a token.
 - Local CSS values are acceptable for component geometry, one-off alpha intensity, category maps, chart scales, or source/tool colors. Do not hard-code a hex value when it is visually and semantically the same as an existing token.
 
 ## Semantic Color Roles
@@ -30,7 +32,7 @@ The built UI uses a compact operational scale.
 
 - Body text is `14px` with `line-height: 1.6` in the shared base. Keep this as the default for readable prompts and page content.
 - Page titles are intentionally small: browser and compare use `16px`; rendered session headers use about `15px`.
-- Section titles, table labels, chips, badges, controls, and metadata generally sit between `10px` and `12px`, often uppercase and mono when they are structural labels.
+- Section titles, table labels, chips, badges, controls, and metadata generally sit between `10px` and `12px`. Labels are sentence case (cursor.com/brand). Mono is for identifiers, numbers and commands, not for decoration. The compare section titles remain the one uppercase exception.
 - Dense row prompts and summaries usually use `12px` to `14px`. Lists should not introduce hero-scale type.
 - Large numerals are reserved for summary stats, such as rendered `.stat-value` at `22px` and browser dashboard values at `15px`.
 - Use `--mono` for identifiers, paths, model names, source/tool labels, filter chips, sort/pagination controls, table values, counts, costs, tokens, durations, and tabular diagnostics.

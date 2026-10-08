@@ -50,6 +50,7 @@ ${CSS_PRINT_ROOT_MARKER}
   .error-dot,
   .minimap,
   .minimap-tooltip { display: none !important; }
+  .header-back { display: none !important; }
 
   /* Remove hover/transition effects */
   .chapter { transition: none; }

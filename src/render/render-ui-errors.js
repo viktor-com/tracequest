@@ -81,6 +81,67 @@ export const UI_ERRORS_JS = `
       body.appendChild(streakWrap);
     }
 
+    // The failures themselves, so "why did this go wrong" is answered here
+    // instead of by scrolling every chapter. Identical failures (same tool,
+    // same first output line) collapse into one row with a count; each row
+    // jumps to the first chapter where it happened.
+    const groups = [];
+    const byKey = new Map();
+    const firstLineOf = (text) => (String(text || '').split('\\n').find(function(l) { return l.trim(); }) || '').trim().slice(0, 200);
+    for (let i = 0; i < chapters.length; i++) {
+      const ch = chapters[i];
+      const add = (name, input, output) => {
+        const line = firstLineOf(output);
+        const key = name + '\\u0000' + (line || String(input || ''));
+        let g = byKey.get(key);
+        if (!g) {
+          g = { chapter: i, name: name, input: String(input || ''), line: line, count: 0, inputs: new Set() };
+          byKey.set(key, g);
+          groups.push(g);
+        }
+        g.count++;
+        if (input) g.inputs.add(String(input));
+      };
+      for (const c of ch.commands || []) if (!c.ok) add('Bash', c.cmd, c.output);
+      for (const m of ch.mcpOps || []) if (!m.ok) add(m.rawName || m.tool, '', m.output);
+      for (const w of ch.webOps || []) if (!w.ok) add(w.type === 'search' ? 'WebSearch' : 'WebFetch', w.url || w.query, w.output);
+      for (const q of ch.searches || []) if (!q.ok) add('Grep', q.query, q.output);
+      for (const ag of ch.agents || []) if (ag.isError) add(ag.toolName || 'Agent', ag.description, ag.result);
+      for (const msg of ch.standaloneErrors || []) add('error', '', msg);
+    }
+    groups.sort((x, y) => y.count - x.count || x.chapter - y.chapter);
+    const shown = groups.slice(0, 6);
+    if (shown.length > 0) {
+      const list = h('ol', { className: 'error-list' });
+      for (const g of shown) {
+        const inputs = Array.from(g.inputs);
+        const what = g.line || (inputs[0] || '').slice(0, 160);
+        const where = inputs.length > 1
+          ? inputs.length + ' different calls, e.g. ' + inputs[0].slice(0, 80)
+          : (g.line && inputs[0] ? inputs[0].slice(0, 160) : '');
+        const row = h('button', {
+          type: 'button',
+          className: 'error-list-item',
+          title: 'Jump to chapter ' + (g.chapter + 1) + ', where this first happened',
+          onClick: (ev) => { ev.stopPropagation(); jumpToChapter(g.chapter); }
+        },
+          h('span', { className: 'error-list-count' }, g.count > 1 ? g.count + '\\u00d7' : ''),
+          h('span', { className: 'error-list-tool' }, fmtMcpName(g.name)),
+          h('span', { className: 'error-list-text' },
+            h('code', null, what),
+            where ? h('span', { className: 'error-list-out' }, where) : null
+          ),
+          h('span', { className: 'error-list-ch' }, 'ch ' + (g.chapter + 1))
+        );
+        list.appendChild(h('li', null, row));
+      }
+      body.appendChild(list);
+      const rest = groups.length - shown.length;
+      if (rest > 0) {
+        body.appendChild(h('div', { className: 'error-list-more' }, rest + ' other kind' + (rest === 1 ? '' : 's') + ' of failure in the chapters below'));
+      }
+    }
+
     wrap.appendChild(body);
 
     const timeline = h('div', { className: 'error-timeline' });

@@ -117,12 +117,12 @@ describe("compare-page-css — tool and outcome visuals", () => {
     assert.match(COMPARE_PAGE_CSS, /border-radius: 5px/);
   });
 
-  test("source badge is compact uppercase mono chip", () => {
-    assert.match(COMPARE_PAGE_CSS, /\.cmp-source-badge\s*\{/);
-    assert.match(COMPARE_PAGE_CSS, /text-transform: uppercase/);
-    assert.match(COMPARE_PAGE_CSS, /font-weight: 600/);
-    assert.match(COMPARE_PAGE_CSS, /color: #111/);
-    assert.match(COMPARE_PAGE_CSS, /border-radius: 4px/);
+  test("source badge is the shared tinted mono pill (same as the Runs list)", () => {
+    const rule = COMPARE_PAGE_CSS.match(/\.cmp-source-badge\s*\{([^}]*)\}/)?.[1] || "";
+    assert.match(rule, /font-family: var\(--mono\)/);
+    assert.match(rule, /border-radius: 999px/);
+    assert.match(rule, /box-shadow: inset 0 0 0 999px/);
+    assert.doesNotMatch(rule, /text-transform: uppercase/);
   });
 });
 

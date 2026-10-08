@@ -227,7 +227,7 @@ body.cmdk-open {
   padding: 1px 7px;
   border-radius: 999px;
   color: var(--fg);
-  box-shadow: inset 0 0 0 999px rgba(17, 17, 19, 0.78);
+  box-shadow: inset 0 0 0 999px var(--chip-tint, rgba(17, 17, 19, 0.78));
   line-height: 1.3;
 }
 .cmdk-sid {
@@ -538,6 +538,7 @@ export const COMMAND_PALETTE_HTML = `<div class="tq-search" id="workspaceSearchW
   <button type="button" id="tqHotkeyGoR" tabindex="-1" data-hotkey="g r">Runs</button>
   <button type="button" id="tqHotkeyGoD" tabindex="-1" data-hotkey="g d">Compare</button>
   <button type="button" id="tqHotkeyGoV" tabindex="-1" data-hotkey="g v">View</button>
+  <button type="button" id="tqHotkeyGoI" tabindex="-1" data-hotkey="g i">Insights</button>
   <button type="button" id="tqHotkeyGoN" tabindex="-1" data-hotkey="g n">New run</button>
   <button type="button" id="tqHotkeyHelp" tabindex="-1" data-hotkey="?,Shift+?,Shift+/,Mod+/,Control+/,Meta+/">Keyboard shortcuts</button>
 </nav>
@@ -1039,6 +1040,19 @@ export function pageNavItems(ctx) {
       keywords: ["home", "sessions", "list", "inventory", "dashboard", "go", "goto", "page"],
     },
     {
+      id: "goto-insights",
+      kind: "nav",
+      dest: "insights",
+      group: "Go to",
+      groupPriority: 50,
+      title: "Go to Insights",
+      subtitle: "Where agents waste time and fail",
+      icon: "insights",
+      href: "/insights",
+      shortcut: ["G", "then", "I"],
+      keywords: ["insights", "trends", "errors", "stalls", "cost", "machines", "go", "goto", "page"],
+    },
+    {
       id: "goto-compare",
       kind: "nav",
       dest: "compare",
@@ -1383,6 +1397,7 @@ export const COMMAND_PALETTE_CLIENT_JS = `
     runs: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M3 8h10M3 11.5h7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
     plus: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
     compare: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3.5" width="4.5" height="9" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="3.5" width="4.5" height="9" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>',
+    insights: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13V8.5M6.5 13V4M10 13V7M13.5 13V2.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
     chat: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 4.2h9v6.3H7.2L4.2 13V10.5H3.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>',
     view: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 3.5h8v9H4z" stroke="currentColor" stroke-width="1.3"/><path d="M6 6.5h4M6 9h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
     analytics: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 12V8M8 12V4M12.5 12V6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
@@ -2279,6 +2294,7 @@ export const COMMAND_PALETTE_CLIENT_JS = `
     if (k === "r") { location.href = "/sessions"; return true; }
     if (k === "d") { location.href = compareHref(ctx); return true; }
     if (k === "v") { location.href = viewHref(ctx); return true; }
+    if (k === "i") { location.href = "/insights"; return true; }
     if (k === "n") { openLauncherFromPalette(); return true; }
     return false;
   }
@@ -2290,6 +2306,7 @@ export const COMMAND_PALETTE_CLIENT_JS = `
     installPageHotkey("tqHotkeyGoR", "g r", function() { consumeGoChord("r"); });
     installPageHotkey("tqHotkeyGoD", "g d", function() { consumeGoChord("d"); });
     installPageHotkey("tqHotkeyGoV", "g v", function() { consumeGoChord("v"); });
+    installPageHotkey("tqHotkeyGoI", "g i", function() { consumeGoChord("i"); });
     installPageHotkey("tqHotkeyGoN", "g n", function() { consumeGoChord("n"); });
   }
   bindGoChordHotkeys();

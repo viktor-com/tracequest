@@ -8,6 +8,15 @@ export const SESSION_VIEWER_RULES = `
   padding: 24px 28px;
   margin-bottom: 12px;
 }
+.header-back {
+  display: inline-block;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--fg3);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.header-back:hover { color: var(--fg); }
 .header-title {
   font-size: 18px;
   font-weight: 400;
@@ -1225,6 +1234,43 @@ html { scroll-behavior: smooth; }
   flex-wrap: wrap;
   align-items: flex-start;
 }
+.error-list {
+  flex-basis: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.error-list-item {
+  display: grid;
+  grid-template-columns: 36px 64px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg2);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.error-list-item:hover, .error-list-item:focus-visible { background: var(--surface2); outline: none; }
+.error-list-ch { font-family: var(--mono); color: var(--fg3); }
+.error-list-count { font-family: var(--mono); color: var(--red); text-align: right; }
+.error-list-tool { font-family: var(--mono); color: var(--red); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.error-list-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.error-list-text code {
+  font-family: var(--mono); font-size: 12px; color: var(--fg);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.error-list-out { color: var(--fg3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.error-list-more { flex-basis: 100%; font-size: 11px; color: var(--fg3); padding-left: 8px; }
 .error-tools-list {
   display: flex;
   gap: 6px;

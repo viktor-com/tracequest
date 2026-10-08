@@ -44,6 +44,35 @@ export const CSS_RESET = `
 * { margin: 0; padding: 0; box-sizing: border-box; }
 `;
 
+
+/**
+ * Light theme: the same tokens re-pointed at paper and ink. Follows the
+ * system unless the user picked a theme (html[data-theme], set by the app
+ * shell and remembered in localStorage). Dark stays the default.
+ */
+const CSS_LIGHT_VARS = `
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --surface2: #f0f0f2;
+    --fg: #18181b;
+    --fg2: #52525b;
+    --fg3: #71717a;
+    --border: rgba(0, 0, 0, 0.09);
+    --accent: #6d5cce;
+    --red: #c43838;
+    --green: #1a8a42;
+    --orange: #b06f12;
+    --chip-tint: rgba(255, 255, 255, 0.80);
+    color-scheme: light;
+`;
+
+export const CSS_THEME_LIGHT = `
+html[data-theme="light"] {${CSS_LIGHT_VARS}}
+@media screen and (prefers-color-scheme: light) {
+  html:not([data-theme="dark"]) {${CSS_LIGHT_VARS}}
+}
+`;
+
 export const CSS_BODY_STANDALONE = `
 body {
   background: var(--bg);
@@ -56,7 +85,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
-`;
+${CSS_THEME_LIGHT}`;
 
 export const CSS_BODY_SESSION = `
 body {
@@ -71,7 +100,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
-`;
+${CSS_THEME_LIGHT}`;
 
 /** Print/PDF :root overrides (inside @media print). */
 export const CSS_PRINT_ROOT_VARS = `

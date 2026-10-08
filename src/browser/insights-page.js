@@ -7,6 +7,7 @@ import { STANDALONE_BASE_CSS } from "../render/render-css.js";
 import { esc } from "../server/server-html-helpers.js";
 import { fmtCost, fmtTokens, formatDuration } from "../filter/filter-formats.js";
 import { INSIGHTS_RANGES } from "../insights/load.js";
+import { appNavHtml, APP_NAV_CSS } from "./app-chrome.js";
 
 const INSIGHTS_PAGE_CSS = `
 .container { max-width: 1120px; margin: 0 auto; padding: 28px 24px 80px; }
@@ -14,7 +15,21 @@ const INSIGHTS_PAGE_CSS = `
 .ins-title { font-size: 24px; font-weight: 400; letter-spacing: -0.02em; }
 .ins-title a { color: var(--fg2); text-decoration: none; }
 .ins-title a:hover { color: var(--fg); }
-.ins-subtitle { color: var(--fg2); font-size: 13px; }
+.ins-header .app-nav { margin-left: auto; }
+.ins-subtitle { color: var(--fg2); font-size: 15px; margin-bottom: 6px; }
+.ins-body[hidden] { display: none; }
+.ins-empty-state {
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+  padding: 22px 24px; margin-bottom: 30px; color: var(--fg2); max-width: 760px;
+}
+.ins-empty-state p { margin: 6px 0; line-height: 1.5; }
+.ins-empty-title { color: var(--fg); font-size: 18px; letter-spacing: -0.01em; margin-bottom: 4px; }
+.ins-cmd {
+  margin: 12px 0; padding: 10px 14px; border-radius: 8px; background: var(--bg);
+  border: 1px solid var(--border); font-family: var(--mono); font-size: 13px; color: var(--fg); user-select: all;
+}
+.ins-empty-sub { font-size: 12.5px; color: var(--fg3); }
+.ins-empty-sub a { color: var(--fg2); }
 .ins-lede { color: var(--fg2); max-width: 760px; margin-bottom: 18px; }
 .ins-scope { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 22px; }
 .ins-scope-input {
@@ -299,14 +314,16 @@ export function insightsPage(data) {
 <style>
 ${STANDALONE_BASE_CSS}
 ${INSIGHTS_PAGE_CSS}
+${APP_NAV_CSS}
 </style>
 </head>
 <body>
 <div class="container" data-insights-state="${t.analyzed > 0 ? "ready" : "empty"}">
   <div class="ins-header">
     <div class="ins-title"><a href="/">tracequest</a> / insights</div>
-    <div class="ins-subtitle">where agents waste time and fail</div>
+    ${appNavHtml("insights")}
   </div>
+  <div class="ins-subtitle">Where agents waste time and fail</div>
   <p class="ins-lede">Every figure covers the sessions in scope across all collected machines. Click a row to see the sessions behind it.</p>
 
   <form class="ins-scope" method="get" action="/insights">
@@ -317,8 +334,16 @@ ${INSIGHTS_PAGE_CSS}
     ${rangeChips}
     ${q.host ? `<a class="ins-chip" href="${esc(scopeHref(q, { host: "" }))}" aria-current="true" title="Show every machine">machine: ${esc(q.host)} ×</a>` : ""}
   </form>
-  ${notes.map((n) => `<div class="ins-note" role="status">${esc(n)}</div>`).join("\n")}
+  ${t.analyzed === 0 ? "" : notes.map((n) => `<div class="ins-note" role="status">${esc(n)}</div>`).join("\n")}
 
+  ${t.analyzed === 0 ? `<div class="ins-empty-state">
+    <div class="ins-empty-title">Nothing analysed in this scope yet</div>
+    ${notes.map((n) => `<p class="ins-empty-note" role="status">${esc(n.replace(/\s*Run: tracequest insights --refresh\.?$/, ""))}</p>`).join("\n")}
+    <p>Insights reads a cache that the CLI fills, so this page never slows down your machine. Build it once, then reload:</p>
+    <pre class="ins-cmd"><code>tracequest insights --refresh</code></pre>
+    <p class="ins-empty-sub">If you narrowed the scope, try <a href="/insights">all sessions</a> or a longer time range first.</p>
+  </div>` : ""}
+  <div class="ins-body"${t.analyzed === 0 ? " hidden" : ""}>
   <div class="ins-tiles" data-insight="headline">
     ${tile(num(t.analyzed), "sessions analysed", `${num(t.hosts)} machine${t.hosts === 1 ? "" : "s"} · ${hours(t.activeMs)} of agent time`)}
     ${tile(pct(t.errorRate), "of tool calls fail", `${num(t.errors)} of ${num(t.calls)} calls`)}
@@ -327,12 +352,14 @@ ${INSIGHTS_PAGE_CSS}
     ${tile(fmtCost(t.cost, { zeroLabel: "$0", prefix: "$", decimals: 0 }), "estimated model spend", `${fmtTokens(t.tokens, { zeroLabel: "0" })} tokens`)}
   </div>
 
+  </div>
   <section class="ins-section">
     <div class="ins-section-title">Machines</div>
     <div class="ins-section-sub">Which machines feed this view and how fresh each one is. A machine is stale after a day without a good pull.</div>
     ${hubTable(data.hub, now)}
   </section>
 
+  <div class="ins-body"${t.analyzed === 0 ? " hidden" : ""}>
   <section class="ins-section">
     <div class="ins-section-title">Why tool calls fail</div>
     <div class="ins-section-sub">Failed tool calls grouped by cause, most common first.</div>
@@ -398,6 +425,7 @@ ${INSIGHTS_PAGE_CSS}
     ${trapCards(data.traps, now)}
   </section>
 
+  </div>
   <div class="ins-foot">Generated ${esc(data.generatedAt)}. Prompts, error text and commands shown here are redacted for secrets.${t.suspect ? ` ${num(t.suspect)} results flagged as errors by the session parser look like ordinary output and are not counted.` : ""}</div>
 </div>
 </body>

@@ -2,26 +2,49 @@
 
 Source of truth: [docs/ui-style-design-guidelines.md](ui-style-design-guidelines.md) is the index for UI guidance. Use this companion guide when changing page hierarchy, route-level navigation, session identity, compare context, or how dense trace evidence is grouped. For visual styling, route error and refresh state details, and selector vocabulary, use the companion links in the main index.
 
+## Who opens tracequest and why
+
+People open tracequest to do one of five jobs. Every surface should make its job's first step obvious.
+
+| Job | Starts at | Answer is |
+| --- | --- | --- |
+| Find why a run went wrong | Runs (`/sessions`), filter `errors:>0` or sort by grade | `/view` errors panel: grouped failures with counts, each jumping to its chapter |
+| Compare two runs of the same task | Runs, tick two rows, Compare | `/compare`: one-sentence verdict, then metrics with B-vs-A deltas |
+| Watch a live run | Chat (`/`) | the chat view with the rail of running and recent sessions |
+| Find a past run | Runs filter or the top-bar search (`/`, ⌘K) | the matching rows, or an empty state that says how to widen the search |
+| See patterns across runs and machines | Insights (`/insights`) | tiles and grouped failure causes, or an empty state with the command that fills the cache |
+
 ## Page Hierarchy
 
-Tracequest has three primary UI surfaces:
+Tracequest has three sections, named the same everywhere: **Chat**, **Runs** and **Insights**. Every served app page carries the section nav (`appNavHtml`) in its top bar with `aria-current="page"` on the current section, and the CommandPalette's g-chords jump between them (`g c` Chat, `g r` Runs, `g i` Insights) from anywhere except a text field or an open overlay.
 
-- `/` is the Runs home: a list-first inventory of sessions/runs. Its vertical order is app bar, Runs heading, composed chrome (filters, dashboard, quick filters, sort), the inventory table, and pagination. The fixed compare bar is a contextual action surface, not another page section. `/` is not a landing page and not the full-page session viewer.
-- `/compare?a=...&b=...` is a server-rendered diagnostic worksheet. It should render only after both sessions resolve, then read as paired identity cards, metrics, tool usage, and chapter quality. Load failures or missing parameters use the compact compare error shell instead of a partial worksheet.
-- `/view?path=...` or `/view?id=...` is the self-contained rendered session viewer. It reads as session header and actions, metadata, session summary and diagnostics, chapter filters, then chapter rows with in-place details. Export, markdown, and raw routes are utility outputs, not separate navigation surfaces.
+```
+Chat  (/)            rail of running + recent sessions → chat for one run (/run?id= or ?session=)
+Runs  (/sessions)    inventory table → row opens analytics flyout → "Open full page" /view
+                     tick two rows → /compare?a=…&b=…
+Insights (/insights) machine health, failure causes, retries, stalls, spend
+/view?id=…           one session, in depth (also the exported/shared document)
+```
 
-Route error pages belong to the route that failed. Keep them terminal and compact: route context, failure title, status, failed handle, message, and a return path to the browser index.
+- `/sessions` is the Runs inventory: app bar, Runs heading, composed chrome (filters, dashboard, quick filters, sort), the inventory table, and pagination. The fixed compare bar is a contextual action surface, not another page section.
+- `/` is Chat: the live chat surface with the agent rail. It opens the most relevant run (a tracequest-launched run first, then a running session, then the newest session).
+- `/compare?a=...&b=...` is a server-rendered diagnostic worksheet. It renders only after both sessions resolve and reads as a one-sentence verdict, paired identity cards, metrics with deltas, tool usage, and chapter quality. Load failures or missing parameters use the compact compare error shell instead of a partial worksheet.
+- `/view?path=...` or `/view?id=...` is the session viewer. It reads as back link (served only), session header and actions, metadata, session summary and diagnostics, the errors panel, chapter filters, then chapter rows with in-place details. Export, markdown, and raw routes are utility outputs, not separate navigation surfaces.
+
+Route error pages belong to the route that failed. Keep them terminal and compact: route context, failure title, status, failed handle, message, and a return path to Runs.
 
 ## Route Headers And Back Links
 
 Headers should identify the current route before they introduce controls.
 
-- Browser index header: `tracequest`, a dynamic count subtitle, and the compact refresh status share one baseline. The subtitle is result-state metadata, not prose.
-- Compare header: `tracequest`, `session comparison`, and a right-aligned `back to sessions` link. Do not add breadcrumbs inside the paired session cards; the two cards already establish the comparison context.
+- App bar (Chat, Runs, run chat): wordmark, section nav, live counter, plan-limit chips, then search, theme toggle, ⌘K and `+ New run` on the right. The page crumb (`Runs`, `sessions`) stays in the DOM for screen readers but is visually replaced by the nav.
+- Plan windows sit in one scrollable line under the app bar (`#usageRow`): harness, plan, a small meter per window with used % and reset time. Never let it wrap into a block taller than one line.
+- Compare header: `tracequest` (links to Runs), `session comparison`, then `swap A and B` (also the `s` key) and `back to sessions`, which returns to `/sessions`, the list the comparison was started from.
+- Insights header: `tracequest / insights` with the section nav on the right. The page ships no script, so it has no keyboard jumps or theme toggle; it follows the system theme.
 - Rendered session header: `tracequest` plus the session hash or short ID is the primary title. Source, model, cwd, branch, duration, and start time belong in the source badge and meta grid; page actions stay to the right.
 - Route error shells: use the compact route-error title pattern instead of recreating the full happy-path header.
 
-Use `back to sessions` for exits from compare and route error shells. The rendered session viewer currently has no back link because it is also a standalone/exportable document; add one only if the viewer gains an explicit in-app navigation mode.
+The served session viewer shows `← Runs` above its header. The route marks the document with `data-tq-served`; exported and shared files do not carry it, so they never show a link that would lead nowhere. Print hides it.
 
 ## Reload And Live Update Controls
 
@@ -51,7 +74,8 @@ Compare pages depend on two valid session summaries. Keep side identity visible 
 - Session A is left/accent, session B is right/orange. Preserve that identity in the paired cards and repeated column headers instead of adding large decorative A/B labels.
 - Start every compare page with `.cmp-sessions`. Users need the two session IDs, source badges, models, prompt excerpts, and full-session links before they can trust the metric rows.
 - Repeat side labels only where they help scanning: metric table column headers, tool comparison rows, and chapter-quality sides. Avoid prose explanations between every section.
-- Keep exits simple: `back to sessions` returns to the browser index; `view full session` opens the selected side in the rendered session viewer.
+- Keep exits simple: `back to sessions` returns to Runs (`/sessions`); `view full session` opens the selected side in the rendered session viewer; `swap A and B` reloads with the sides exchanged.
+- Lead with the answer. The verdict sentence names which run was longer, more expensive and had more errors. Differences under 5% are not coloured, so red and green only mark gaps worth reading.
 - If compare gains client-side swapping or async loading, place transient state above the worksheet and update the route-state checklist before adding section-local spinners or partial charts.
 
 ## Session Identity
@@ -62,7 +86,8 @@ Show session identity before evidence, and keep load handles separate from user-
 - Compare cards identify side, session ID, source, model, prompt excerpt, and full-session link in parallel order on both sides.
 - Rendered session headers identify the product and session hash or short ID first, then source and metadata. Detailed evidence starts after identity is established.
 - Prefer a session hash or short session ID for visible identity. Use raw paths and missing handles mainly as load/error repair information, where overflow wrapping is expected.
-- Source badges are identity markers, not status badges. Keep them compact, uppercase, and adjacent to the session ID or title they qualify.
+- Source badges are identity markers, not status badges. Keep them compact, sentence case, mono, a quiet tint of the source hue (`box-shadow: inset 0 0 0 999px var(--chip-tint)`), and adjacent to the session ID or title they qualify. Compare uses the same pill as the Runs list.
+- Show projects as people read them. Encoded folders (`-Users-me--kandev-tasks-<uuid>`) display through `prettyProject` (no home prefix, 8-character UUIDs); the raw value stays in the title and is still what filters match.
 
 ## Dense Trace Information Grouping
 

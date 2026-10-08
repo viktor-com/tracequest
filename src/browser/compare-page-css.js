@@ -9,7 +9,7 @@ export const COMPARE_PAGE_CSS = `
   gap: 10px;
   margin-bottom: 20px;
 }
-.cmp-title { font-size: 16px; font-weight: 600; }
+.cmp-title { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; color: var(--fg); text-decoration: none; }
 .cmp-subtitle { font-size: 13px; color: var(--fg3); }
 .cmp-back {
   font-size: 12px;
@@ -241,17 +241,37 @@ export const COMPARE_PAGE_CSS = `
 .cmp-outcome-dot.struggling { background: var(--red); }
 
 .cmp-source-badge {
+  /* same identity chip as the Runs list: sentence case, quiet tint of the source hue */
   display: inline-block;
-  font-size: 10px;
+  font-size: 11px;
   font-family: var(--mono);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  color: #111;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 999px;
+  color: var(--fg);
+  /* the inline source hue becomes a quiet tint, exactly like .session-source */
+  box-shadow: inset 0 0 0 999px var(--chip-tint, rgba(17, 17, 19, 0.78));
+  margin-left: 8px;
+  vertical-align: 1px;
+}
+.cmp-delta {
+  font-size: 11px;
+  color: var(--fg3);
   margin-left: 6px;
 }
+.cmp-verdict {
+  margin: 0 0 20px;
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+.cmp-verdict-side { font-family: var(--mono); font-size: 13px; }
+.cmp-verdict-side.a { color: var(--accent); }
+.cmp-verdict-side.b { color: var(--orange); }
+.cmp-header-actions { margin-left: auto; display: inline-flex; gap: 16px; align-items: baseline; }
+.cmp-header-actions .cmp-back { margin-left: 0; }
+.cmp-header .tq-search.in-cmp-header { margin-left: 16px; }
 
 @media (max-width: 600px) {
   .container { padding: 24px 12px; }

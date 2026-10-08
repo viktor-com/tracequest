@@ -242,13 +242,69 @@ export function buildCompareToolRows(a, b) {
   return toolRows;
 }
 
+/**
+ * Differences under 5% of the larger side are noise (95% vs 96% cache hit):
+ * they keep neutral colour so red and green only mark gaps worth reading.
+ */
+function isNoiseDelta(rawA, rawB) {
+  if (rawA === 0 || rawB === 0) return false;
+  const hi = Math.max(Math.abs(rawA), Math.abs(rawB));
+  return Math.abs(rawA - rawB) / hi < 0.05;
+}
+
+/** Rows whose B-vs-A ratio reads naturally ("2.1×", "−40%"). */
+const DELTA_LABELS = new Set(["Duration", "Turns", "Tool calls", "Cost", "Input tokens", "Output tokens"]);
+
+/** How B differs from A, shown after B's value; empty when it would mislead. */
+function deltaChipHtml(label, rawA, rawB) {
+  if (!DELTA_LABELS.has(label) || !rawA || !rawB || rawA === rawB) return "";
+  const ratio = rawB / rawA;
+  let text;
+  if (ratio >= 1.95) text = (Math.round(ratio * 10) / 10) + "×";
+  else if (ratio <= 1 / 1.95) text = "÷" + (Math.round((1 / ratio) * 10) / 10);
+  else {
+    const pct = Math.round((ratio - 1) * 100);
+    if (pct === 0) return "";
+    text = (pct > 0 ? "+" : "−") + Math.abs(pct) + "%";
+  }
+  return ' <span class="cmp-delta" title="B relative to A">' + esc(text) + "</span>";
+}
+
+/**
+ * One plain sentence above the worksheet: which run was faster, cheaper and
+ * cleaner, so the reader knows the answer before scanning sixteen rows.
+ */
+export function buildCompareVerdictHtml(a, b) {
+  const parts = [];
+  const ratioPhrase = (x, y, more, less) => {
+    if (!x || !y || isNoiseDelta(x, y)) return null;
+    const r = y / x;
+    return r > 1
+      ? (r >= 1.95 ? (Math.round(r * 10) / 10) + "× " + more : Math.round((r - 1) * 100) + "% " + more)
+      : (1 / r >= 1.95 ? (Math.round((1 / r) * 10) / 10) + "× " + less : Math.round((1 - r) * 100) + "% " + less);
+  };
+  const dur = ratioPhrase(a.durationMs, b.durationMs, "longer", "shorter");
+  if (dur) parts.push("ran " + dur);
+  const cost = ratioPhrase(a.cost, b.cost, "more expensive", "cheaper");
+  if (cost) parts.push("was " + cost);
+  if (a.errors !== b.errors) parts.push("hit " + b.errors + " error" + (b.errors === 1 ? "" : "s") + " vs " + a.errors);
+  if (!parts.length) {
+    return '<p class="cmp-verdict">These runs are within 5% on time and cost and had the same number of errors.</p>';
+  }
+  const list = parts.length > 1 ? parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1] : parts[0];
+  return (
+    '<p class="cmp-verdict"><span class="cmp-verdict-side b">' + esc(b.id) + "</span> " + esc(list) +
+    ' than <span class="cmp-verdict-side a">' + esc(a.id) + "</span>.</p>"
+  );
+}
+
 export function buildMetricTableHtml(rows) {
   let html = "";
   for (const row of rows) {
     const [label, valA, valB, pref, rawA, rawB] = row;
     let aClass = "";
     let bClass = "";
-    if (pref !== "none" && rawA != null && rawB != null && rawA !== rawB) {
+    if (pref !== "none" && rawA != null && rawB != null && rawA !== rawB && !isNoiseDelta(rawA, rawB)) {
       const aWins = pref === "lower" ? rawA < rawB : rawA > rawB;
       aClass = aWins ? "delta-good" : "delta-bad";
       bClass = aWins ? "delta-bad" : "delta-good";
@@ -267,6 +323,7 @@ export function buildMetricTableHtml(rows) {
       bClass +
       '">' +
       esc(valB) +
+      deltaChipHtml(label, rawA, rawB) +
       "</td>" +
       "</tr>";
   }

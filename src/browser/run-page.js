@@ -69,6 +69,7 @@ import { ansiPaletteCss } from "../render/ansi-html.js";
 import { esc } from "../server/server-html-helpers.js";
 import {
   computeGrade,
+  prettyProject,
   shortModel,
   estimateCost,
   getModelRates,
@@ -93,6 +94,7 @@ import {
 } from "./command-palette.js";
 import {
   appTopHtml,
+  APP_SHELL_JS,
   APP_TOP_CSS,
   IDENTITY_ROW_CSS,
   SOURCE_COLORS,
@@ -634,7 +636,7 @@ ${ANALYTICS_PANEL_CSS}
 `;
 
 /** The shared app bar (same builder the dashboard uses) — ONE noun: sessions. */
-const APP_TOP_HTML = appTopHtml({ crumbHtml: '<span class="app-crumb">sessions</span>' });
+const APP_TOP_HTML = appTopHtml({ crumbHtml: '<span class="app-crumb">sessions</span>', nav: 'chat' });
 
 /** The persistent session rail (client-rendered rows) — same noun as the dashboard. */
 const AGENT_RAIL_HTML = `<aside class="agent-rail" aria-label="Sessions">
@@ -692,6 +694,7 @@ const AGENT_RAIL_HTML = `<aside class="agent-rail" aria-label="Sessions">
     </aside>`;
 
 const COMPUTE_GRADE_SRC = computeGrade.toString();
+const PRETTY_PROJECT_SRC = prettyProject.toString();
 const SUM_TOOL_COUNTS_SRC = sumToolCounts.toString().replace(/^export /, "");
 const SHORT_MODEL_SRC = shortModel.toString().replace(/^export /, "");
 const INCLUDES_LOWER_SRC = includesLower.toString().replace(/^export /, "");
@@ -723,6 +726,7 @@ function shellClientScript({ current, defaultCwd }) {
   var SOURCE_COLORS = ${JSON.stringify(SOURCE_COLORS)};
 ${SUM_TOOL_COUNTS_SRC}
 ${COMPUTE_GRADE_SRC}
+${PRETTY_PROJECT_SRC}
 ${SHORT_MODEL_SRC}
 ${INCLUDES_LOWER_SRC}
 ${GET_MODEL_RATES_SRC}
@@ -797,7 +801,9 @@ ${RUN_IDENTITY_STATUS_SRC}
   function agentBit(name, project) {
     var color = SOURCE_COLORS[name] || "#7a7a85";
     var html = '<span class="rail-agent" style="color:' + color + '">' + railEsc(name) + "</span>";
-    if (project) html += " &middot; " + railEsc(project);
+    if (project) {
+      html += " &middot; " + railEsc(prettyProject(project));
+    }
     return html;
   }
   function gradeHtml(s) {
@@ -1531,7 +1537,8 @@ function escH(s) {
   });
 }
 ${LAUNCHER_CLIENT_JS}
-${COMMAND_PALETTE_CLIENT_JS}`;
+${COMMAND_PALETTE_CLIENT_JS}
+${APP_SHELL_JS}`;
 }
 
 const RUN_PAGE_CSS = `
@@ -4996,7 +5003,7 @@ ${APP_TOP_HTML}
       <span class="session-source" style="background:${sourceColor(source)}">${esc(source)}</span>
       <span class="session-id" id="chatSessionId">${esc(hash)}</span>
       <span class="session-model" id="chatModel" hidden></span>
-      <span class="session-project" title="${esc(path)}">${esc(project || path.split("/").filter(Boolean).pop() || path)}</span>
+      <span class="session-project" title="${esc(path)}">${esc(prettyProject(project) || path.split("/").filter(Boolean).pop() || path)}</span>
       <span class="session-grade-badge run-grade" id="runGrade" hidden></span>
       <span class="run-origin" title="This session was started outside tracequest — its own terminal drives it">external</span>
       <span class="chat-top-spacer"></span>
