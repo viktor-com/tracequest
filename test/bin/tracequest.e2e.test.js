@@ -1843,62 +1843,62 @@ describe("bin/tracequest.js e2e standup", () => {
     assert.match(stdout, /agentCommand, agentArgs, agentTimeoutMs, params/);
   });
 
-  test("standup previous-workday docs appear in help and README", async () => {
+  test("standup previous-workday docs appear in help and CLI reference", async () => {
     const { stdout } = await runBin(["standup", "--help"]);
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
     assert.match(stdout, /--previous-workday/);
     assert.match(stdout, /previous weekday's\s+local 09:00-17:00 workday/);
     assert.match(stdout, /previousWorkday/);
-    assert.match(readme, /--previous-workday --print-input/);
-    assert.match(readme, /`since`\/`today`\/`yesterday`\/`workday`\/`previousWorkday`/);
+    assert.match(reference, /--previous-workday --print-input/);
+    assert.match(reference, /`since`\/`today`\/`yesterday`\/`workday`\/`previousWorkday`/);
   });
 
-  test("README documents standup windows, env defaults, and prompt agents", () => {
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
-    assert.match(readme, /\*\*standup\*\*/);
-    assert.match(readme, /--print-input/);
-    assert.match(readme, /--profile daily --print-input/);
-    assert.match(readme, /--dry-run-agent-detection/);
-    assert.match(readme, /--probe-agents/);
-    assert.match(readme, /--since 4h/);
-    assert.match(readme, /--workday --print-input/);
-    assert.match(readme, /--previous-workday --print-input/);
-    assert.match(readme, /--yesterday/);
-    assert.match(readme, /TRACEQUEST_STANDUP_AGENT_COMMAND/);
-    assert.match(readme, /TRACEQUEST_STANDUP_AGENT_ARGS/);
-    assert.match(readme, /TRACEQUEST_STANDUP_AGENT_TIMEOUT_MS/);
-    assert.match(readme, /HOME\/\.tracequest\/standup-profiles\.json/);
-    assert.match(readme, /previousWorkday/);
-    assert.match(readme, /Partial overrides are source-aware/);
-    assert.match(readme, /`--agent-command` selects a new agent identity/);
-    assert.match(readme, /`--agent-arg` alone can replace args for a profile-provided command/);
-    assert.match(readme, /exactly what will be sent to the LLM/);
-    assert.match(readme, /does not discover sessions, build compact input, invoke an agent, or send a prompt/);
-    assert.match(readme, /npm run probe:standup-agents/);
-    assert.match(readme, /empty temporary directory/);
-    assert.match(readme, /reports passed, failed, missing, and skipped agents as JSON/);
-    assert.match(readme, /Before invoking installed agents, it prints a stderr preflight warning/);
-    assert.match(readme, /stdout remains the JSON report/);
-    assert.match(readme, /sentinel as its own stdout line/);
-    assert.match(readme, /exits 1 if any installed probe fails/);
-    assert.match(readme, /missing or skipped optional agents remain JSON statuses/);
-    assert.match(readme, /exits before profile loading, session discovery, real-trace compact-input building, or private prompt sending/);
-    assert.match(readme, /stdout and stderr stream live/);
-    assert.match(readme, /Built-in prompt-agent detection tries Codex \(`codex exec --skip-git-repo-check -`\), Claude \(`claude --print`\), then Droid \(`droid exec`\)/);
-    assert.match(readme, /OpenCode is not a built-in default/);
-    assert.match(readme, /verified reads the prompt from stdin/);
-    assert.match(readme, /wrapper that reads stdin/);
-    assert.match(readme, /not raw JSONL, full transcripts/);
+  test("CLI reference documents standup windows, env defaults, and prompt agents", () => {
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
+    assert.match(reference, /\*\*standup\*\*/);
+    assert.match(reference, /--print-input/);
+    assert.match(reference, /--profile daily --print-input/);
+    assert.match(reference, /--dry-run-agent-detection/);
+    assert.match(reference, /--probe-agents/);
+    assert.match(reference, /--since 4h/);
+    assert.match(reference, /--workday --print-input/);
+    assert.match(reference, /--previous-workday --print-input/);
+    assert.match(reference, /--yesterday/);
+    assert.match(reference, /TRACEQUEST_STANDUP_AGENT_COMMAND/);
+    assert.match(reference, /TRACEQUEST_STANDUP_AGENT_ARGS/);
+    assert.match(reference, /TRACEQUEST_STANDUP_AGENT_TIMEOUT_MS/);
+    assert.match(reference, /HOME\/\.tracequest\/standup-profiles\.json/);
+    assert.match(reference, /previousWorkday/);
+    assert.match(reference, /Partial overrides are source-aware/);
+    assert.match(reference, /`--agent-command` selects a new agent identity/);
+    assert.match(reference, /`--agent-arg` alone can replace args for a profile-provided command/);
+    assert.match(reference, /exactly what will be sent to the LLM/);
+    assert.match(reference, /does not discover sessions, build compact input, invoke an agent, or send a prompt/);
+    assert.match(reference, /npm run probe:standup-agents/);
+    assert.match(reference, /empty temporary directory/);
+    assert.match(reference, /reports passed, failed, missing, and skipped agents as JSON/);
+    assert.match(reference, /Before invoking installed agents, it prints a stderr preflight warning/);
+    assert.match(reference, /stdout remains the JSON report/);
+    assert.match(reference, /sentinel as its own stdout line/);
+    assert.match(reference, /exits 1 if any installed probe fails/);
+    assert.match(reference, /missing or skipped optional agents remain JSON statuses/);
+    assert.match(reference, /exits before profile loading, session discovery, real-trace compact-input building, or private prompt sending/);
+    assert.match(reference, /stdout and stderr stream live/);
+    assert.match(reference, /Built-in prompt-agent detection tries Codex \(`codex exec --skip-git-repo-check -`\), Claude \(`claude --print`\), then Droid \(`droid exec`\)/);
+    assert.match(reference, /OpenCode is not a built-in default/);
+    assert.match(reference, /verified reads the prompt from stdin/);
+    assert.match(reference, /wrapper that reads stdin/);
+    assert.match(reference, /not raw JSONL, full transcripts/);
   });
 
   test("standup agent arg docs cover dash-prefixed values", async () => {
     const { stdout: help } = await runBin(["standup", "--help"]);
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
 
     assert.match(help, /Use --agent-arg=--flag for values that start with -/);
-    assert.match(readme, /When an agent argv value itself starts with `-`/);
-    assert.match(readme, /`--agent-arg=--safe-mode`/);
-    assert.match(readme, /CLI parser treats the value as a TraceQuest option/);
+    assert.match(reference, /When an agent argv value itself starts with `-`/);
+    assert.match(reference, /`--agent-arg=--safe-mode`/);
+    assert.match(reference, /CLI parser treats the value as a TraceQuest option/);
   });
 
   test("installed prompt-agent smoke guide documents safe probes and wrappers", () => {
@@ -1933,9 +1933,9 @@ describe("bin/tracequest.js e2e standup", () => {
     assert.match(guide, /custom-agent run "\$prompt"/);
   });
 
-  test("standup probe docs cover help README smoke guide and npm probe:standup-agents script", async () => {
+  test("standup probe docs cover help CLI reference smoke guide and npm probe:standup-agents script", async () => {
     const { stdout: help } = await runBin(["standup", "--help"]);
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
     const guide = readFileSync(join(ROOT, "tests/standup-handoff-smoke.md"), "utf8");
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
 
@@ -1949,15 +1949,15 @@ describe("bin/tracequest.js e2e standup", () => {
     assert.match(help, /snippets are bounded and redact paths, temp workdirs,\s+and session-looking identifiers/);
     assert.match(help, /Exit status is 1 if any installed probe fails/);
     assert.match(help, /missing\/skipped optional\s+candidates still report in JSON without making the command fail/);
-    assert.match(readme, /tracequest standup --probe-agents/);
-    assert.match(readme, /npm run probe:standup-agents/);
-    assert.match(readme, /empty temporary directory/);
-    assert.match(readme, /reports passed, failed, missing, and skipped agents as JSON/);
-    assert.match(readme, /Before invoking installed agents, it prints a stderr preflight warning/);
-    assert.match(readme, /stdout remains the JSON report/);
-    assert.match(readme, /sentinel as its own stdout line/);
-    assert.match(readme, /snippets are bounded and redact paths, temp workdirs, and session-looking identifiers/);
-    assert.match(readme, /exits 1 if any installed probe fails/);
+    assert.match(reference, /tracequest standup --probe-agents/);
+    assert.match(reference, /npm run probe:standup-agents/);
+    assert.match(reference, /empty temporary directory/);
+    assert.match(reference, /reports passed, failed, missing, and skipped agents as JSON/);
+    assert.match(reference, /Before invoking installed agents, it prints a stderr preflight warning/);
+    assert.match(reference, /stdout remains the JSON report/);
+    assert.match(reference, /sentinel as its own stdout line/);
+    assert.match(reference, /snippets are bounded and redact paths, temp workdirs, and session-looking identifiers/);
+    assert.match(reference, /exits 1 if any installed probe fails/);
     assert.match(guide, /tracequest standup --probe-agents/);
     assert.match(guide, /`passed`, `failed`, `missing`, and `skipped`/);
     assert.match(guide, /empty temporary directory/);
@@ -1971,26 +1971,26 @@ describe("bin/tracequest.js e2e standup", () => {
 
   test("standup probe opt-in docs keep installed-agent probe out of routine examples", async () => {
     const { stdout: help } = await runBin(["standup", "--help"]);
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
 
-    const readmeStandupBlock = readme.match(/\*\*standup\*\*:[\s\S]*?```bash\n([\s\S]*?)\n```/)?.[1] ?? "";
+    const referenceStandupBlock = reference.match(/\*\*standup\*\*:[\s\S]*?```bash\n([\s\S]*?)\n```/)?.[1] ?? "";
     const helpExamples = help.match(/Examples:[\s\S]*?Supported agents:/)?.[0] ?? "";
 
-    assert.doesNotMatch(readmeStandupBlock, /--probe-agents/);
+    assert.doesNotMatch(referenceStandupBlock, /--probe-agents/);
     assert.doesNotMatch(helpExamples, /tracequest standup --probe-agents/);
-    assert.match(readme, /Opt-in installed-agent validation:\s*```bash\s*tracequest standup --probe-agents/s);
+    assert.match(reference, /Opt-in installed-agent validation:\s*```bash\s*tracequest standup --probe-agents/s);
     assert.match(help, /Opt-in installed-agent validation command:\s+tracequest standup --probe-agents/);
-    assert.match(readme, /Use `tracequest standup --probe-agents` or `npm run probe:standup-agents` only when you explicitly want to probe installed built-in prompt agents/);
+    assert.match(reference, /Use `tracequest standup --probe-agents` or `npm run probe:standup-agents` only when you explicitly want to probe installed built-in prompt agents/);
     assert.match(help, /--probe-agents is separate from normal standup execution/);
   });
 
-  test("standup audit-mode privacy docs align help and README", async () => {
+  test("standup audit-mode privacy docs align help and CLI reference", async () => {
     const { stdout: help } = await runBin(["standup", "--help"]);
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
 
     assert.match(help, /--dry-run-agent-detection/);
     assert.match(help, /without discovering\s+sessions, building compact input, invoking an agent,\s+or sending a prompt/);
-    assert.match(readme, /does not discover sessions, build compact input, invoke an agent, or send a prompt/);
+    assert.match(reference, /does not discover sessions, build compact input, invoke an agent, or send a prompt/);
 
     assert.match(help, /--probe-agents/);
     assert.match(help, /synthetic prompts only/);
@@ -2000,13 +2000,13 @@ describe("bin/tracequest.js e2e standup", () => {
     assert.match(help, /sentinel as its own stdout line/);
     assert.match(help, /snippets are bounded and redact paths, temp workdirs,\s+and session-looking identifiers/);
     assert.match(help, /Exit status is 1 if any installed probe fails/);
-    assert.match(readme, /exits before profile loading, session discovery, real-trace compact-input building, or private prompt sending/);
-    assert.match(readme, /sentinel as its own stdout line/);
-    assert.match(readme, /Before invoking installed agents, it prints a stderr preflight warning/);
-    assert.match(readme, /stdout remains the JSON report/);
-    assert.match(readme, /snippets are bounded and redact paths, temp workdirs, and session-looking identifiers/);
-    assert.match(readme, /missing or skipped optional agents remain JSON statuses/);
-    assert.match(readme, /It does not send raw JSONL, real prompts, assistant replies, tool outputs, or absolute session paths/);
+    assert.match(reference, /exits before profile loading, session discovery, real-trace compact-input building, or private prompt sending/);
+    assert.match(reference, /sentinel as its own stdout line/);
+    assert.match(reference, /Before invoking installed agents, it prints a stderr preflight warning/);
+    assert.match(reference, /stdout remains the JSON report/);
+    assert.match(reference, /snippets are bounded and redact paths, temp workdirs, and session-looking identifiers/);
+    assert.match(reference, /missing or skipped optional agents remain JSON statuses/);
+    assert.match(reference, /It does not send raw JSONL, real prompts, assistant replies, tool outputs, or absolute session paths/);
   });
 
   test("standup and handoff release notes summarize shipped surface", () => {
@@ -2031,9 +2031,9 @@ describe("bin/tracequest.js e2e standup", () => {
     assert.match(releaseNotes, /OpenCode remains explicit configuration only/);
   });
 
-  test("README quick CLI usage lists standup and handoff commands", () => {
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
-    const cliUsage = readme.match(/## CLI Usage[\s\S]*?### All Modes with Examples/)?.[0] ?? "";
+  test("CLI reference quick CLI usage lists standup and handoff commands", () => {
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
+    const cliUsage = reference.match(/## CLI Usage[\s\S]*?### All Modes with Examples/)?.[0] ?? "";
 
     assert.match(cliUsage, /search <query>\s+Full-text search across all sessions/);
     assert.match(cliUsage, /handoff <query>\s+Paste Markdown search handoff without an LLM/);
@@ -2042,10 +2042,10 @@ describe("bin/tracequest.js e2e standup", () => {
     assert.match(cliUsage, /share \[session\]\s+Share a session to Gist or Hugging Face/);
   });
 
-  test("handoff command discoverability appears in help and README", async () => {
+  test("handoff command discoverability appears in help and CLI reference", async () => {
     const { stdout: help } = await runBin(["--help"]);
     const visibleHelp = stripAnsi(help);
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
 
     assert.match(visibleHelp, /handoff <query>\s+Paste Markdown search handoff without an LLM/);
     assert.match(visibleHelp, /handoff Options:/);
@@ -2057,19 +2057,19 @@ describe("bin/tracequest.js e2e standup", () => {
     assert.match(visibleHelp, /tracequest handoff "error handling" --sort recent --limit 5/);
     assert.match(visibleHelp, /tracequest handoff "error handling" --sort date --limit 5/);
     assert.match(visibleHelp, /tracequest search "error handling" --format handoff --sort date --limit 5/);
-    assert.match(readme, /handoff <query>\s+Paste Markdown search handoff without an LLM/);
-    assert.match(readme, /tracequest handoff "error handling" --limit 5/);
-    assert.match(readme, /tracequest handoff "error handling" --sort recent --limit 5/);
-    assert.match(readme, /tracequest handoff "error handling" --sort date --limit 5/);
-    assert.match(readme, /search "error handling" --format handoff --limit 5/);
-    assert.match(readme, /search "error handling" --format handoff --filter 'project:tracequest source:claude' --sort recent --limit 5/);
-    assert.match(readme, /search "error handling" --format handoff --sort date --limit 5/);
+    assert.match(reference, /handoff <query>\s+Paste Markdown search handoff without an LLM/);
+    assert.match(reference, /tracequest handoff "error handling" --limit 5/);
+    assert.match(reference, /tracequest handoff "error handling" --sort recent --limit 5/);
+    assert.match(reference, /tracequest handoff "error handling" --sort date --limit 5/);
+    assert.match(reference, /search "error handling" --format handoff --limit 5/);
+    assert.match(reference, /search "error handling" --format handoff --filter 'project:tracequest source:claude' --sort recent --limit 5/);
+    assert.match(reference, /search "error handling" --format handoff --sort date --limit 5/);
   });
 
   test("handoff quoted phrase sort tradeoff is documented", async () => {
     const { stdout: help } = await runBin(["--help"]);
     const visibleHelp = stripAnsi(help);
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
     const changelog = readFileSync(join(ROOT, "CHANGELOG.md"), "utf8");
     const releaseNotes = changelogReleaseSection(changelog, "0.1.2");
 
@@ -2078,7 +2078,7 @@ describe("bin/tracequest.js e2e standup", () => {
       /Quoted phrases with recent\/date return exact matches within a bounded scan;\s+older phrase matches may be omitted/,
     );
     assert.match(
-      readme,
+      reference,
       /quoted-phrase `--sort recent\|date` keeps returned rows exact but may omit older phrase matches beyond the bounded scan cap/,
     );
     assert.match(
@@ -2090,7 +2090,7 @@ describe("bin/tracequest.js e2e standup", () => {
 
   test("standup/handoff maintainer verification script is documented and wired", () => {
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
     const guide = readFileSync(join(ROOT, "tests/standup-handoff-smoke.md"), "utf8");
     const ci = readFileSync(join(ROOT, ".github/workflows/ci.yml"), "utf8");
 
@@ -2098,12 +2098,12 @@ describe("bin/tracequest.js e2e standup", () => {
       pkg.scripts["verify:standup-handoff"],
       "npm run test:standup-handoff-cli && npm run smoke:standup-handoff && npm run smoke:standup-handoff-examples",
     );
-    assert.match(readme, /npm run verify:standup-handoff/);
-    assert.match(readme, /serial direct CLI command tests, the synthetic standup\/handoff smoke, and the README\/help example smoke/);
-    assert.match(readme, /without requiring real installed prompt agents/);
-    assert.match(readme, /Run `npm run probe:standup-agents` separately only when installed-agent validation is intentional/);
+    assert.match(reference, /npm run verify:standup-handoff/);
+    assert.match(reference, /serial direct CLI command tests, the synthetic standup\/handoff smoke, and the CLI reference\/help example smoke/);
+    assert.match(reference, /without requiring real installed prompt agents/);
+    assert.match(reference, /Run `npm run probe:standup-agents` separately only when installed-agent validation is intentional/);
     assert.match(guide, /npm run verify:standup-handoff/);
-    assert.match(guide, /combines serial direct CLI command tests, the synthetic feature smoke, and README\/help example smoke/);
+    assert.match(guide, /combines serial direct CLI command tests, the synthetic feature smoke, and CLI reference\/help example smoke/);
     assert.match(guide, /tracequest handoff <query> --filter <expr>/);
     assert.match(guide, /tracequest handoff <query> --sort recent/);
     assert.match(guide, /tracequest handoff <query> --sort date/);
@@ -2118,12 +2118,12 @@ describe("bin/tracequest.js e2e standup", () => {
 
   test("standup/handoff release alias is documented and wired", () => {
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
     const guide = readFileSync(join(ROOT, "tests/standup-handoff-smoke.md"), "utf8");
 
     assert.equal(pkg.scripts["release:standup-handoff"], "npm run verify:standup-handoff");
-    assert.match(readme, /npm run release:standup-handoff/);
-    assert.match(readme, /alias for that same synthetic-only gate/);
+    assert.match(reference, /npm run release:standup-handoff/);
+    assert.match(reference, /alias for that same synthetic-only gate/);
     assert.match(guide, /npm run release:standup-handoff/);
     assert.match(guide, /release-checklist alias for the same synthetic-only gate/);
     assert.doesNotMatch(pkg.scripts["release:standup-handoff"], /probe:standup-agents|--probe-agents/);
@@ -2156,7 +2156,7 @@ describe("bin/tracequest.js e2e standup", () => {
 
   test("standup/handoff direct CLI verification script uses serial test concurrency", () => {
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
     const guide = readFileSync(join(ROOT, "tests/standup-handoff-smoke.md"), "utf8");
 
     assert.equal(
@@ -2164,9 +2164,9 @@ describe("bin/tracequest.js e2e standup", () => {
       "TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/cli/cli-commands.test.js",
     );
     assert.match(pkg.scripts["verify:standup-handoff"], /^npm run test:standup-handoff-cli && /);
-    assert.match(readme, /npm run test:standup-handoff-cli/);
-    assert.match(readme, /--test-concurrency=1/);
-    assert.match(readme, /patch stdout, stderr, `process\.exit`, and environment variables/);
+    assert.match(reference, /npm run test:standup-handoff-cli/);
+    assert.match(reference, /--test-concurrency=1/);
+    assert.match(reference, /patch stdout, stderr, `process\.exit`, and environment variables/);
     assert.match(guide, /npm run test:standup-handoff-cli/);
     assert.match(guide, /--test-concurrency=1/);
     assert.match(guide, /patch stdout, stderr, `process\.exit`, and environment variables/);
@@ -2177,14 +2177,14 @@ describe("bin/tracequest.js e2e standup", () => {
     assert.equal(pkg.scripts["probe:standup-agents"], "node bin/tracequest.js standup --probe-agents");
   });
 
-  test("standup profile docs appear in README", () => {
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
-    assert.match(readme, /--profile daily --print-input/);
-    assert.match(readme, /HOME\/\.tracequest\/standup-profiles\.json/);
-    assert.match(readme, /Supported keys are `project`, `filter`, `sort`, `limit`/);
-    assert.match(readme, /`since`\/`today`\/`yesterday`\/`workday`/);
-    assert.match(readme, /`agentCommand`, `agentArgs`, `agentTimeoutMs`, and `params`/);
-    assert.match(readme, /Partial overrides are source-aware/);
+  test("standup profile docs appear in CLI reference", () => {
+    const reference = readFileSync(join(ROOT, "docs/cli-reference.md"), "utf8");
+    assert.match(reference, /--profile daily --print-input/);
+    assert.match(reference, /HOME\/\.tracequest\/standup-profiles\.json/);
+    assert.match(reference, /Supported keys are `project`, `filter`, `sort`, `limit`/);
+    assert.match(reference, /`since`\/`today`\/`yesterday`\/`workday`/);
+    assert.match(reference, /`agentCommand`, `agentArgs`, `agentTimeoutMs`, and `params`/);
+    assert.match(reference, /Partial overrides are source-aware/);
   });
 });
 

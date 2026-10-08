@@ -2,7 +2,10 @@
 # cli
 
 ## docs
-- label: README CLI Usage documents the current command-specific option groups for messages, find, search, handoff, standup, list, latest, share, import, limits, and serve, including filter/limit/sort where supported
+- label: CLI reference documents the current command-specific option groups for messages, find, search, handoff, standup, list, latest, share, import, limits, and serve, including filter/limit/sort where supported
   id: b8r
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'README CLI usage documents current command-specific options' test/bin/tracequest-doc-examples.e2e.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'CLI reference documents current command-specific options' test/bin/tracequest-doc-examples.e2e.test.js
   tags: [spec, docs, cli-docs, implemented, cursor-cloud]
+- label: The README introduces session browsing, analysis and sharing with screenshots before setup, offers a working sample demo, and directs coding agents to a docs entry point for command, configuration and API details
+  id: rdmx
+  tags: [spec, docs, readme, implemented]

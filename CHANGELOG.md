@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- README leads with screenshots and features; command, configuration and API guides live in `docs/` with an entry point for coding agents.
+
 ## [0.1.0] - 2026-10-08
 
 First public release.

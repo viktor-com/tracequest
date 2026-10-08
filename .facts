@@ -281,7 +281,7 @@
 - For tracequest serve, the port from --port/-p or a preset must be validated as integer 1-65535 before calling serve(); invalid (NaN, 0, 99999+) produces clear 'Invalid port ...' error + exit 1 instead of a node:net RangeError stack @implemented
 - In the render branch, CLI rejects top-level agent directories (e.g. ~/.grok/sessions or ~/.claude/projects passed as direct positional) with clear error + exit 1 (dir vs file guard for roots); also wraps writeFileSync for --out in try/catch so ENOENT/permission/etc yields friendly 'Failed to write output to <path>: <msg>' + exit 1 (no uncaught stack) @implemented
 - The serve subcommand accepts --filter/-f as its project filter, logs whether matching sessions were found before starting the server, and passes the filter to serve(port, filter) for the initial browser index @implemented
-- CLI help is maintained in the shared src/cli/cli-help.js template, while bin/tracequest.js uses matching parseArgs schemas for command validation; README/help parity tests cover the documented option groups @implemented
+- CLI help is maintained in the shared src/cli/cli-help.js template, while bin/tracequest.js uses matching parseArgs schemas for command validation; CLI reference/help parity tests cover the documented option groups @implemented
 - cli > the list command supports --filter <expression> flag that applies the same filter expression as the web app (project:, source:, tool:, model:, grade:, errors:, size:, age:, live, free text, AND/OR/NOT, parentheses) to filter discovered sessions @spec @cli-filter @implemented
 - cli > the latest command supports --filter <expression> flag that applies the same filter expression as the web app to pick the most recent matching session @spec @cli-filter @implemented
 - cli > the list and latest commands support --sort <key> flag (recent, duration, cost, tokens, errors, files, commits, chapters, grade) to sort results using sortSessionList @spec @cli-filter @implemented
@@ -377,8 +377,8 @@
 - label: tracequest handoff <query> directly emits the non-LLM Markdown search handoff, keeping Markdown on stdout and discovery/indexing progress on stderr
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'direct handoff command' test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, cli-search, handoff, implemented]
-- label: tracequest help and README document tracequest handoff as the direct Markdown handoff entry point alongside search --format handoff
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'handoff command discoverability|README and help standup/handoff examples parse' test/bin/tracequest.e2e.test.js test/bin/tracequest-doc-examples.e2e.test.js
+- label: tracequest help and CLI reference document tracequest handoff as the direct Markdown handoff entry point alongside search --format handoff
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'handoff command discoverability|CLI reference and help standup/handoff examples parse' test/bin/tracequest.e2e.test.js test/bin/tracequest-doc-examples.e2e.test.js
   tags: [spec, cli-search, handoff, docs, implemented]
 - label: tracequest handoff <query> accepts --filter <expr> and applies the existing session filter expression before local search/indexing, keeping Markdown on stdout and progress on stderr
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'direct handoff command applies --filter before search' test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
@@ -398,7 +398,7 @@
 - label: tracequest handoff --sort recent or --sort date keeps quoted-phrase verification bounded by searchSessions' default phrase scan cap instead of forcing all candidate sessions to be scanned, so returned handoff rows remain exact phrase matches within the capped recency window while older phrase matches beyond the cap may be omitted
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'recent-sorted quoted phrase search respects phraseScanCap|direct handoff quoted recent sort keeps phrase verification capped' test/sessions/scan-queries.test.js test/cli/cli-commands.test.js
   tags: [spec, handoff, cli-search, perf, implemented]
-- label: README, help, and CHANGELOG tell users that tracequest handoff --sort recent or --sort date keeps returned quoted-phrase matches exact but may omit older phrase matches beyond the bounded phrase scan cap
+- label: CLI reference, help, and CHANGELOG tell users that tracequest handoff --sort recent or --sort date keeps returned quoted-phrase matches exact but may omit older phrase matches beyond the bounded phrase scan cap
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'handoff quoted phrase sort tradeoff is documented' test/bin/tracequest.e2e.test.js
   tags: [spec, handoff, docs, release, implemented]
 - label: tracequest search <query> accepts --sort only for handoff Markdown, and search --format handoff accepts --filter <expr> plus --sort recent|date at the real bin boundary to match the direct tracequest handoff option surface while staying local/non-LLM
@@ -427,8 +427,8 @@
 - label: tracequest standup reports the invoked prompt-agent command, nonzero exit status, signal exits, and stderr/stdout snippets without hiding the agent output
   command: node --test --test-concurrency=1 --test-name-pattern 'standup agent runner|cmdStandup formats agent failures' test/standup/agent-runner.test.js test/cli/cli-commands.test.js
   tags: [spec, standup, implemented]
-- label: tracequest standup help and README examples show prompt-agent configuration and --print-input auditing before LLM execution
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup help documents selection windows and env defaults|README documents standup windows and env defaults' test/bin/tracequest.e2e.test.js
+- label: tracequest standup help and CLI reference examples show prompt-agent configuration and --print-input auditing before LLM execution
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup help documents selection windows and env defaults|CLI reference documents standup windows' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, implemented]
 - label: tracequest standup accepts --agent-timeout-ms and fails with a clear timeout error when the prompt agent exceeds the configured deadline
   command: node --test --test-name-pattern 'agent timeout|--agent-timeout-ms' test/standup/agent-runner.test.js test/bin/tracequest.e2e.test.js
@@ -439,8 +439,8 @@
 - label: tracequest standup uses TRACEQUEST_STANDUP_AGENT_COMMAND, TRACEQUEST_STANDUP_AGENT_ARGS, and TRACEQUEST_STANDUP_AGENT_TIMEOUT_MS as defaults when matching CLI flags are absent
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup env defaults' test/cli/cli-commands.test.js
   tags: [spec, standup, implemented]
-- label: tracequest standup help and README examples document selection windows and TRACEQUEST_STANDUP_AGENT_* defaults
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup help documents selection windows and env defaults|README documents standup windows and env defaults' test/bin/tracequest.e2e.test.js
+- label: tracequest standup help and CLI reference examples document selection windows and TRACEQUEST_STANDUP_AGENT_* defaults
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup help documents selection windows and env defaults|CLI reference documents standup windows' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, implemented]
 - label: tracequest standup reports no-session and missing prompt-agent cases as stderr-only CLI errors without printing compact input or invoking an agent
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup empty and no-agent errors' test/cli/cli-commands.test.js
@@ -454,21 +454,21 @@
 - label: tracequest standup --profile <name> keeps --print-input as an audit-only path that prints compact standup input without invoking any profile-configured agent
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup profile print-input audit' test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, profile, implemented]
-- label: tracequest standup help and README document --profile, the HOME/.tracequest/standup-profiles.json location, and supported profile keys
+- label: tracequest standup help and CLI reference document --profile, the HOME/.tracequest/standup-profiles.json location, and supported profile keys
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup profile docs' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, profile, implemented]
 - label: tracequest standup --workday selects sessions modified during the current local 09:00-17:00 workday window by discovery mtime before compact input, and it is mutually exclusive with --since, --today, and --yesterday
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'workday' test/standup/selection-window.test.js test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, workday, implemented]
-- label: tracequest standup profiles may set workday as the selection-window default, explicit CLI selection-window flags override profile workday, and help plus README document the key
+- label: tracequest standup profiles may set workday as the selection-window default, explicit CLI selection-window flags override profile workday, and help plus CLI reference document the key
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'workday|standup profile docs|standup help documents' test/standup/profile.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, profile, workday, implemented]
 - label: tracequest standup built-in prompt-agent detection includes Codex via codex exec -, Claude via claude --print, and Droid via droid exec, preserving that priority order when commands are available; OpenCode is not a built-in default
   id: 4pz
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'default prompt-agent candidates include Codex, Claude, and Droid only' test/standup/agent-runner.test.js
   tags: [spec, standup, agent, implemented]
-- label: tracequest standup help and README distinguish built-in detected prompt agents from configurable custom agents, document Droid detection, and tell users to verify or wrap non-stdin agents before using --agent-command
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup (help|README).*prompt agents' test/bin/tracequest.e2e.test.js
+- label: tracequest standup help and CLI reference distinguish built-in detected prompt agents from configurable custom agents, document Droid detection, and tell users to verify or wrap non-stdin agents before using --agent-command
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup (help|CLI reference).*prompt agents' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, agent, docs, implemented]
 - label: tracequest ships a local synthetic-data smoke check for handoff and standup that drives bin/tracequest.js through search --format handoff, standup --print-input, profile workday selection, missing prompt-agent detection, and a fixture prompt-agent invocation without using private trace data
   command: TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff
@@ -476,8 +476,8 @@
 - label: tracequest standup --dry-run-agent-detection reports the resolved prompt-agent command from CLI/env/profile/default detection without discovering sessions, building compact input, invoking an agent, or sending a prompt
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup dry-run agent detection' test/standup/agent-runner.test.js test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, agent, dry-run, implemented]
-- label: tracequest standup help and README document --dry-run-agent-detection as a JSON audit mode that skips session discovery, compact-input building, agent invocation, and prompt sending
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup help documents selection windows|README documents standup windows' test/bin/tracequest.e2e.test.js
+- label: tracequest standup help and CLI reference document --dry-run-agent-detection as a JSON audit mode that skips session discovery, compact-input building, agent invocation, and prompt sending
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup help documents selection windows|CLI reference documents standup windows' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, docs, dry-run, implemented]
 - label: tracequest standup compact input privacy regression tests use adversarial sentinel fixtures to prove --print-input and buildStandupInput omit raw JSONL records, full prompt/transcript tails, absolute session paths, and full tool outputs while preserving capped useful summaries
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup compact input privacy regression|cmdStandup --print-input privacy regression' test/standup/compact-input.test.js test/cli/cli-commands.test.js
@@ -494,19 +494,19 @@
 - label: tracequest standup --probe-agents probes built-in installed prompt-agent candidates with synthetic prompts only, exits before profile loading, session discovery, real-trace compact input building, or private prompt sending, and reports passed, failed, missing, and skipped agents
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup --probe-agents' test/standup/agent-runner.test.js test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, agent, probe, implemented]
-- label: tracequest help, README, and package scripts document the opt-in standup agent probe as synthetic-only and separate from normal standup execution
+- label: tracequest help, CLI reference, and package scripts document the opt-in standup agent probe as synthetic-only and separate from normal standup execution
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup probe docs|standup --help includes probe|npm probe:standup-agents' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, agent, probe, docs, implemented]
 - label: tracequest standup without --print-input resolves the prompt-agent after candidate session discovery but before expression indexing, session parsing, or compact-input building, so missing-agent failures do not read private trace content or expose parse paths
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup missing agent is reported before selected sessions are parsed' test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, privacy, implemented]
-- label: tracequest standup help and README use matching audit-mode privacy wording for --dry-run-agent-detection and --probe-agents, including that dry-run sends no prompt and probe sends no private prompt data
+- label: tracequest standup help and CLI reference use matching audit-mode privacy wording for --dry-run-agent-detection and --probe-agents, including that dry-run sends no prompt and probe sends no private prompt data
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup audit-mode privacy docs' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, docs, privacy, dry-run, probe, implemented]
-- label: tracequest README and help standup/handoff examples are exercised through the real bin parser against synthetic sessions and fake prompt agents, so documented commands stay parser-valid without touching private trace data or real agents
+- label: tracequest CLI reference and help standup/handoff examples are exercised through the real bin parser against synthetic sessions and fake prompt agents, so documented commands stay parser-valid without touching private trace data or real agents
   command: TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff-examples
   tags: [spec, standup, handoff, docs, examples, implemented]
-- label: tracequest exposes a focused npm smoke command for README/help standup and handoff examples that runs the documented-command parser through the real bin with synthetic sessions and fake prompt agents, separate from the broad bin e2e suite
+- label: tracequest exposes a focused npm smoke command for CLI reference/help standup and handoff examples that runs the documented-command parser through the real bin with synthetic sessions and fake prompt agents, separate from the broad bin e2e suite
   command: TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff-examples
   tags: [spec, standup, handoff, docs, examples, smoke, implemented]
 - label: bin-level standup and handoff tests share synthetic HOME and fake prompt-agent fixtures while still executing real bin/tracequest.js coverage for broad e2e and documented examples
@@ -540,7 +540,7 @@
 - label: tracequest standup --previous-workday selects sessions modified during the previous weekday's local 09:00-17:00 window by discovery mtime before compact input, skips Saturday and Sunday when choosing that previous weekday, and is mutually exclusive with --since, --today, --yesterday, and --workday
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'previous-workday' test/standup/selection-window.test.js test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, workday, previous-workday, implemented]
-- label: tracequest standup profiles may set previousWorkday or previous-workday as the selection-window default, explicit CLI selection-window flags override that profile default, and help plus README document the option and profile keys
+- label: tracequest standup profiles may set previousWorkday or previous-workday as the selection-window default, explicit CLI selection-window flags override that profile default, and help plus CLI reference document the option and profile keys
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'previous-workday' test/standup/profile.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, profile, workday, previous-workday, docs, implemented]
 - label: tracequest verify:standup-handoff includes synthetic previous-workday smoke coverage for --previous-workday, previousWorkday profile defaults, and explicit CLI window override without requiring real installed prompt agents
@@ -549,10 +549,10 @@
 - label: tracequest exposes a serial standup/handoff CLI verification script for direct in-process CLI tests that patch stdout, stderr, process.exit, and environment, and the maintainer standup/handoff verification runs it before smoke checks
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup/handoff direct CLI verification script uses serial test concurrency' test/bin/tracequest.e2e.test.js && TRACEQUEST_SKIP_LR_WATCH=1 npm run test:standup-handoff-cli
   tags: [spec, standup, handoff, test-robustness, implemented]
-- label: README quick CLI usage command list includes search <query> and standup [project] entries so handoff and standup are discoverable before the examples
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'README quick CLI usage lists standup and handoff commands' test/bin/tracequest.e2e.test.js
+- label: CLI reference quick CLI usage command list includes search <query> and standup [project] entries so handoff and standup are discoverable before the examples
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'CLI reference quick CLI usage lists standup and handoff commands' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, handoff, docs, release, implemented]
-- label: tracequest standup README and help document that agent argv values beginning with - must use --agent-arg=<value> so they are not parsed as TraceQuest options
+- label: tracequest standup CLI reference and help document that agent argv values beginning with - must use --agent-arg=<value> so they are not parsed as TraceQuest options
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup agent arg docs cover dash-prefixed values' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, agent, docs, implemented]
 - label: tracequest standup --probe-agents redacts public-paste-sensitive stdout and stderr diagnostics in its JSON report by replacing absolute paths, temp workdirs, and session-looking identifiers with placeholders while preserving bounded status snippets
@@ -576,8 +576,8 @@
 - label: tracequest standup resolves prompt-agent precedence as explicit CLI flags over profile defaults over TRACEQUEST_STANDUP_AGENT_* env defaults over built-in detection, and dry-run audit shows the resolved argv without discovering sessions or invoking an agent
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup profile/env/CLI precedence' test/cli/cli-commands.test.js
   tags: [spec, standup, profile, env, precedence, implemented]
-- label: tracequest standup help and README document prompt-agent precedence as explicit CLI flags over profile defaults over TRACEQUEST_STANDUP_AGENT_* env defaults over built-in detection
-  command: grep -Fq 'Precedence: explicit CLI flags > profile > `TRACEQUEST_STANDUP_AGENT_*` env defaults > built-in detection.' README.md && grep -Fq 'Precedence: explicit CLI flags > profile > env defaults > built-in detection.' src/cli/cli-help.js
+- label: tracequest standup help and CLI reference document prompt-agent precedence as explicit CLI flags over profile defaults over TRACEQUEST_STANDUP_AGENT_* env defaults over built-in detection
+  command: grep -Fq 'Precedence: explicit CLI flags > profile > `TRACEQUEST_STANDUP_AGENT_*` env defaults > built-in detection.' docs/cli-reference.md && grep -Fq 'Precedence: explicit CLI flags > profile > env defaults > built-in detection.' src/cli/cli-help.js
   tags: [spec, standup, profile, env, precedence, docs, implemented]
 - label: tracequest standup treats --agent-command as an agent identity override that does not inherit profile or env agent args or params unless matching CLI flags are supplied, while --agent-arg can override args for a profile-provided command
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup mixed partial agent overrides' test/standup/profile.test.js test/cli/cli-commands.test.js
@@ -588,8 +588,8 @@
 - label: tracequest's standup/handoff release gate has a transitive package-script regression that expands release:standup-handoff through verify and smoke scripts, proving the gate remains synthetic-only and does not reference installed-agent probes or built-in prompt-agent executables
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup/handoff release gate script chain stays synthetic-only' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, handoff, release, test-maintainability, implemented]
-- label: tracequest README and help keep standup --probe-agents documented as opt-in installed-agent validation outside the routine standup example list, while the documented example smoke still exercises the command with fake agents and synthetic data only
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup probe opt-in docs|README and help standup/handoff examples parse through the real bin' test/bin/tracequest.e2e.test.js test/bin/tracequest-doc-examples.e2e.test.js
+- label: tracequest CLI reference and help keep standup --probe-agents documented as opt-in installed-agent validation outside the routine standup example list, while the documented example smoke still exercises the command with fake agents and synthetic data only
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup probe opt-in docs|CLI reference and help standup/handoff examples parse through the real bin' test/bin/tracequest.e2e.test.js test/bin/tracequest-doc-examples.e2e.test.js
   tags: [spec, standup, agent, probe, docs, examples, implemented]
 - label: CHANGELOG 0.1.2 lists npm run release:standup-handoff alongside the synthetic standup/handoff verification scripts so release docs match package scripts
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup and handoff release notes summarize shipped surface' test/bin/tracequest.e2e.test.js
@@ -1003,8 +1003,8 @@
 - label: the serve API populates liveSessions from the full unfiltered session snapshot and the browser refresh path updates the pinned unified live rows and row badge set from each /api/sessions response
   command: node --test --test-concurrency=1 test/routes/route-handlers-pages.test.js test/browser/browser-client-dashboard.test.js test/bin/tracequest-serve-integration.test.js
   tags: [spec, live-ui, implemented]
-- label: README serve docs mention live running sessions and the live:true filter key
-  command: grep -q 'live running sessions' README.md && grep -q 'live:true' README.md
+- label: CLI reference serve docs mention live running sessions and the live:true filter key
+  command: grep -q 'live running sessions' docs/cli-reference.md && grep -q 'live:true' docs/cli-reference.md
   tags: [spec, live-ui, docs, implemented]
 - label: served browser tests load tracequest serve in Playwright and verify an external live session renders as ONE unified live row (run-row chrome, running state badge, external origin chip, /run?session=<hash> click target, no #liveBar strip, no duplicate session row) from the initial page payload and after window._refreshData fetches /api/sessions
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/live-ui-served.playwright.test.js
