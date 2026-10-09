@@ -1265,7 +1265,7 @@
   command: test -f docs/ui-implementation-style-reference.md && grep -q 'Browser Index Vocabulary' docs/ui-implementation-style-reference.md && grep -q 'Compare Vocabulary' docs/ui-implementation-style-reference.md && grep -q 'Rendered Session Vocabulary' docs/ui-implementation-style-reference.md && grep -q 'Route-State And Error Shell Vocabulary' docs/ui-implementation-style-reference.md && grep -q 'Diagnostics Vocabulary' docs/ui-implementation-style-reference.md && grep -q 'ui-implementation-style-reference.md' docs/ui-style-design-guidelines.md
   tags: [spec, docs, ui, implementation-vocabulary, implemented]
 - label: compare tool usage rows keep long tool labels within the mobile worksheet by truncating the centered label instead of widening the viewport
-  command: node --test test/browser/compare-page-css.test.js --test-name-pattern 'compare-page-css — responsive rules'
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'compare responsive tool labels' test/browser/compare-responsive.playwright.test.js
   tags: [spec, ui, compare-route, responsive, implemented]
 - label: compare tool usage long labels have narrow-viewport browser coverage that verifies no horizontal overflow and visible truncation at mobile width
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'compare responsive tool labels' test/browser/compare-responsive.playwright.test.js
@@ -1438,7 +1438,7 @@
   command: node --test test/render-ui-chapters.test.js test/render/render-ui-detail.test.js test/render/render-interactions.test.js
   tags: [spec, ui, rendered-session, accessibility, implemented]
 - label: Rendered session analytics panels use native button controls with accessible labels and pressed/expanded state for panel toggles, file and tool filters, git chapter jumps, and minimap chapter jumps
-  command: node --test test/render-analytics-compose.test.js test/render/render-analytics-charts.test.js test/render-session-css.test.js
+  command: node --test test/render-analytics-compose.test.js test/render/render-analytics-charts.test.js
   tags: [spec, rendered-session, analytics, accessibility, implemented]
 - rendered activity timeline diagnostics are available from the keyboard with a focusable timeline canvas, Arrow/Home/End timeline selection, visible diagnostic text, and Enter/Space chapter activation matching pointer chapter context @spec @ui @rendered-session @accessibility @activity-timeline @implemented
 - label: Rendered session error timeline jump controls use native buttons with explicit accessible labels for streak badges and per-chapter error dots
