@@ -19,6 +19,7 @@ export function fmtMcpName(name) {
 export function fmtTokens(n, opts) {
   const zeroLabel = opts && opts.zeroLabel !== undefined ? opts.zeroLabel : '';
   if (!n) return zeroLabel;
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
   if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
   return String(n);
@@ -87,6 +88,12 @@ export function formatDuration(ms, opts = {}) {
   }
   const h = Math.floor(m / 60);
   const rm = m % 60;
+  // Past two days, hours stop being readable ("822h 40m"): show days + hours.
+  if (h >= 48) {
+    const d = Math.floor(h / 24);
+    const rh = h % 24;
+    return rh ? d + 'd ' + rh + 'h' : d + 'd';
+  }
   if (rm === 0 && !alwaysShowMinutes) return h + 'h';
   return h + 'h ' + rm + 'm';
 }

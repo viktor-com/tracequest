@@ -509,79 +509,50 @@ html.theme-switching, html.theme-switching * { transition: background-color var(
  * pages, so the record cannot look like two objects.
  */
 export const IDENTITY_ROW_CSS = `
-/* ---- shared identity row: the same record, the same chips, everywhere ---- */
-.session-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.session-id { font-family: var(--mono); font-size: 13px; color: var(--fg); font-weight: 500; }
-.session-model { font-size: 11px; color: var(--fg3); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+/* ---- identity: the same record wears the same marks everywhere ---- */
+.session-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.session-id { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
+.session-model { font-size: var(--text-xs); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
 .session-model[hidden] { display: none; }
-.session-project {
-  font-size: 11px; color: var(--fg3); font-family: var(--mono);
-  background: rgba(255,255,255,0.04); padding: 1px 6px; border-radius: 4px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;
-}
+.session-project { font-size: var(--text-xs); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
 .session-source {
-  font-size: 11px; font-family: var(--mono); font-weight: 500;
-  padding: 1px 8px; border-radius: 999px; color: var(--fg);
-  /* the inline source hue becomes a quiet tint instead of a solid fill */
-  box-shadow: inset 0 0 0 999px rgba(17, 17, 19, 0.78);
+  display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); color: var(--text-2); white-space: nowrap;
 }
-@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.session-source::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--hue, var(--hue-other)); flex: none; }
 .run-state-badge {
-  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
-  font-size: 11px; font-family: var(--mono); font-weight: 500;
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-size: var(--text-xs); color: var(--text-3); white-space: nowrap;
 }
-.run-state-badge::before {
-  content: ''; width: 6px; height: 6px; border-radius: 50%;
-}
-.run-state-badge[data-status="running"] { color: var(--green); }
-.run-state-badge[data-status="running"]::before {
-  background: var(--green); animation: live-pulse 2s ease-in-out infinite;
-}
-.run-state-badge[data-status="exited"] { color: var(--fg3); }
-.run-state-badge[data-status="exited"]::before { background: var(--fg3); }
-.run-state-badge[data-status="idle"] { color: var(--fg3); }
-.run-state-badge[data-status="idle"]::before { background: var(--fg3); animation: none; }
-.run-state-badge[data-status="gone"] { color: var(--red); }
-.run-state-badge[data-status="gone"]::before { background: var(--red); }
+.run-state-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--text-4); flex: none; }
+.run-state-badge[data-status="running"] { color: var(--ok); }
+.run-state-badge[data-status="running"]::before { background: var(--ok); animation: ui-pulse 2.2s var(--ease-out) infinite; }
+.run-state-badge[data-status="idle"] { color: var(--text-3); }
+.run-state-badge[data-status="idle"]::before { background: var(--warn); }
+.run-state-badge[data-status="exited"]::before { background: var(--text-4); }
+.run-state-badge[data-status="gone"] { color: var(--bad); }
+.run-state-badge[data-status="gone"]::before { background: var(--bad); }
 .run-origin {
-  font-size: 10px; font-family: var(--mono); font-weight: 500;
-  color: var(--fg3);
-  border: 1px solid var(--border); border-radius: 999px; padding: 0 7px;
-  flex-shrink: 0;
+  display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: var(--radius-pill);
+  font-size: 11px; color: var(--text-3); box-shadow: inset 0 0 0 1px var(--line-2); flex-shrink: 0; white-space: nowrap;
 }
 .session-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  margin-top: 5px;
-  font-size: 11px;
-  font-family: var(--mono);
-  color: var(--fg3);
-  font-variant-numeric: tabular-nums;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px;
+  font-size: var(--text-xs); color: var(--text-3); font-variant-numeric: tabular-nums;
 }
-.session-stat { display: inline-flex; align-items: center; gap: 3px; }
-.session-stat-icon { font-size: 10px; }
-.session-stat.errors { color: var(--red); }
-.session-stat.tokens { color: var(--fg3); }
-.session-stat.commits { color: var(--green); }
-.session-stat.files-stat { color: var(--fg3); }
-.session-stat.duration { color: var(--fg2); }
-.session-stat.cost { color: var(--orange); }
+.session-stat { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.session-stat.errors { color: var(--bad); }
+.session-stat.commits { color: var(--ok); }
+.session-stat.duration { color: var(--text-2); }
+.session-stat.cost { color: var(--text-2); }
 .session-grade-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  font-family: var(--mono);
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 3px;
-  white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 18px; padding: 0 5px;
+  border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: 11px; font-weight: var(--weight-medium);
+  color: var(--text-2); background: var(--surface-3); white-space: nowrap; cursor: default;
 }
 .session-grade-badge[hidden] { display: none; }
-.session-grade-badge.grade-a { color: var(--green); background: rgba(74,222,128,0.10); }
-.session-grade-badge.grade-b { color: var(--green); background: rgba(74,222,128,0.07); opacity: 0.85; }
-.session-grade-badge.grade-c { color: var(--orange); background: rgba(232,164,76,0.10); }
-.session-grade-badge.grade-d { color: #d97740; background: rgba(217,119,64,0.10); }
-.session-grade-badge.grade-f { color: var(--red); background: rgba(240,112,112,0.10); }
+.session-grade-badge.grade-a { color: var(--ok); background: var(--ok-soft); }
+.session-grade-badge.grade-b { color: var(--ok); background: color-mix(in srgb, var(--ok) 9%, transparent); }
+.session-grade-badge.grade-c { color: var(--warn); background: var(--warn-soft); }
+.session-grade-badge.grade-d { color: var(--warn); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.session-grade-badge.grade-f { color: var(--bad); background: var(--bad-soft); }
 `;

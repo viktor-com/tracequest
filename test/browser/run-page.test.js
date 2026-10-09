@@ -39,7 +39,7 @@ describe("run page — document shell and header", () => {
     assert.match(page, /<title>tracequest — run @3<\/title>/);
     // The exact chips the dashboard list card wears, same classes verbatim.
     assert.ok(page.includes('<span class="run-state-badge" id="runStatus" data-status="running">running</span>'));
-    assert.match(page, /<span class="session-source" style="background:#a78bfa">claude<\/span>/);
+    assert.match(page, /<span class="session-source" style="--hue:#a78bfa">claude<\/span>/);
     assert.ok(page.includes('<span class="session-id" id="chatSessionId" title="run @3">@3</span>'));
     assert.ok(page.includes('<span class="session-model" id="chatModel" hidden></span>'));
     assert.ok(page.includes("started 2026-08-10T12:00:00.000Z"));
@@ -1175,7 +1175,7 @@ describe("live-session watch page — header and identity (unified-live)", () =>
     assert.match(page, /<title>tracequest — running session abcd1234<\/title>/);
     assert.doesNotMatch(page, /<title>tracequest — live session/);
     // The exact chips the dashboard's external live row wears, same classes.
-    assert.match(page, /<span class="session-source" style="background:#59d4a0">codex<\/span>/);
+    assert.match(page, /<span class="session-source" style="--hue:#59d4a0">codex<\/span>/);
     assert.ok(page.includes('<span class="session-id" id="chatSessionId">abcd1234</span>'));
     assert.ok(page.includes('<span class="session-model" id="chatModel" hidden></span>'));
     assert.match(page, /<span class="run-origin" title="[^"]*outside tracequest[^"]*">external<\/span>/);
@@ -1859,11 +1859,11 @@ describe("watch pages — app shell (the chat lives inside tracequest)", () => {
         "renderRail paints #appLive from liveNow(), not a filtered loop");
       assert.match(page, /liveN \+ " running"/,
         "chat-page #appLive / railCount print N running");
-      assert.match(page, /dashStat\('<span style="color:#4ade80">' \+ liveCount \+ "<\/span>", "running"\)/,
+      assert.match(page, /dashStat\('<span class="dash-live-n" style="color:var\(--ok\)">' \+ liveCount \+ "<\/span>", "running"\)/,
         "chat-page Overview dashStat label is running");
       assert.doesNotMatch(page, /liveN \+ " live"/,
         "chat-page count chrome does not print N live");
-      assert.doesNotMatch(page, /dashStat\('<span style="color:#4ade80">' \+ liveCount \+ "<\/span>", "live"\)/,
+      assert.doesNotMatch(page, /dashStat\('<span class="dash-live-n" style="color:var\(--ok\)">' \+ liveCount \+ "<\/span>", "live"\)/,
         "chat-page Overview dashStat label is not live");
     }
 

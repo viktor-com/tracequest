@@ -73,7 +73,7 @@ function renderDashboard() {
   var topTools = toolEntries.slice(0, 10);
 
   // Format helpers
-  var fmtCostVal = fmtCost(totalCost, { prefix: '$', zeroLabel: '$0' });
+  var fmtCostVal = totalCost >= 1000 ? '$' + Math.round(totalCost).toLocaleString('en-US') : fmtCost(totalCost, { prefix: '$', zeroLabel: '$0' });
   var totalTokFmt = fmtTokens(totalInputTok + totalOutputTok + totalCacheRead);
   var durFmt = fmtDuration(totalDuration);
 
@@ -90,7 +90,9 @@ function renderDashboard() {
     + '</div>';
 
   html += '<div class="dashboard-stats">';
+  function group(n) { return typeof n === 'number' ? n.toLocaleString('en-US') : n; }
   function dashStat(val, label, growth) {
+    val = group(val);
     return '<span class="dashboard-stat"><span class="dashboard-stat-val">' + val + '</span><span class="dashboard-stat-label">' + label + ' ' + (growth || '') + '</span></span>';
   }
   // ONE origin-agnostic running count (liveNow: generating launched runs via
@@ -98,7 +100,7 @@ function renderDashboard() {
   // deduped by recording path) — the same definition the list's pinned rows
   // and the run-page shell counter use. The chrome word is running, not live.
   var liveN = liveNow();
-  if (liveN) html += dashStat('<span style="color:#4ade80">' + liveN + '</span>', 'running');
+  if (liveN) html += dashStat('<span class="dash-live-n" style="color:var(--ok)">' + liveN + '</span>', 'running');
   html += dashStat(totalSessions, 'runs');
   html += dashStat(fmtCostVal, 'cost', growthBadge('cost'));
   html += dashStat(totalTokFmt || '--', 'tokens', growthBadge('tokens'));

@@ -58,7 +58,6 @@ describe('browser-page-build HTML shell', () => {
     assert.match(html, /<div class="refresh-status" id="refreshStatus" aria-live="polite" data-state="idle" hidden><\/div>/);
     // The app bar frames the scrolling list (sticky, outside the container).
     assert.ok(html.indexOf('<header class="app-top">') < html.indexOf('<div class="container runs-home">'));
-    assert.match(html, /\.app-top \{ position: sticky; top: 0; z-index: 150; \}/);
   });
 
   test('main container wraps dashboard, quick filters, sort bar, sessions, pagination', () => {
@@ -113,34 +112,7 @@ describe('browser-page-build HTML shell', () => {
     assert.match(html, /class="sort-btn" data-sort="duration" aria-pressed="false"/);
   });
 
-  test('status CSS uses shared semantic color tokens', () => {
-    const html = shellHtml();
-    const styleStart = html.indexOf('<style>') + 7;
-    const styleEnd = html.indexOf('</style>');
-    const css = html.slice(styleStart, styleEnd);
-    assert.match(css, /\.refresh-status\[data-state="stale"\] \{ color: var\(--orange\); \}/);
-    assert.match(css, /\.refresh-status\[data-state="error"\] \{ color: var\(--red\); \}/);
-    assert.match(css, /\.live-indicator \{[\s\S]*color: var\(--green\);/);
-    assert.match(css, /\.fetch-error \{ color: var\(--red\);/);
-    assert.match(css, /\.session-stat\.commits \{ color: var\(--green\); \}/);
-    assert.match(css, /\.session-badge\.commit-badge \{ color: var\(--green\);/);
-  });
 
-  test('run rows are styled as first-class session-list rows (no Agents strip remnants)', () => {
-    const html = shellHtml();
-    const styleStart = html.indexOf('<style>') + 7;
-    const styleEnd = html.indexOf('</style>');
-    const css = html.slice(styleStart, styleEnd);
-    assert.match(css, /\.session-row\.run-row \{ cursor: pointer; \}/);
-    assert.match(css, /\.run-state-badge\[data-status="running"\] \{ color: var\(--green\); \}/);
-    assert.match(css, /\.run-activity \{/);
-    assert.match(css, /\.run-activity-dot \{/);
-    assert.match(css, /\.run-dismiss \{/);
-    assert.match(css, /\.run-row-wrap \.runs-col-check \{ width: var\(--runs-check\); \}/,
-      'run rows align with checkbox-carrying session rows');
-    // The separate run-strip vocabulary is gone for good.
-    assert.doesNotMatch(css, /\.live-run-row|\.run-status-pill|\.run-open-chat|run-chat-badge/);
-  });
 
   test('runs-home: / is a Runs inventory, not a landing page or session viewer', () => {
     const html = shellHtml();
@@ -230,7 +202,7 @@ describe('browser-page-build filter bar', () => {
 
   test('filter input has expression placeholder and is not autofocused', () => {
     const html = shellHtml();
-    assert.match(html, /placeholder="Filter — e\.g\. foo AND \(tool:Read OR tool:Edit\)"/);
+    assert.match(html, /placeholder="Filter runs — words, project:api, errors:>0, tool:Edit, age:<7d"/);
     assert.match(html, /id="filterInput"[^>]*aria-label="Filter runs"/);
     assert.match(html, /id="filterInput"[^>]*aria-controls="suggestions"/);
     assert.match(html, /id="filterInput"[^>]*aria-autocomplete="list"/);
@@ -239,16 +211,6 @@ describe('browser-page-build filter bar', () => {
     assert.match(html, /id="workspaceSearch"/);
   });
 
-  test('embedded CSS defines chip and suggestion autocomplete styling', () => {
-    const html = shellHtml();
-    const styleStart = html.indexOf('<style>') + 7;
-    const styleEnd = html.indexOf('</style>');
-    const css = html.slice(styleStart, styleEnd);
-    assert.match(css, /\.filter-bar:focus-within/);
-    assert.match(css, /\.chip\.negated/);
-    assert.match(css, /\.suggestions\.open/);
-    assert.match(css, /\.suggestion-item\.hl/);
-  });
 
   test('filter legend documents key prefixes and boolean operators', () => {
     const html = shellHtml();

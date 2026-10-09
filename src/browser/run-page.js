@@ -1128,7 +1128,7 @@ ${RUN_IDENTITY_STATUS_SRC}
       return '<span class="dashboard-stat"><span class="dashboard-stat-val">' + val + '</span><span class="dashboard-stat-label">' + label + "</span></span>";
     }
     var html = "";
-    if (liveCount) html += dashStat('<span style="color:#4ade80">' + liveCount + "</span>", "running");
+    if (liveCount) html += dashStat('<span class="dash-live-n" style="color:var(--ok)">' + liveCount + "</span>", "running");
     html += dashStat(totalSessions || "0", "runs");
     html += dashStat(fmtCost(_stats.totalCost || 0, { prefix: "$", zeroLabel: "$0" }), "cost");
     html += dashStat(fmtTokens(totalInputTok + totalOutputTok + totalCacheRead) || "--", "tokens");
@@ -3892,7 +3892,7 @@ ${APP_TOP_HTML}
   <header class="chat-top">
     <div class="session-top chat-identity">
       <span class="run-state-badge" id="runStatus" data-status="${esc(identityStatus)}">${esc(identityStatus)}</span>
-      <span class="session-source" style="background:${sourceColor(agent)}">${esc(agent)}</span>
+      <span class="session-source" style="--hue:${sourceColor(agent)}">${esc(agent)}</span>
       <span class="session-id" id="chatSessionId" title="run ${esc(id)}">${esc(id)}</span>
       <span class="session-model" id="chatModel" hidden></span>
       <span class="session-project" title="${esc(cwd)}">${esc(cwd.split("/").filter(Boolean).pop() || cwd || "cwd")}</span>
@@ -4998,7 +4998,7 @@ ${APP_TOP_HTML}
   <header class="chat-top">
     <div class="session-top chat-identity">
       <span class="run-state-badge" id="runStatus" data-status="${esc(statusWord)}">${esc(statusWord)}</span>
-      <span class="session-source" style="background:${sourceColor(source)}">${esc(source)}</span>
+      <span class="session-source" style="--hue:${sourceColor(source)}">${esc(source)}</span>
       <span class="session-id" id="chatSessionId">${esc(hash)}</span>
       <span class="session-model" id="chatModel" hidden></span>
       <span class="session-project" title="${esc(path)}">${esc(project || path.split("/").filter(Boolean).pop() || path)}</span>
