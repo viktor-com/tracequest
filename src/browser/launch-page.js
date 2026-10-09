@@ -14,120 +14,77 @@ import { OVERLAY_FOCUS_SRC } from "./overlay-focus.js";
  */
 
 export const LAUNCHER_MODAL_CSS = `
-/* --- New run button (dashboard header) --- */
-.new-run-btn {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--fg);
-  color: var(--bg);
-  border: none;
-  border-radius: 999px;
-  padding: 5px 14px;
-  font-size: 12px;
-  font-family: var(--sans);
-  font-weight: 500;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
-  white-space: nowrap;
-}
-.new-run-btn:hover { opacity: 0.85; }
-
-/* --- Launcher modal --- */
+/* ---- New run launcher (the run "settings": agent, folder, prompt) ---- */
 .launch-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  z-index: 400;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 12vh 16px 16px;
+  position: fixed; inset: 0; z-index: var(--z-dialog);
+  display: flex; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px;
+  background: var(--scrim); backdrop-filter: blur(3px);
+  animation: ui-fade-in var(--dur-2) var(--ease-out);
 }
 .launch-overlay[hidden] { display: none; }
 .launch-modal {
-  width: 100%;
-  max-width: 460px;
-  background: var(--surface);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 14px 18px 16px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  width: min(560px, 100%); background: var(--surface-pop); border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-pop); overflow: hidden; animation: ui-pop-in var(--dur-3) var(--ease-out);
 }
-.launch-modal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.launch-modal-title {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--fg3);
-}
+.launch-modal-head { display: flex; align-items: flex-start; gap: var(--space-3); padding: 22px 22px 6px; }
+.launch-modal-title { font-size: var(--text-xl); line-height: var(--lh-xl); letter-spacing: var(--track-tight); }
+.launch-modal-sub { font-size: var(--text-sm); color: var(--text-3); margin-top: 2px; }
 .launch-close {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: var(--fg3);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 5px;
-  transition: color 0.12s, background 0.12s;
+  margin-left: auto; width: var(--control-md); height: var(--control-md); border-radius: var(--radius-pill);
+  display: grid; place-items: center; color: var(--text-3); font-size: 18px; line-height: 1;
+  transition: background var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
 }
-.launch-close:hover { color: var(--fg); background: var(--surface2); }
-.launch-mono { font-family: var(--mono); }
-
-.launch-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
-.launch-label {
-  font-size: 11px;
-  color: var(--fg3);
-  font-family: var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
+.launch-close:hover { background: var(--hover); color: var(--text); }
+#launchForm { display: flex; flex-direction: column; gap: var(--space-4); padding: 14px 22px 0; }
+.launch-row { display: grid; grid-template-columns: 180px 1fr; gap: var(--space-3); }
+.launch-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.launch-label { font-size: var(--text-xs); color: var(--text-2); }
 .launch-select, .launch-input, .launch-textarea {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--fg);
-  font-family: var(--mono);
-  font-size: 12px;
-  padding: 6px 8px;
-  outline: none;
-  transition: border-color 0.15s;
+  width: 100%; border: 0; outline: none; color: var(--text); font-size: var(--text-sm);
+  background: var(--surface-1); box-shadow: inset 0 0 0 1px var(--line-2);
+  transition: box-shadow var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out);
 }
-.launch-select:focus, .launch-input:focus, .launch-textarea:focus { border-color: var(--accent); }
-.launch-select:disabled { opacity: 0.4; }
-.launch-textarea { font-family: var(--sans); font-size: 13px; resize: vertical; }
-.launch-agents-empty { font-size: 11px; color: var(--orange); font-family: var(--mono); }
-.launch-agents-empty[hidden] { display: none; }
-.launch-actions { display: flex; align-items: center; gap: 10px; }
+.launch-select, .launch-input { height: var(--control-lg); padding: 0 12px; border-radius: var(--radius-md); }
+.launch-select {
+  -webkit-appearance: none; appearance: none; padding-right: 30px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 14px;
+}
+.launch-input { font-family: var(--font-mono); font-size: 12.5px; }
+.launch-textarea {
+  min-height: 112px; padding: 12px; border-radius: var(--radius-md); resize: vertical;
+  font-family: var(--font-sans); line-height: var(--lh-sm);
+}
+.launch-select:hover, .launch-input:hover, .launch-textarea:hover { box-shadow: inset 0 0 0 1px var(--line-3); }
+.launch-select:focus, .launch-input:focus, .launch-textarea:focus { box-shadow: inset 0 0 0 1px var(--focus); background-color: var(--surface-2); }
+.launch-select::placeholder, .launch-input::placeholder, .launch-textarea::placeholder { color: var(--text-3); }
+.launch-agents-empty { font-size: var(--text-xs); color: var(--warn); }
+.launch-actions {
+  display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+  margin: 6px -22px 0; padding: 14px 22px; box-shadow: inset 0 1px 0 var(--line-1); background: var(--surface-1);
+}
+.launch-hint { font-size: var(--text-xs); color: var(--text-3); display: inline-flex; align-items: center; gap: 6px; }
+.launch-hint kbd {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: 10.5px; color: var(--text-3);
+  background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-2);
+}
 .launch-start {
-  background: var(--accent);
-  color: #111;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 16px;
-  font-size: 13px;
-  font-family: var(--sans);
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.12s;
+  order: 3; margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  height: var(--control-md); padding: 0 16px; border-radius: var(--radius-pill);
+  background: var(--ink); color: var(--paper); font-size: var(--text-sm);
+  transition: background var(--dur-2) var(--ease-out), opacity var(--dur-2) var(--ease-out);
 }
-.launch-start:hover { opacity: 0.85; }
-.launch-start:disabled { opacity: 0.4; cursor: default; }
-.launch-hint { font-size: 11px; color: var(--fg3); }
-.launch-error { color: var(--red); font-size: 12px; font-family: var(--mono); overflow-wrap: anywhere; }
+.launch-start:hover { background: color-mix(in oklab, var(--ink) 86%, var(--paper)); }
+.launch-start:disabled { opacity: 0.45; cursor: default; }
+.launch-error { flex-basis: 100%; order: 4; font-size: var(--text-xs); color: var(--bad); }
 .launch-error[hidden] { display: none; }
-
-.launch-nomux {
-  border-left: 2px solid var(--orange);
-  padding: 4px 12px;
-}
+.launch-nomux { margin: 14px 22px 22px; padding: 14px 16px; border-radius: var(--radius-md); background: var(--warn-soft); }
 .launch-nomux[hidden] { display: none; }
-.launch-nomux-title { color: var(--fg); font-size: 14px; font-weight: 600; }
-.launch-nomux-message { margin-top: 8px; color: var(--fg2); font-size: 13px; line-height: 1.5; }
+.launch-nomux-title { font-size: var(--text-sm); color: var(--text); margin-bottom: 4px; }
+.launch-nomux-message { font-size: var(--text-xs); color: var(--text-2); line-height: var(--lh-xs); }
+.launch-mono { font-family: var(--font-mono); }
+@media (max-width: 560px) { .launch-row { grid-template-columns: 1fr; } }
 `;
 
 /**
@@ -138,26 +95,31 @@ export const LAUNCHER_MODAL_CSS = `
 export const LAUNCHER_MODAL_HTML = `<div class="launch-overlay" id="launchOverlay" hidden>
   <div class="launch-modal" role="dialog" aria-modal="true" aria-labelledby="launchTitle">
     <div class="launch-modal-head">
-      <div class="launch-modal-title" id="launchTitle">Start a run</div>
+      <div>
+        <div class="launch-modal-title" id="launchTitle">Start a run</div>
+        <div class="launch-modal-sub">Starts the agent in a terminal tracequest manages, then opens its chat.</div>
+      </div>
       <button class="launch-close" id="launchClose" type="button" aria-label="Close launcher">&times;</button>
     </div>
     <form id="launchForm" data-launch-state="form">
-      <div class="launch-field">
-        <label class="launch-label" for="agentSelect">agent</label>
-        <select class="launch-select" id="agentSelect"></select>
-        <div class="launch-agents-empty" id="agentsEmpty" hidden>no agents detected on PATH</div>
+      <div class="launch-row">
+        <div class="launch-field">
+          <label class="launch-label" for="agentSelect">Agent</label>
+          <select class="launch-select" id="agentSelect"></select>
+          <div class="launch-agents-empty" id="agentsEmpty" hidden>no agents detected on PATH</div>
+        </div>
+        <div class="launch-field">
+          <label class="launch-label" for="cwdInput">Folder</label>
+          <input class="launch-input" id="cwdInput" type="text" placeholder="/path/to/project" spellcheck="false">
+        </div>
       </div>
       <div class="launch-field">
-        <label class="launch-label" for="cwdInput">cwd</label>
-        <input class="launch-input" id="cwdInput" type="text" placeholder="/path/to/project" spellcheck="false">
-      </div>
-      <div class="launch-field">
-        <label class="launch-label" for="promptInput">prompt</label>
-        <textarea class="launch-textarea" id="promptInput" rows="3" placeholder="optional initial prompt" spellcheck="false"></textarea>
+        <label class="launch-label" for="promptInput">Prompt</label>
+        <textarea class="launch-textarea" id="promptInput" rows="4" placeholder="optional initial prompt — what should the agent do?" spellcheck="false"></textarea>
       </div>
       <div class="launch-actions">
+        <div class="launch-hint"><kbd>⌘</kbd><kbd>↵</kbd> to start · <kbd>esc</kbd> to close</div>
         <button class="launch-start" id="startBtn" type="submit">Start</button>
-        <div class="launch-hint">opens the run chat</div>
         <div class="launch-error" id="launchError" role="alert" hidden></div>
       </div>
     </form>
@@ -274,6 +236,12 @@ export const LAUNCHER_CLIENT_JS = `
       e.stopPropagation();
       if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
       closeLauncher();
+      return;
+    }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      var go = document.getElementById('startBtn');
+      if (go && !go.disabled) go.click();
       return;
     }
     if (e.key === 'Tab') trapOverlayTab(e, launchOverlay);

@@ -46,7 +46,7 @@ describe("launcher modal — dashboard-native launch surface", () => {
     assert.ok(html.includes('id="agentsEmpty"'), "no-agents-detected state present");
     assert.ok(html.includes("no agents detected on PATH"));
     assert.match(html, /<input class="launch-input" id="cwdInput" type="text" placeholder="\/path\/to\/project"/);
-    assert.match(html, /<textarea class="launch-textarea" id="promptInput"[^>]*placeholder="optional initial prompt"/);
+    assert.match(html, /<textarea class="launch-textarea" id="promptInput"[^>]*placeholder="optional initial prompt[^"]*"/);
     assert.match(html, /<button class="launch-start" id="startBtn" type="submit">Start<\/button>/);
     // Overlay starts hidden; the header button opens it.
     assert.match(html, /<div class="launch-overlay" id="launchOverlay" hidden>/);
@@ -98,7 +98,6 @@ describe("launcher modal — dashboard-native launch surface", () => {
   test("launcher modal styles ship with the dashboard stylesheet", () => {
     const html = dashboardHtml();
     assert.ok(html.includes(".launch-overlay"), "modal CSS embedded");
-    assert.ok(LAUNCHER_MODAL_CSS.includes(".new-run-btn"), "header button styled by the launcher CSS");
   });
 });
 
@@ -109,7 +108,7 @@ describe("dashboard header — New run entry point", () => {
     const headerEnd = html.indexOf('<div class="filter-wrap">', headerStart);
     assert.ok(headerStart >= 0 && headerEnd > headerStart);
     const header = html.slice(headerStart, headerEnd);
-    assert.match(header, /<button class="new-run-btn" id="newRunBtn" type="button"[^>]*>\+ New run<\/button>/);
+    assert.match(header, /<button class="new-run-btn" id="newRunBtn" type="button"[^>]*>[\s\S]*?New run[\s\S]*?<\/button>/);
     assert.ok(!header.includes('href="/launch"'), "no standalone /launch link in the header");
   });
 });

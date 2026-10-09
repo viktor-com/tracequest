@@ -17,7 +17,7 @@ import {
 } from "./browser-client-dashboard.js";
 import { LAUNCHER_CLIENT_JS } from "./launch-page.js";
 import { COMMAND_PALETTE_CLIENT_JS } from "./command-palette.js";
-import { SESSION_STAT_CHIPS_HTML_SRC, SESSION_STATS_HTML_SRC, LIVE_NOW_SRC, USAGE_LIMITS_CLIENT_SRC } from "./app-chrome.js";
+import { SESSION_STAT_CHIPS_HTML_SRC, SESSION_STATS_HTML_SRC, LIVE_NOW_SRC, USAGE_LIMITS_CLIENT_SRC, APP_SHELL_JS } from "./app-chrome.js";
 import { joinBundleParts } from "../render/join-bundle.js";
 import { includesLower, INDEX_OF_LOWER_JS, sumToolCounts } from "../parse/parse-utils.js";
 import { FORM_FIELD_GUARD_SRC } from "./is-form-field.js";
@@ -547,6 +547,7 @@ fetch('/api/agents')
 
 ${USAGE_LIMITS_CLIENT_SRC}
 startUsageLimitsPolling(60000);
+${APP_SHELL_JS}
 
 function continueAgentForSource(source, host) {
   if (host) return null;
@@ -897,7 +898,7 @@ function render() {
   if (appLiveEl) {
     var liveN = liveNow();
     appLiveEl.hidden = !liveN;
-    appLiveEl.textContent = '\\u25CF ' + liveN + ' running';
+    appLiveEl.textContent = liveN + ' running';
   }
   if (!filtered.length && !runsHtml) sessionsEl.insertAdjacentHTML('afterbegin', '<div class="empty">No runs match</div>');
   renderDashboard();

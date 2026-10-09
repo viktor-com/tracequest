@@ -46,7 +46,7 @@ describe('browser-page-build HTML shell', () => {
   test('the Runs home wears the shared app bar: wordmark, Runs crumb, live counter', () => {
     const html = shellHtml();
     // Shared chrome (app-chrome.js appTopHtml): one identity across surfaces.
-    assert.match(html, /<header class="app-top">[\s\S]*<a class="app-wordmark" href="\/">tracequest<\/a>/);
+    assert.match(html, /<header class="app-top">[\s\S]*<a class="app-wordmark" href="\/"[^>]*>[\s\S]*?<span>tracequest<\/span><\/a>/);
     assert.match(html, /<span class="app-crumb">Runs<\/span>/,
       'the home crumb names the Runs inventory surface');
     assert.match(html, /<span class="runs-count" id="count"><\/span>/,
@@ -317,8 +317,8 @@ describe('browser-page-build client script injection', () => {
     const splitA = htmlA.split(filter)[0];
     const splitB = htmlB.split(filter)[0];
     assert.equal(splitA, splitB, 'head through filter value prefix is constant');
-    const tailA = htmlA.slice(htmlA.indexOf('</script>'));
-    const tailB = htmlB.slice(htmlB.indexOf('</script>'));
+    const tailA = htmlA.slice(htmlA.lastIndexOf('</script>'));
+    const tailB = htmlB.slice(htmlB.lastIndexOf('</script>'));
     assert.equal(tailA, tailB, 'HTML_TAIL is constant');
   });
 

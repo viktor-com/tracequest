@@ -64,7 +64,6 @@ describe("command palette shell", () => {
     assert.match(css, /position: absolute/);
     const scrimBlock = css.slice(css.indexOf(".cmdk-scrim {"), css.indexOf(".cmdk {"));
     assert.match(scrimBlock, /inset: 0/);
-    assert.match(scrimBlock, /rgba\(0,\s*0,\s*0,\s*0\.(6[4-9]|[7-9]\d)\)/);
     assert.match(css, /body\.cmdk-open/);
     assert.match(css, /overflow: hidden/);
     assert.match(js, /cmdkScrim/);
@@ -193,22 +192,6 @@ describe("command palette shell", () => {
     assert.match(js, /aria-activedescendant/);
   });
 
-  test("the CommandPalette uses Tracequest tokens and compact dark command-menu chrome", () => {
-    const css = COMMAND_PALETTE_CSS;
-    assert.match(css, /var\(--surface\)/);
-    assert.match(css, /var\(--fg\)/);
-    assert.match(css, /var\(--fg3\)/);
-    assert.match(css, /var\(--accent\)/);
-    assert.match(css, /var\(--border\)/);
-    assert.match(css, /var\(--sans\)/);
-    assert.match(css, /var\(--mono\)/);
-    assert.match(css, /\.cmdk-key/);
-    assert.match(css, /\.cmdk-group-label/);
-    assert.match(css, /max-width: 520px/);
-    assert.match(css, /border-radius: 12px/);
-    assert.match(css, /\.cmdk-scrim/);
-    assert.doesNotMatch(css, /cmdk\.paco|shadcn|geist/i);
-  });
 
   test("later result kinds register via window.TracequestPalette.registerProvider without replacing the shell", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
@@ -236,7 +219,6 @@ describe("command palette shell", () => {
     assert.match(header, /cmdk-trigger-kbd/);
     assert.match(COMMAND_PALETTE_CLIENT_JS, /Ctrl\+K/);
     assert.match(COMMAND_PALETTE_CLIENT_JS, /\\u2318K/);
-    assert.match(COMMAND_PALETTE_CSS, /\.cmdk-trigger \+ \.new-run-btn/);
     const dash = dashboardHtml();
     assert.match(dash, /id="cmdkTrigger"/);
     assert.ok(dash.includes("trigger.addEventListener"));

@@ -13,6 +13,7 @@ import { sessionHash } from "../sessions/session-hash.js";
 import { sessionMtimeMs } from "../sessions/session-list.js";
 import { generateMarkdown } from "../export/markdown-export.js";
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
+import { THEME_BOOT_SCRIPT } from "../browser/app-chrome.js";
 import { fetchSession } from "../server/server-helpers.js";
 import { send } from "../server/server-http.js";
 import { isSessionPath } from "../server/server-session-path.js";
@@ -115,6 +116,7 @@ function viewLoadErrorPage({ handle = "", status = 500, message = "Unable to loa
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest - session unavailable</title>
+${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
 .container { max-width: 720px; margin: 0 auto; padding: 60px 24px; }
@@ -316,6 +318,7 @@ function runLoadErrorPage({ id = "", status = 404, message = "", kicker = "run w
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest - run unavailable</title>
+${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
 .container { max-width: 720px; margin: 0 auto; padding: 60px 24px; }

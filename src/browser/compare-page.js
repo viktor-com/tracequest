@@ -1,4 +1,5 @@
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
+import { THEME_BOOT_SCRIPT } from "./app-chrome.js";
 import { esc } from "../server/server-html-helpers.js";
 import { COMPARE_PAGE_CSS } from "./compare-page-css.js";
 import {
@@ -25,6 +26,7 @@ function compareDocument(bodyHtml) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest — compare</title>
+${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
 ${COMPARE_PAGE_CSS}

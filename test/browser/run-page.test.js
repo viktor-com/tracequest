@@ -1799,7 +1799,7 @@ describe("live-session watch page — honest read-only state (no fake composer)"
 describe("watch pages — app shell (the chat lives inside tracequest)", () => {
   test("both watch pages render the tracequest shell: wordmark header, live counter, New run launcher", () => {
     for (const page of [html(), sessionHtml()]) {
-      assert.match(page, /<a class="app-wordmark" href="\/">tracequest<\/a>/, "wordmark links home");
+      assert.match(page, /<a class="app-wordmark" href="\/"[^>]*>[\s\S]*?<span>tracequest<\/span><\/a>/, "wordmark links home");
       assert.ok(page.includes('<span class="app-live" id="appLive" hidden>'), "origin-agnostic live counter");
       assert.ok(page.includes('class="new-run-btn" id="newRunBtn"'), "same New run button as the dashboard");
       assert.ok(page.includes('id="launchOverlay"'), "launcher modal embedded — start a run from any chat");

@@ -1,6 +1,6 @@
 import { browserClientScript } from "./browser-client.js";
 import { LAUNCHER_MODAL_CSS, LAUNCHER_MODAL_HTML } from "./launch-page.js";
-import { appTopHtml, APP_TOP_CSS, IDENTITY_ROW_CSS } from "./app-chrome.js";
+import { appTopHtml, APP_TOP_CSS, IDENTITY_ROW_CSS, THEME_BOOT_SCRIPT } from "./app-chrome.js";
 import { COMMAND_PALETTE_CSS, COMMAND_PALETTE_HTML } from "./command-palette.js";
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
 
@@ -11,6 +11,7 @@ const HTML_HEAD = `<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Runs · tracequest</title>
+${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
 ${APP_TOP_CSS}
@@ -1063,6 +1064,7 @@ ${COMMAND_PALETTE_CSS}
 <body>
 ${appTopHtml({
   crumbHtml: '<span class="app-crumb">Runs</span>',
+  nav: 'runs',
   extraHtml: '\n    <div class="refresh-status" id="refreshStatus" aria-live="polite" data-state="idle" hidden></div>',
 })}
 <div class="container runs-home">

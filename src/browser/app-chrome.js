@@ -170,9 +170,11 @@ function usageWidgetHtml(harness, host, snapshot) {
       var reset = relativeReset(w.resetsAt, new Date());
       var meters = "";
       if (amounts) {
+        var fill = Math.max(0, Math.min(100, Number(amounts.used) || 0));
         meters =
+          '<span class="usage-bar' + (fill >= 80 ? " is-high" : "") + '" aria-hidden="true"><i style="width:' + fill + '%"></i></span>' +
           '<span class="usage-meter"><span class="usage-meter-val">' + amounts.used + '%</span><span class="usage-meter-label">used</span></span>' +
-          '<span class="usage-meter"><span class="usage-meter-val">' + amounts.left + '%</span><span class="usage-meter-label">left</span></span>';
+          '<span class="usage-meter usage-meter-left"><span class="usage-meter-val">' + amounts.left + '%</span><span class="usage-meter-label">left</span></span>';
       }
       body +=
         '<div class="usage-window' + (limiting ? " is-limiting" : "") + '">' +
@@ -185,7 +187,7 @@ function usageWidgetHtml(harness, host, snapshot) {
   var hostAttr = host ? ' data-host="' + esc(host) + '"' : "";
   return (
     '<article class="usage-widget' + (unauth ? " is-unauth" : "") + '" data-harness="' + esc(harness.id) + '"' + hostAttr +
-    ' style="--usage-accent:' + color + '" title="' + esc(title) + '">' +
+    ' style="--hue:' + color + '" title="' + esc(title) + '">' +
     '<header class="usage-widget-head"><span class="usage-widget-id">' + esc(id) + "</span>" +
     (plan ? '<span class="usage-widget-plan">' + esc(plan) + "</span>" : "") +
     "</header>" + body + "</article>"
@@ -206,7 +208,7 @@ function paintUsageLimits(data) {
       var unauth = h.status === "unauthenticated";
       chips.push(
         '<span class="app-limit-chip' + (unauth ? " is-unauth" : "") + '"' +
-          (unauth ? "" : ' style="background:' + color + '"') +
+          ' style="--hue:' + color + '"' +
           ' title="' +
           String(title).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;") +
           '">' +
@@ -230,14 +232,20 @@ function paintUsageLimits(data) {
     }
   }
   var el = document.getElementById("appLimits");
+  var btn = document.getElementById("appLimitsBtn");
   if (!el) return;
   if (!chips.length) {
     el.hidden = true;
     el.innerHTML = "";
+    if (btn) btn.hidden = true;
     return;
   }
   el.hidden = false;
   el.innerHTML = chips.join("");
+  if (btn) {
+    btn.hidden = false;
+    btn.setAttribute("data-more", chips.length > 3 ? "+" + (chips.length - 3) : "");
+  }
 }
 
 function startUsageLimitsPolling(intervalMs) {
@@ -266,161 +274,232 @@ export const USAGE_LIMITS_CLIENT_SRC =
   paintUsageLimits.toString().replace(/^export /, "") + "\n" +
   startUsageLimitsPolling.toString().replace(/^export /, "");
 
+/** The tracequest mark: two offset strokes, a trace and its echo. */
+const MARK_SVG = '<svg class="app-mark" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><rect x="1.25" y="1.25" width="15.5" height="15.5" rx="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 11.5h2.5l1.5-5 1.5 5H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+const ICON_THEME = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="5.75" stroke="currentColor" stroke-width="1.5"/><path d="M8 2.25a5.75 5.75 0 0 1 0 11.5z" fill="currentColor"/></svg>';
+const ICON_PLUS = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>';
+
 /**
- * The app top bar, shared by the dashboard and the chat watch pages:
- * wordmark linking home, "/" separator, a caller-supplied crumb (the
- * dashboard mounts the Runs crumb there; chat pages still say
- * "sessions"), the origin-agnostic live counter (#appLive, client-filled),
- * optional extra elements, and the "+ New run" launcher button.
+ * Section nav, the same three names everywhere: Chat (/), Runs (/sessions),
+ * Insights (/insights). `current` marks the page with aria-current.
  */
-export function appTopHtml({ crumbHtml, extraHtml = "" } = {}) {
+export function appNavHtml(current) {
+  const item = (key, href, label, kbd) =>
+    `<a class="app-nav-item" href="${href}" data-nav="${key}" title="${label} — g then ${kbd}"` +
+    (current === key ? ' aria-current="page"' : "") + `>${label}</a>`;
+  return `<nav class="app-nav" aria-label="Sections">${item("chat", "/", "Chat", "c")}${item("runs", "/sessions", "Runs", "r")}${item("insights", "/insights", "Insights", "i")}</nav>`;
+}
+
+/**
+ * Sets html[data-theme] before first paint from the remembered choice, so a
+ * page never flashes the wrong theme. Embedded in every served page's head.
+ */
+export const THEME_BOOT_SCRIPT = `<script>(function(){try{var t=localStorage.getItem("tq-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>`;
+
+/**
+ * Shell behaviour shared by every served page: the theme toggle (system by
+ * default, remembered once chosen) and the plan-limits popover.
+ */
+export const APP_SHELL_JS = `(function () {
+  if (typeof document === "undefined" || typeof document.addEventListener !== "function") return;
+  var root = document.documentElement;
+  function stored() { try { return localStorage.getItem("tq-theme"); } catch (_) { return null; } }
+  function effective() {
+    var t = stored();
+    if (t === "light" || t === "dark") return t;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+  function paintToggle() {
+    var btn = document.getElementById("themeToggle");
+    if (!btn) return;
+    var next = effective() === "light" ? "dark" : "light";
+    btn.setAttribute("aria-label", "Switch to " + next + " theme");
+    btn.title = "Switch to " + next + " theme";
+  }
+  paintToggle();
+  function setLimitsOpen(open) {
+    var btn = document.getElementById("appLimitsBtn");
+    var panel = document.getElementById("usageRow");
+    if (!btn || !panel) return;
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    panel.classList.toggle("is-open", !!open);
+  }
+  document.addEventListener("click", function (e) {
+    var t = e.target && e.target.closest ? e.target : null;
+    if (!t) return;
+    if (t.closest("#themeToggle")) {
+      var next = effective() === "light" ? "dark" : "light";
+      try { localStorage.setItem("tq-theme", next); } catch (_) {}
+      root.setAttribute("data-theme", next);
+      root.classList.add("theme-switching");
+      setTimeout(function () { root.classList.remove("theme-switching"); }, 260);
+      paintToggle();
+      return;
+    }
+    if (t.closest("#appLimitsBtn")) {
+      var b = document.getElementById("appLimitsBtn");
+      setLimitsOpen(b.getAttribute("aria-expanded") !== "true");
+      return;
+    }
+    if (!t.closest("#usageRow")) setLimitsOpen(false);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") setLimitsOpen(false);
+  });
+})();`;
+
+/**
+ * The app top bar for every app page: mark and wordmark, section nav with
+ * the live count, then search (mounted by the palette), plan limits, theme,
+ * ⌘K and the primary "New run" action. The page crumb stays for screen
+ * readers; the nav carries the visible location.
+ */
+export function appTopHtml({ crumbHtml, extraHtml = "", nav = "" } = {}) {
   return `<header class="app-top">
-    <a class="app-wordmark" href="/">tracequest</a>
+    <a class="app-wordmark" href="/" aria-label="tracequest — Chat">${MARK_SVG}<span>tracequest</span></a>
     <span class="app-crumb-sep">/</span>
     ${crumbHtml}
-    <span class="app-live" id="appLive" hidden></span>
-    <span class="app-limits" id="appLimits" hidden></span>${extraHtml}
+    ${appNavHtml(nav)}
+    <span class="app-live" id="appLive" hidden></span>${extraHtml}
+    <button class="app-limits-btn" id="appLimitsBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="usageRow" title="Plan limits" hidden><span class="app-limits" id="appLimits" hidden></span></button>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch theme" title="Switch theme">${ICON_THEME}</button>
     <button class="cmdk-trigger" id="cmdkTrigger" type="button" aria-label="Open command menu" title="Command menu">
       <kbd class="cmdk-trigger-kbd">⌘K</kbd>
     </button>
-    <button class="new-run-btn" id="newRunBtn" type="button" title="Start an agent run">+ New run</button>
+    <button class="new-run-btn" id="newRunBtn" type="button" title="Start an agent run — g then n">${ICON_PLUS}<span>New run</span></button>
   </header>
-  <div class="usage-row" id="usageRow" hidden aria-label="Harness usage"></div>`;
+  <div class="usage-row" id="usageRow" hidden role="dialog" aria-label="Plan limits"></div>`;
 }
 
 export const APP_TOP_CSS = `
-/* ---- shared app top bar (dashboard + chat watch pages) ---- */
+/* ---- app shell: top bar ---- */
 .app-top {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: var(--z-sticky);
+  display: flex; align-items: center; gap: var(--space-2);
+  height: var(--shell-top); padding: 0 var(--space-4) 0 var(--space-5);
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px);
+  box-shadow: inset 0 -1px 0 var(--line-1);
   flex: none;
-  background: var(--bg);
 }
-.app-wordmark { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; color: var(--fg); text-decoration: none; line-height: 1.2; }
-.app-wordmark:hover { color: var(--fg2); }
-.app-crumb-sep { font-size: 12px; color: var(--fg3); }
-.app-crumb { font-size: 13px; color: var(--fg3); }
+.app-wordmark {
+  display: inline-flex; align-items: center; gap: 8px; margin-right: var(--space-4);
+  font-size: 15px; font-weight: var(--weight-medium); letter-spacing: -0.02em; color: var(--text);
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+.app-wordmark:hover { opacity: 0.8; }
+.app-mark { color: var(--text); flex: none; }
+.app-crumb-sep, .app-crumb {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.app-nav { display: inline-flex; align-items: center; gap: 2px; }
+.app-nav-item {
+  position: relative; display: inline-flex; align-items: center; height: var(--control-md); padding: 0 12px;
+  border-radius: var(--radius-pill); font-size: var(--text-md); color: var(--text-2);
+  transition: color var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out);
+}
+.app-nav-item:hover { color: var(--text); background: var(--hover); }
+.app-nav-item[aria-current="page"] { color: var(--text); background: var(--surface-2); }
 .app-live {
-  font-size: 11px;
-  font-family: var(--mono);
-  color: var(--green);
-  align-self: center;
+  display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px 0 8px; margin-left: var(--space-1);
+  border-radius: var(--radius-pill); font-size: var(--text-xs); color: var(--ok); background: var(--ok-soft);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.app-live::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ok);
+  animation: ui-pulse 2.2s var(--ease-out) infinite;
 }
 .app-live[hidden] { display: none; }
-.app-limits {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
-  overflow: hidden;
-  min-width: 0;
-  max-width: min(52vw, 420px);
-  align-self: center;
+/* right cluster, in reading order: search, limits, theme, ⌘K, New run */
+.app-top > .tq-search { order: 1; margin-left: auto; }
+.app-top > .app-limits-btn { order: 2; }
+.app-top > .theme-toggle { order: 3; }
+.app-top > .cmdk-trigger { order: 4; }
+.app-top > .new-run-btn { order: 5; }
+.app-limits-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: var(--control-md); padding: 0 10px;
+  border-radius: var(--radius-pill); color: var(--text-2); transition: background var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
 }
+.app-limits-btn:hover, .app-limits-btn[aria-expanded="true"] { background: var(--hover); color: var(--text); }
+.app-limits-btn[data-more]:not([data-more=""])::after { content: attr(data-more); font-size: var(--text-xs); color: var(--text-3); }
+.app-limits { display: inline-flex; align-items: center; gap: 10px; }
 .app-limits[hidden] { display: none; }
 .app-limit-chip {
-  flex: none;
-  font-size: 10px;
-  font-family: var(--mono);
-  line-height: 1.2;
-  padding: 2px 6px;
-  border-radius: 999px;
-  color: #111;
-  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-xs); white-space: nowrap;
+  font-variant-numeric: tabular-nums; color: inherit;
 }
-.app-limit-chip.is-unauth {
-  color: var(--fg2);
-  box-shadow: inset 0 0 0 1px var(--border);
+.app-limit-chip:nth-child(n+4) { display: none; }
+.app-limit-chip::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--hue, var(--text-4)); }
+.app-limit-chip.is-unauth { color: var(--text-3); }
+.app-limit-chip.is-unauth::before { background: transparent; box-shadow: inset 0 0 0 1px var(--text-3); }
+.theme-toggle {
+  display: inline-grid; place-items: center; width: var(--control-md); height: var(--control-md);
+  border-radius: var(--radius-pill); color: var(--text-3);
+  transition: color var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out);
 }
-@media (max-width: 720px) {
-  .app-limits { max-width: 42vw; }
+.theme-toggle:hover { color: var(--text); background: var(--hover); }
+.new-run-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: var(--control-md); padding: 0 14px 0 11px; margin-left: var(--space-1);
+  border-radius: var(--radius-pill); background: var(--ink); color: var(--paper);
+  font-size: var(--text-sm); white-space: nowrap;
+  transition: background var(--dur-2) var(--ease-out), transform var(--dur-1) var(--ease-out);
 }
+.new-run-btn:hover { background: color-mix(in oklab, var(--ink) 86%, var(--paper)); }
+.new-run-btn:active { transform: translateY(0.5px); }
+html.theme-switching, html.theme-switching * { transition: background-color var(--dur-3) var(--ease-out), color var(--dur-3) var(--ease-out), box-shadow var(--dur-3) var(--ease-out) !important; }
+
+/* ---- plan limits popover ---- */
 .usage-row {
-  display: flex;
-  flex: none;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 10px 18px;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 6px 16px 8px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
-  font-family: var(--mono);
+  position: fixed; top: calc(var(--shell-top) - 4px); right: var(--space-4); z-index: var(--z-popover);
+  width: min(460px, calc(100vw - 32px)); max-height: min(70vh, 560px); overflow: auto;
+  display: none; flex-direction: column; gap: 2px; padding: var(--space-2);
+  background: var(--surface-pop); border-radius: var(--radius-lg); box-shadow: var(--shadow-pop);
+  font-size: var(--text-sm);
 }
-.usage-row[hidden] { display: none; }
-.usage-widget {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-  max-width: 100%;
-  padding-left: 8px;
-  border-left: 2px solid var(--usage-accent, var(--border));
+.usage-row.is-open:not([hidden]) { display: flex; animation: ui-pop-in var(--dur-2) var(--ease-out); }
+.usage-widget { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--radius-md); }
+.usage-widget + .usage-widget { box-shadow: inset 0 1px 0 var(--line-1); border-radius: 0; }
+.usage-widget-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.usage-widget-id { display: inline-flex; align-items: center; gap: 7px; color: var(--text); font-size: var(--text-sm); }
+.usage-widget-id::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--hue, var(--text-4)); }
+.usage-widget.is-unauth .usage-widget-id::before { background: transparent; box-shadow: inset 0 0 0 1px var(--text-3); }
+.usage-widget-plan { margin-left: auto; font-size: var(--text-xs); color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+.usage-window { display: grid; grid-template-columns: 88px 1fr auto auto; align-items: center; gap: 10px; font-size: var(--text-xs); color: var(--text-3); }
+.usage-window.is-limiting .usage-window-name { color: var(--text-2); }
+.usage-window-name { white-space: nowrap; }
+.usage-bar { position: relative; height: 4px; border-radius: 999px; background: var(--surface-4); overflow: hidden; }
+.usage-bar > i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--text-2); transition: width var(--dur-4) var(--ease-out); }
+.usage-bar.is-high > i { background: var(--accent); }
+.usage-meter { display: inline-flex; align-items: baseline; gap: 3px; }
+.usage-meter-val { color: var(--text); font-variant-numeric: tabular-nums; }
+.usage-meter-left { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.usage-window-reset { white-space: nowrap; text-align: right; min-width: 92px; }
+.usage-widget-hint { margin: 0; font-size: var(--text-xs); color: var(--text-3); }
+
+@media (max-width: 900px) {
+  .app-top .cmdk-trigger { display: none; }
+  .app-top .app-limit-chip:nth-child(n+2) { display: none; }
+  .app-top .app-limits-btn[data-more]:not([data-more=""])::after { content: none; }
 }
-.usage-widget.is-unauth { border-left-color: var(--border); }
-.usage-widget-head {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
+@media (max-width: 640px) {
+  .app-top { padding: 0 var(--space-3); gap: var(--space-1); }
+  .app-top .app-wordmark { margin-right: var(--space-1); }
+  .app-top .app-wordmark span { display: none; }
+  .app-top .app-nav-item { padding: 0 7px; font-size: var(--text-sm); }
+  .app-top .app-live { display: none; }
+  .app-top .app-limits-btn { padding: 0 6px; max-width: 22vw; overflow: hidden; }
+  .app-top .app-limit-chip { overflow: hidden; text-overflow: ellipsis; }
+  .app-top .tq-search-input { width: 32px; padding: 0 0 0 30px; }
+  .app-top .tq-search-input:focus { width: 160px; }
+  .app-top .tq-search-kbd { display: none; }
+  .app-top .new-run-btn span { display: none; }
+  .app-top .new-run-btn { padding: 0 9px; margin-left: 0; }
 }
-.usage-widget-id {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: var(--fg);
+@media (max-width: 480px) {
+  .app-top .theme-toggle { display: none; }
 }
-.usage-widget-plan {
-  font-size: 10px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  color: var(--fg3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.usage-window {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-}
-.usage-window.is-limiting .usage-window-name { color: var(--fg); }
-.usage-window-name,
-.usage-meter-label,
-.usage-window-reset {
-  font-size: 10px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  color: var(--fg3);
-}
-.usage-meter {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-}
-.usage-meter-val {
-  font-size: 14px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--fg);
-  line-height: 1.2;
-}
-.usage-widget-hint {
-  margin: 0;
-  font-size: 11px;
-  color: var(--fg2);
-  font-family: var(--mono);
-}
-@media (max-width: 600px) {
-  .usage-row { gap: 8px 12px; padding: 6px 12px 8px; }
-  .usage-meter-val { font-size: 13px; }
-}
+@media print { .app-top, .usage-row { display: none !important; } }
 `;
 
 /**

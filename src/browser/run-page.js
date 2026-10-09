@@ -93,6 +93,8 @@ import {
 } from "./command-palette.js";
 import {
   appTopHtml,
+  APP_SHELL_JS,
+  THEME_BOOT_SCRIPT,
   APP_TOP_CSS,
   IDENTITY_ROW_CSS,
   SOURCE_COLORS,
@@ -634,7 +636,7 @@ ${ANALYTICS_PANEL_CSS}
 `;
 
 /** The shared app bar (same builder the dashboard uses) — ONE noun: sessions. */
-const APP_TOP_HTML = appTopHtml({ crumbHtml: '<span class="app-crumb">sessions</span>' });
+const APP_TOP_HTML = appTopHtml({ crumbHtml: '<span class="app-crumb">sessions</span>', nav: 'chat' });
 
 /** The persistent session rail (client-rendered rows) — same noun as the dashboard. */
 const AGENT_RAIL_HTML = `<aside class="agent-rail" aria-label="Sessions">
@@ -754,6 +756,7 @@ ${SESSION_STAT_CHIPS_HTML_SRC}
   var appLive = document.getElementById("appLive");
 ${USAGE_LIMITS_CLIENT_SRC}
   startUsageLimitsPolling(60000);
+  ${APP_SHELL_JS}
   var gradeBadge = document.getElementById("runGrade");
   var headIdEl = document.getElementById("chatSessionId");
   var headModelEl = document.getElementById("chatModel");
@@ -1279,7 +1282,7 @@ ${RUN_IDENTITY_STATUS_SRC}
     railCount.textContent = liveN ? liveN + " running" : "";
     if (appLive) {
       appLive.hidden = !liveN;
-      appLive.textContent = "\\u25CF " + liveN + " running";
+      appLive.textContent = liveN + " running";
     }
     renderOverview(liveN);
     updateHeaderIdentity();
@@ -3871,6 +3874,7 @@ export function runPage({ run } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest — run ${esc(id)}</title>
+${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
 ${RUN_PAGE_CSS}
@@ -4976,6 +4980,7 @@ export function liveSessionPage({ session } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest — ${esc(statusWord)} session ${esc(hash)}</title>
+${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
 ${RUN_PAGE_CSS}
@@ -5389,6 +5394,7 @@ export function chatHomePage({ defaultCwd } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest</title>
+${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
 ${RUN_PAGE_CSS}

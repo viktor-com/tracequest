@@ -182,6 +182,7 @@ describe("usage-limits playwright", SKIP_NO_PLAYWRIGHT, () => {
       assert.match(await chips.nth(2).textContent(), /cursor 40%/);
       assert.match(await chips.nth(3).textContent(), /grok@gpu/);
 
+      await page.click("#appLimitsBtn");
       await page.waitForSelector("#usageRow:not([hidden]) .usage-widget");
       const insideDashboard = await page.evaluate(() => !!document.getElementById("usageRow").closest("#dashboard"));
       assert.equal(insideDashboard, false);
@@ -272,6 +273,7 @@ describe("usage-limits playwright", SKIP_NO_PLAYWRIGHT, () => {
       assert.ok(overflow.chipLeft >= 0, "chips start on-screen");
       assert.ok(overflow.chipRight <= overflow.vw + 1, "chips stay inside the viewport");
       assert.ok(overflow.clip >= 0, "chip row clips rather than expanding the page");
+      await page.click("#appLimitsBtn");
       await page.waitForSelector("#usageRow:not([hidden]) .usage-widget");
       const rowBox = await page.locator("#usageRow").boundingBox();
       assert.ok(rowBox, "home usage row is visible");
