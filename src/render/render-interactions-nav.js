@@ -48,7 +48,7 @@ export const INTERACTIONS_NAV_JS = `
         var tTitle = fmtMcpName(toolNames[i]);
         html += '<span class="chapter-tooltip-tool" style="background:' + tColor + '" title="' + esc(tTitle) + ' ' + ch.toolCounts[toolNames[i]] + '"></span>';
       }
-      if (toolNames.length > 8) html += '<span style="color:var(--fg3);font-size:10px">+' + (toolNames.length - 8) + '</span>';
+      if (toolNames.length > 8) html += '<span style="color:var(--text-3);font-size:10px">+' + (toolNames.length - 8) + '</span>';
       html += '</div>';
     }
 
@@ -64,7 +64,7 @@ export const INTERACTIONS_NAV_JS = `
         var short = shortToolPath(filePaths[fi]);
         html += '<div class="chapter-tooltip-file">' + esc(short) + '</div>';
       }
-      if (filePaths.length > 3) html += '<div class="chapter-tooltip-file" style="color:var(--fg3)">+' + (filePaths.length - 3) + ' more</div>';
+      if (filePaths.length > 3) html += '<div class="chapter-tooltip-file" style="color:var(--text-3)">+' + (filePaths.length - 3) + ' more</div>';
       html += '</div>';
     }
 
@@ -94,7 +94,7 @@ export const INTERACTIONS_NAV_JS = `
     }
 
     if (ch.deps && ch.deps.fixesFrom.length > 0) {
-      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">fixes</span><span class="chapter-tooltip-value" style="color:var(--green)">ch ' + ch.deps.fixesFrom.map(function(r){return r+1;}).join(', ') + '</span></div>';
+      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">fixes</span><span class="chapter-tooltip-value" style="color:var(--ok)">ch ' + ch.deps.fixesFrom.map(function(r){return r+1;}).join(', ') + '</span></div>';
     } else if (ch.deps && ch.deps.continuesFrom.length > 0) {
       html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">continues</span><span class="chapter-tooltip-value" style="color:var(--accent)">ch ' + ch.deps.continuesFrom.map(function(r){return r+1;}).join(', ') + '</span></div>';
     }
@@ -103,9 +103,9 @@ export const INTERACTIONS_NAV_JS = `
     html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">quality</span><span class="chapter-tooltip-value ' + outcome + '">' + outcome + '</span></div>';
 
     if (ch.efficiency && ch.efficiency.isWasteful) {
-      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">efficiency</span><span class="chapter-tooltip-value" style="color:var(--orange)">' + ch.efficiency.score + '/100 \\u26a0</span></div>';
+      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">efficiency</span><span class="chapter-tooltip-value" style="color:var(--warn)">' + ch.efficiency.score + '/100 \\u26a0</span></div>';
     } else if (ch.efficiency && ch.efficiency.score < 70) {
-      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">efficiency</span><span class="chapter-tooltip-value" style="color:var(--fg2)">' + ch.efficiency.score + '/100</span></div>';
+      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">efficiency</span><span class="chapter-tooltip-value" style="color:var(--text-2)">' + ch.efficiency.score + '/100</span></div>';
     }
 
     tip.innerHTML = html;

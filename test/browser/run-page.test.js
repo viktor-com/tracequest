@@ -39,7 +39,7 @@ describe("run page — document shell and header", () => {
     assert.match(page, /<title>tracequest — run @3<\/title>/);
     // The exact chips the dashboard list card wears, same classes verbatim.
     assert.ok(page.includes('<span class="run-state-badge" id="runStatus" data-status="running">running</span>'));
-    assert.match(page, /<span class="session-source" style="--hue:#a78bfa">claude<\/span>/);
+    assert.match(page, /<span class="session-source" style="--hue:var\(--hue-claude\)">claude<\/span>/);
     assert.ok(page.includes('<span class="session-id" id="chatSessionId" title="run @3">@3</span>'));
     assert.ok(page.includes('<span class="session-model" id="chatModel" hidden></span>'));
     assert.ok(page.includes("started 2026-08-10T12:00:00.000Z"));
@@ -1135,7 +1135,7 @@ describe("live-session watch page — header and identity (unified-live)", () =>
     assert.match(page, /<title>tracequest — running session abcd1234<\/title>/);
     assert.doesNotMatch(page, /<title>tracequest — live session/);
     // The exact chips the dashboard's external live row wears, same classes.
-    assert.match(page, /<span class="session-source" style="--hue:#59d4a0">codex<\/span>/);
+    assert.match(page, /<span class="session-source" style="--hue:var\(--hue-codex\)">codex<\/span>/);
     assert.ok(page.includes('<span class="session-id" id="chatSessionId">abcd1234</span>'));
     assert.ok(page.includes('<span class="session-model" id="chatModel" hidden></span>'));
     assert.match(page, /<span class="run-origin" title="[^"]*outside tracequest[^"]*">external<\/span>/);

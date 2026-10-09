@@ -26,9 +26,9 @@ Then read the relevant guide rather than guessing commands or source layouts:
 
 ## UI development
 
-Start with [UI style guidelines](ui-style-design-guidelines.md) and
-[information architecture](ui-information-architecture-guidelines.md).
-The style guide links the detailed interaction, density, diagnostics and theming
-rules. Use the [design review template](ui-design-review-note-template.md) when a
-change needs a review note. [Screenshot and recording examples](ui-examples/) show
-the browser, session detail, comparison, insights and usage views.
+Start with the [UI guidelines](ui-guidelines.md): who uses tracequest, the five
+jobs, the information architecture and the states every screen handles. The
+[design system](design-system.md) holds the tokens, components and themes, and
+`node scripts/design-specimen.mjs` renders every component in dark and light.
+[Screenshot and recording examples](ui-examples/) show the Runs, session,
+compare, insights and usage views.

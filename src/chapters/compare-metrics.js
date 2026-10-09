@@ -14,13 +14,13 @@ import { buildSessionChapters } from "./session-chapters.js";
 import { summarizeChapterQuality } from "./chapter-quality.js";
 
 const SOURCE_COLORS = {
-  claude: "#a78bfa",
-  codex: "#59d4a0",
-  cursor: "#c4e86b",
-  "cursor-cloud": "#4dd0e1",
-  factory: "#e0c45e",
-  opencode: "#6ba4e8",
-  grok: "#f07070",
+  claude: "var(--hue-claude)",
+  codex: "var(--hue-codex)",
+  cursor: "var(--hue-cursor)",
+  "cursor-cloud": "var(--hue-cursor-cloud)",
+  factory: "var(--hue-factory)",
+  opencode: "var(--hue-opencode)",
+  grok: "var(--hue-grok)",
 };
 
 const TOOL_COLORS_CMP = {
@@ -422,7 +422,7 @@ export function compareViewUrl(session, summary) {
 
 export function buildSessionCardHtml(summary, _session, viewUrl, sessionClass) {
   const displayModel = shortModel(summary.model) || "—";
-  const badgeColor = SOURCE_COLORS[summary.source] || "#888";
+  const badgeColor = SOURCE_COLORS[summary.source] || "var(--hue-other)";
   const side = sessionClass === "session-a" ? "A" : "B";
   return (
     '<div class="cmp-session ' +

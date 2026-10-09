@@ -732,7 +732,7 @@ export const CORE_SHELL_JS = `
     if (totalIdleMs > 0) {
       var activeStr = formatDuration(activeMs);
       var idleStr = formatDuration(totalIdleMs);
-      legend.appendChild(h('span', { className: 'activity-timeline-legend-item', style: 'margin-left: auto; color: var(--fg2);' },
+      legend.appendChild(h('span', { className: 'activity-timeline-legend-item', style: 'margin-left: auto; color: var(--text-2);' },
         'active: ' + activeStr + ' · idle: ' + idleStr + ' (' + Math.round(totalIdleMs / totalSpan * 100) + '%)'));
     }
     wrap.appendChild(legend);

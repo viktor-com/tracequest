@@ -414,7 +414,7 @@ export const ANALYTICS_CHARTS_JS = `
         tooltip.style.left = (oL + tx) + 'px';
         tooltip.style.top = (oT + 14) + 'px';
         tooltip.innerHTML =
-          '<span style="color:var(--fg3)">chapter ' + (chIdx + 1) + '</span> · ' +
+          '<span style="color:var(--text-3)">chapter ' + (chIdx + 1) + '</span> · ' +
           (turn.timestamp ? '<b>' + formatTime(turn.timestamp) + '</b> ' : '') +
           (turn.tools.length ? turn.tools.join(', ') : 'text') +
           '<br>out: ' + fmtTokens(turn.output) +
@@ -556,8 +556,8 @@ export const ANALYTICS_CHARTS_JS = `
       const cumStr = fmtCost(c.cumulative, { prefix: '$' });
       tooltip.innerHTML =
         '<b>chapter ' + (idx + 1) + '</b><br>' +
-        'cost: <span style="color:var(--orange)">' + costStr + '</span> · ' +
-        'cumulative: <span style="color:var(--orange)">' + cumStr + '</span>';
+        'cost: <span style="color:var(--warn)">' + costStr + '</span> · ' +
+        'cumulative: <span style="color:var(--warn)">' + cumStr + '</span>';
 
       const oL = canvas.offsetLeft;
       const oT = canvas.offsetTop;

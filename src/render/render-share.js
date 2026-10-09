@@ -339,7 +339,7 @@ export const SHARE_JS = `
     repoInput.style.display = 'none';
     modal.appendChild(repoInput);
 
-    var privateRow = h('label', { style: 'display:flex;align-items:center;gap:6px;margin-top:12px;font-size:12px;color:var(--fg2);' });
+    var privateRow = h('label', { style: 'display:flex;align-items:center;gap:6px;margin-top:12px;font-size:12px;color:var(--text-2);' });
     var privateChk = h('input', { type: 'checkbox' });
     privateRow.appendChild(privateChk);
     privateRow.appendChild(document.createTextNode('Private (secret gist / private HF repo)'));
@@ -351,7 +351,7 @@ export const SHARE_JS = `
     findingsPanel.style.display = 'none';
     modal.appendChild(findingsPanel);
 
-    var confirmRow = h('label', { style: 'display:none;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--fg2);' });
+    var confirmRow = h('label', { style: 'display:none;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text-2);' });
     var confirmChk = h('input', { type: 'checkbox' });
     confirmRow.appendChild(confirmChk);
     confirmRow.appendChild(document.createTextNode('I understand — share anyway'));

@@ -1127,7 +1127,7 @@ export const COMMAND_PALETTE_CLIENT_JS = `
   var CATALOG_TTL_MS = 60000;
 
   function sourceColor(source) {
-    return SOURCE_COLORS[source] || "#7a7a85";
+    return SOURCE_COLORS[source] || "var(--hue-other)";
   }
   function loadRecentQueries() {
     try {

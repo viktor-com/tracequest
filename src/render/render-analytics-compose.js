@@ -366,7 +366,7 @@ export const ANALYTICS_COMPOSE_JS = `
     body.appendChild(list);
 
     if (entries.length > 30) {
-      body.appendChild(h('div', { style: 'font-size:11px;color:var(--fg3);margin-top:6px;padding-left:10px;' }, '… ' + (entries.length - 30) + ' more files'));
+      body.appendChild(h('div', { style: 'font-size:11px;color:var(--text-3);margin-top:6px;padding-left:10px;' }, '… ' + (entries.length - 30) + ' more files'));
     }
 
     wrap.appendChild(body);

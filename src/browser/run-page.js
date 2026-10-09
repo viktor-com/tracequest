@@ -297,18 +297,18 @@ ${RUN_IDENTITY_STATUS_SRC}
   var toolsOpen = false;
   var AGE_OPTIONS = { "": "All time", "<1d": "Past 24 hours", "<7d": "Past 7 days", "<30d": "Past 30 days" };
   var TOOL_COLORS = {
-    Bash: "#59d4a0", Edit: "#e0c45e", Write: "#d89660", Read: "#6ba4e8",
-    Agent: "#a78bfa", Grep: "#7a7a85", Glob: "#7a7a85", Skill: "#c88abd",
-    WebFetch: "#6ba4e8", WebSearch: "#6ba4e8", ToolSearch: "#7a7a85",
-    SemanticSearch: "#7a7a85", Delete: "#f07070", Await: "#8b8b92",
-    Ask: "#6ba4e8", CallMcpTool: "#5dadec"
+    Bash: "var(--hue-bash)", Edit: "var(--hue-edit)", Write: "var(--hue-edit)", Read: "var(--hue-read)",
+    Agent: "var(--hue-agent)", Grep: "var(--hue-grep)", Glob: "var(--hue-grep)", Skill: "var(--hue-agent)",
+    WebFetch: "var(--hue-web)", WebSearch: "var(--hue-web)", ToolSearch: "var(--hue-grep)",
+    SemanticSearch: "var(--hue-grep)", Delete: "var(--bad)", Await: "var(--hue-other)",
+    Ask: "var(--hue-web)", CallMcpTool: "var(--hue-web)"
   };
   var filterInput = document.getElementById("filterInput");
   var qfBarEl = document.getElementById("qfBar");
   var _filterTimer = null;
 
   function agentBit(name, project) {
-    var color = SOURCE_COLORS[name] || "#7a7a85";
+    var color = SOURCE_COLORS[name] || "var(--hue-other)";
     var html = '<span class="rail-agent" style="--hue:' + color + '">' + railEsc(name) + "</span>";
     if (project) html += " &middot; " + railEsc(prettyProject(project));
     return html;
@@ -511,8 +511,7 @@ ${RUN_IDENTITY_STATUS_SRC}
       for (var si = 0; si < sourceEntries.length; si++) {
         var sn = sourceEntries[si][0];
         var sc = sourceEntries[si][1];
-        var sColor = SOURCE_COLORS[sn] || "#888";
-        html += '<button type="button" class="qf-chip" data-source="' + railEsc(sn) + '" aria-pressed="false" style="border-color:' + sColor + '40"><span style="color:' + sColor + '">' + railEsc(sn) + '</span> <span class="qf-chip-count">' + sc + "</span></button>";
+        html += '<button type="button" class="qf-chip qf-chip--source" data-source="' + railEsc(sn) + '" aria-pressed="false" style="--hue:' + (SOURCE_COLORS[sn] || "var(--hue-other)") + '">' + railEsc(sn) + ' <span class="qf-chip-count">' + sc + "</span></button>";
       }
       html += "</span></div>";
     }
@@ -685,7 +684,7 @@ ${RUN_IDENTITY_STATUS_SRC}
       for (var ti = 0; ti < top.length; ti++) {
         var tName = top[ti][0];
         var tCount = top[ti][1];
-        var tColor = TOOL_COLORS[tName] || (String(tName).indexOf("mcp__") === 0 ? "#5dadec" : "#7a7a85");
+        var tColor = TOOL_COLORS[tName] || (String(tName).indexOf("mcp__") === 0 ? "var(--hue-web)" : "var(--hue-other)");
         tHtml += '<span class="dashboard-tool-chip" style="color:' + tColor + '">' + railEsc(fmtMcpName(tName)) + ' <span class="dashboard-tool-count">' + tCount + "</span></span>";
       }
       tHtml += "</div>";

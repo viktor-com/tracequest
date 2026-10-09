@@ -39,18 +39,18 @@ import {
 
 /** The one source→pill-color map (dashboard rows, rail rows, chat header). */
 export const SOURCE_COLORS = {
-  claude: "#a78bfa",
-  codex: "#59d4a0",
-  factory: "#e0c45e",
-  cursor: "#c4e86b",
-  "cursor-cloud": "#4dd0e1",
-  opencode: "#6ba4e8",
-  grok: "#f07070",
+  claude: "var(--hue-claude)",
+  codex: "var(--hue-codex)",
+  factory: "var(--hue-factory)",
+  cursor: "var(--hue-cursor)",
+  "cursor-cloud": "var(--hue-cursor-cloud)",
+  opencode: "var(--hue-opencode)",
+  grok: "var(--hue-grok)",
 };
 
 /** Pill color for a source/agent name. */
 export function sourceColor(source) {
-  return SOURCE_COLORS[source] || "#7a7a85";
+  return SOURCE_COLORS[source] || "var(--hue-other)";
 }
 
 /* Client-bundle formatter contract: the functions below are embedded via
@@ -152,7 +152,7 @@ function usageWidgetHtml(harness, host, snapshot) {
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
   }
-  var color = (typeof SOURCE_COLORS !== "undefined" && SOURCE_COLORS[harness.id]) || "#7a7a85";
+  var color = (typeof SOURCE_COLORS !== "undefined" && SOURCE_COLORS[harness.id]) || "var(--hue-other)";
   var id = host ? harness.id + "@" + host : harness.id;
   var unauth = harness.status === "unauthenticated";
   var plan = unauth ? "sign-in" : (harness.plan || "");
@@ -202,7 +202,7 @@ function paintUsageLimits(data) {
     for (var i = 0; i < snapshot.harnesses.length; i++) {
       var h = snapshot.harnesses[i];
       if (h.status !== "ok" && h.status !== "unauthenticated") continue;
-      var color = (typeof SOURCE_COLORS !== "undefined" && SOURCE_COLORS[h.id]) || "#7a7a85";
+      var color = (typeof SOURCE_COLORS !== "undefined" && SOURCE_COLORS[h.id]) || "var(--hue-other)";
       var label = usageChipLabel(h, host);
       var title = usageChipTitle(h, { host: host, collectedAt: snapshot.collectedAt, now: new Date() });
       var unauth = h.status === "unauthenticated";
