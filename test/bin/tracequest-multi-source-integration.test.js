@@ -312,7 +312,7 @@ describe("tests/multi-source-integration.md harness", () => {
 
       const res = await httpGet(port, comparePath);
       assert.equal(res.status, 200);
-      assert.match(res.body, /session comparison/i);
+      assert.match(res.body, /Compare runs/);
       assert.match(res.body, /session-a/);
       assert.match(res.body, /session-b/);
       assert.match(res.body, /cmp-session-prompt/);

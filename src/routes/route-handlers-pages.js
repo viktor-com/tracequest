@@ -108,80 +108,68 @@ function sendCompareLoadError(res, side, error) {
   );
 }
 
-function viewLoadErrorPage({ handle = "", status = 500, message = "Unable to load session" } = {}) {
-  const displayHandle = handle || "(missing)";
+/**
+ * The one route-error shell (session view, run watch): what failed, the
+ * status, the handle that failed, the server's message and a way back.
+ */
+const ROUTE_ERROR_CSS = `
+.route-error-page { min-height: 100vh; display: grid; place-items: start center; padding: 16vh var(--space-6) var(--space-8); }
+.route-error { width: min(560px, 100%); display: flex; flex-direction: column; gap: var(--space-3); }
+.route-error-kicker { display: inline-flex; align-items: center; gap: 8px; font-size: var(--text-xs); color: var(--text-3); }
+.route-error-kicker::first-letter { text-transform: uppercase; }
+.route-error-kicker::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--bad); }
+.route-error-title { font-size: var(--text-2xl); line-height: var(--lh-2xl); font-weight: var(--weight-regular); letter-spacing: var(--track-display); color: var(--text); }
+.route-error-message { font-size: var(--text-md); color: var(--text-2); line-height: var(--lh-md); }
+.route-error-status { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3); }
+.route-error-handle {
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-2); overflow-wrap: anywhere;
+  padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--surface-1); box-shadow: inset 0 0 0 1px var(--line-1);
+}
+.route-error-link {
+  align-self: flex-start; margin-top: var(--space-2); display: inline-flex; align-items: center; height: var(--control-md); padding: 0 16px;
+  border-radius: var(--radius-pill); background: var(--ink); color: var(--paper); font-size: var(--text-sm);
+}
+.route-error-link:hover { background: color-mix(in oklab, var(--ink) 86%, var(--paper)); }
+`;
+
+function routeErrorDocument({ docTitle, stateAttr, kicker, title, status, handle, message }) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>tracequest - session unavailable</title>
+<title>${docTitle}</title>
 ${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
-.container { max-width: 720px; margin: 0 auto; padding: 60px 24px; }
-.route-error {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 2px solid var(--red);
-  border-radius: 8px;
-  padding: 18px 20px;
-}
-.route-error-kicker {
-  color: var(--fg3);
-  font-family: var(--mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.route-error-title {
-  margin-top: 8px;
-  color: var(--fg);
-  font-size: 16px;
-  font-weight: 600;
-}
-.route-error-status {
-  margin-top: 10px;
-  color: var(--red);
-  font-family: var(--mono);
-  font-size: 12px;
-}
-.route-error-handle {
-  margin-top: 8px;
-  color: var(--fg2);
-  font-family: var(--mono);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-.route-error-message {
-  margin-top: 10px;
-  color: var(--fg2);
-  font-size: 13px;
-  line-height: 1.5;
-}
-.route-error-link {
-  display: inline-block;
-  margin-top: 16px;
-  color: var(--accent);
-  font-size: 13px;
-  text-decoration: none;
-}
-.route-error-link:hover { text-decoration: underline; }
+${ROUTE_ERROR_CSS}
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="route-error" role="alert" data-view-state="error">
-    <div class="route-error-kicker">session view</div>
-    <div class="route-error-title">Could not load session</div>
+<div class="route-error-page">
+  <div class="route-error" role="alert" ${stateAttr}="error">
+    <div class="route-error-kicker">${esc(kicker)}</div>
+    <div class="route-error-title">${esc(title)}</div>
+    <div class="route-error-message">${esc(message)}</div>
     <div class="route-error-status">HTTP ${esc(status)}</div>
-    <div class="route-error-handle">${esc(displayHandle)}</div>
-    <div class="route-error-message">${esc(message || "Unable to load session")}</div>
-    <a class="route-error-link" href="/">&larr; back to sessions</a>
+    <div class="route-error-handle">${esc(handle)}</div>
+    <a class="route-error-link" href="/sessions">&larr; Back to Runs</a>
   </div>
 </div>
 </body>
 </html>`;
+}
+
+function viewLoadErrorPage({ handle = "", status = 500, message = "Unable to load session" } = {}) {
+  return routeErrorDocument({
+    docTitle: "tracequest - session unavailable",
+    stateAttr: "data-view-state",
+    kicker: "session view",
+    title: "Could not load session",
+    status,
+    handle: handle || "(missing)",
+    message: message || "Unable to load session",
+  });
 }
 
 async function sendViewLoadError(res, url, error) {
@@ -309,81 +297,17 @@ export async function handleLaunch(_req, res, _url, _deps = null) {
 /** A run id IS a tmux window id — "@" + digits, nothing else (see launch routes). */
 const RUN_ID_RE = /^@\d+$/;
 
-/** Error page for /run — same shape as the session view error page. */
+/** Error page for /run — same shell as the session view error page. */
 function runLoadErrorPage({ id = "", status = 404, message = "", kicker = "run watch", title = "Could not load run" } = {}) {
-  const displayId = id || "(missing)";
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>tracequest - run unavailable</title>
-${THEME_BOOT_SCRIPT}
-<style>
-${STANDALONE_BASE_CSS}
-.container { max-width: 720px; margin: 0 auto; padding: 60px 24px; }
-.route-error {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 2px solid var(--red);
-  border-radius: 8px;
-  padding: 18px 20px;
-}
-.route-error-kicker {
-  color: var(--fg3);
-  font-family: var(--mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.route-error-title {
-  margin-top: 8px;
-  color: var(--fg);
-  font-size: 16px;
-  font-weight: 600;
-}
-.route-error-status {
-  margin-top: 10px;
-  color: var(--red);
-  font-family: var(--mono);
-  font-size: 12px;
-}
-.route-error-handle {
-  margin-top: 8px;
-  color: var(--fg2);
-  font-family: var(--mono);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-.route-error-message {
-  margin-top: 10px;
-  color: var(--fg2);
-  font-size: 13px;
-  line-height: 1.5;
-}
-.route-error-link {
-  display: inline-block;
-  margin-top: 16px;
-  color: var(--accent);
-  font-size: 13px;
-  text-decoration: none;
-}
-.route-error-link:hover { text-decoration: underline; }
-</style>
-</head>
-<body>
-<div class="container">
-  <div class="route-error" role="alert" data-run-state="error">
-    <div class="route-error-kicker">${esc(kicker)}</div>
-    <div class="route-error-title">${esc(title)}</div>
-    <div class="route-error-status">HTTP ${esc(status)}</div>
-    <div class="route-error-handle">${esc(displayId)}</div>
-    <div class="route-error-message">${esc(message || "Unable to load run")}</div>
-    <a class="route-error-link" href="/">&larr; back to sessions</a>
-  </div>
-</div>
-</body>
-</html>`;
+  return routeErrorDocument({
+    docTitle: "tracequest - run unavailable",
+    stateAttr: "data-run-state",
+    kicker,
+    title,
+    status,
+    handle: id || "(missing)",
+    message: message || "Unable to load run",
+  });
 }
 
 /** Linked recording + detectLiveSessions bit for /run?id= SSR identity. */
@@ -599,6 +523,7 @@ const VIEW_RUN_CHIP_CSS = `<style>
 .view-run-chip .chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: ui-pulse 2.2s var(--ease-out, ease) infinite; }
 .view-run-chip .chip-dot[data-status="exited"],
 .view-run-chip .chip-dot[data-status="idle"] { background: var(--text-4); animation: none; }
+@media print { .view-run-chip { display: none !important; } }
 </style>
 `;
 
@@ -627,7 +552,7 @@ const VIEW_CONTINUE_CHIP_CSS = `<style>
 .vc-send:disabled { opacity: 0.4; cursor: default; }
 .view-continue-chip[data-mode="cwd"] { box-shadow: var(--shadow-pop), 0 0 0 1px var(--warn); }
 .view-continue-chip[data-mode="cwd"] .vc-glyph { color: var(--warn); }
-@media print { .view-run-chip, .view-continue-chip { display: none !important; } }
+@media print { .view-continue-chip { display: none !important; } }
 </style>
 `;
 

@@ -179,7 +179,7 @@ function assertGradeColumns(html) {
 function assertViewLinks(html, pathA, pathB) {
   assert.match(html, new RegExp(`href="/view\\?id=${sessionHash(pathA)}"`));
   assert.match(html, new RegExp(`href="/view\\?id=${sessionHash(pathB)}"`));
-  assert.equal((html.match(/view full session/g) || []).length, 2);
+  assert.equal((html.match(/View full session/g) || []).length, 2);
   assert.equal((html.match(/href="\/view\?id=[0-9a-f]{8}/g) || []).length, 2);
 }
 
@@ -212,7 +212,7 @@ describe("integration compare (parse ×2 → comparePage)", () => {
 
       assert.equal(typeof html, "string");
       assert.ok(html.startsWith("<!DOCTYPE html>"));
-      assert.match(html, /session comparison/);
+      assert.match(html, /Compare runs/);
       assert.match(html, /session-a/);
       assert.match(html, /session-b/);
       assert.match(html, new RegExp(sessionHash(pathA)));
@@ -225,7 +225,7 @@ describe("integration compare (parse ×2 → comparePage)", () => {
       assertViewLinks(html, pathA, pathB);
 
       const strugglingRow = html.match(
-        /cmp-val[^>]*>(\d+)<\/td>\s*<td class="cmp-label">Struggling chapters<\/td>\s*<td class="cmp-val[^>]*>(\d+)<\/td>/,
+        /<td class="cmp-label">Struggling chapters<\/td>\s*<td data-side="a" class="cmp-val[^>]*>(\d+)<\/td>\s*<td data-side="b" class="cmp-val[^>]*>(\d+)<\/td>/,
       );
       assert.ok(strugglingRow, "grade row should show struggling counts");
       assert.equal(Number(strugglingRow[1]), 0, "session A should have no struggling chapters");

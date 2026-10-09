@@ -737,7 +737,7 @@ function expectedSessionDisplayId(session) {
 function assertCompareShell(html, sessionA, sessionB) {
   assert.equal(typeof html, "string");
   assert.ok(html.startsWith("<!DOCTYPE html>"));
-  assert.match(html, /session comparison/i);
+  assert.match(html, /Compare runs/);
   assert.match(html, /session-a/);
   assert.match(html, /session-b/);
   assert.match(html, new RegExp(expectedSessionDisplayId(sessionA)));
@@ -787,7 +787,7 @@ function assertCompareViewLinks(html, pathA, pathB, { sourceA, sourceB } = {}) {
   const qB = sourceB ? `&source=${sourceB}` : "";
   assert.match(html, new RegExp(`href="/view\\?id=${esc(sessionHash(pathA))}${qA}"`));
   assert.match(html, new RegExp(`href="/view\\?id=${esc(sessionHash(pathB))}${qB}"`));
-  assert.equal((html.match(/view full session/g) || []).length, 2);
+  assert.equal((html.match(/View full session/g) || []).length, 2);
 }
 
 function assertChapterShape(ch, idx) {
@@ -918,7 +918,7 @@ describe("integration pipeline comparePage branch (parse ×2 → comparePage)", 
       assert.match(html, /delta-good|delta-bad/);
 
       const strugglingRow = html.match(
-        /cmp-val[^>]*>(\d+)<\/td>\s*<td class="cmp-label">Struggling chapters<\/td>\s*<td class="cmp-val[^>]*>(\d+)<\/td>/,
+        /<td class="cmp-label">Struggling chapters<\/td>\s*<td data-side="a" class="cmp-val[^>]*>(\d+)<\/td>\s*<td data-side="b" class="cmp-val[^>]*>(\d+)<\/td>/,
       );
       assert.ok(strugglingRow, "compare should show struggling chapter counts");
       assert.equal(Number(strugglingRow[1]), 0, "pipeline A has no struggling chapters");
@@ -938,7 +938,7 @@ describe("integration pipeline comparePage branch (parse ×2 → comparePage)", 
       assertCompareViewLinks(html, session._path, session._path);
 
       const chaptersRow = html.match(
-        /cmp-val[^>]*>(\d+)<\/td>\s*<td class="cmp-label">Chapters<\/td>\s*<td class="cmp-val[^>]*>(\d+)<\/td>/,
+        /<td class="cmp-label">Chapters<\/td>\s*<td data-side="a" class="cmp-val[^>]*>(\d+)<\/td>\s*<td data-side="b" class="cmp-val[^>]*>(\d+)<\/td>/,
       );
       assert.ok(chaptersRow, "chapters row should be present");
       assert.equal(chaptersRow[1], chaptersRow[2], "self-compare chapter counts should match");
@@ -1128,7 +1128,7 @@ describe("integration pipeline codex jsonl branch (parse → chapters → render
       assert.match(html, /variant B/i);
 
       const strugglingRow = html.match(
-        /cmp-val[^>]*>(\d+)<\/td>\s*<td class="cmp-label">Struggling chapters<\/td>\s*<td class="cmp-val[^>]*>(\d+)<\/td>/,
+        /<td class="cmp-label">Struggling chapters<\/td>\s*<td data-side="a" class="cmp-val[^>]*>(\d+)<\/td>\s*<td data-side="b" class="cmp-val[^>]*>(\d+)<\/td>/,
       );
       assert.ok(strugglingRow);
       assert.equal(Number(strugglingRow[1]), 0);
@@ -1281,7 +1281,7 @@ describe("integration pipeline factory branch (parse → chapters → render | c
       assert.match(html, /variant B/i);
 
       const strugglingRow = html.match(
-        /cmp-val[^>]*>(\d+)<\/td>\s*<td class="cmp-label">Struggling chapters<\/td>\s*<td class="cmp-val[^>]*>(\d+)<\/td>/,
+        /<td class="cmp-label">Struggling chapters<\/td>\s*<td data-side="a" class="cmp-val[^>]*>(\d+)<\/td>\s*<td data-side="b" class="cmp-val[^>]*>(\d+)<\/td>/,
       );
       assert.ok(strugglingRow);
       assert.equal(Number(strugglingRow[1]), 0);

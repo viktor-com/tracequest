@@ -167,7 +167,7 @@ function assertCompareLoadError(res, { status, side, handle, message }) {
   assert.match(res.body, /data-compare-state="error"/);
   assert.match(res.body, new RegExp(`Could not load ${side}`));
   assert.match(res.body, new RegExp(`HTTP ${status}`));
-  assert.match(res.body, /back to sessions/);
+  assert.match(res.body, /Back to Runs/);
   assert.doesNotMatch(res.body, /<div class="cmp-sessions">/);
   assert.doesNotMatch(res.body, /<table class="cmp-table">/);
   if (handle) assert.ok(res.body.includes(handle));
@@ -181,7 +181,7 @@ function assertViewLoadError(res, { status, handle, message }) {
   assert.match(res.body, /data-view-state="error"/);
   assert.match(res.body, /Could not load session/);
   assert.match(res.body, new RegExp(`HTTP ${status}`));
-  assert.match(res.body, /back to sessions/);
+  assert.match(res.body, /Back to Runs/);
   assert.match(res.body, /EventSource\("\/__livereload"\)/);
   if (handle) assert.ok(res.body.includes(handle));
   if (message) assert.match(res.body, message);
@@ -948,7 +948,7 @@ describe("route-handlers-pages handleCompare success paths", () => {
       assert.equal(res.status, 200);
       assert.match(res.headers["Content-Type"], /text\/html/);
       assert.match(res.body, /<!DOCTYPE html>/i);
-      assert.match(res.body, /session comparison/);
+      assert.match(res.body, /Compare runs/);
     });
   });
 

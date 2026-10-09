@@ -1582,7 +1582,7 @@ describe("launch routes — GET /run watch page handler", () => {
       assert.match(res.headers["Content-Type"], /text\/html/);
       assert.ok(String(res.body).includes('data-run-state="error"'));
       assert.ok(String(res.body).includes("HTTP 400"));
-      assert.ok(String(res.body).includes('href="/"'));
+      assert.ok(String(res.body).includes('href="/sessions"'));
       assert.equal(deps.listWindows.mock.calls.length, 0, `id ${String(id)} must not touch tmux`);
     }
   });
@@ -1606,7 +1606,7 @@ describe("launch routes — GET /run watch page handler", () => {
       assert.match(res.headers["Content-Type"], /text\/html/);
       assert.ok(String(res.body).includes('data-run-state="error"'));
       assert.ok(String(res.body).includes(id));
-      assert.ok(String(res.body).includes('href="/"'));
+      assert.ok(String(res.body).includes('href="/sessions"'));
     }
   });
 

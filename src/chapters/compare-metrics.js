@@ -24,22 +24,18 @@ const SOURCE_COLORS = {
 };
 
 const TOOL_COLORS_CMP = {
-  Bash: "#59d4a0",
-  Edit: "#e0c45e",
-  Write: "#d89660",
-  Read: "#6ba4e8",
-  Agent: "#a78bfa",
-  Grep: "#7a7a85",
-  Glob: "#7a7a85",
-  Skill: "#c88abd",
-  WebFetch: "#6ba4e8",
-  WebSearch: "#6ba4e8",
-  ToolSearch: "#7a7a85",
-  SemanticSearch: "#7a7a85",
-  Delete: "#f07070",
-  Await: "#8b8b92",
-  Ask: "#6ba4e8",
-  CallMcpTool: "#5dadec",
+  Bash: "var(--hue-bash)",
+  Edit: "var(--hue-edit)",
+  Write: "var(--hue-edit)",
+  Read: "var(--hue-read)",
+  Agent: "var(--hue-agent)",
+  Grep: "var(--hue-grep)",
+  Glob: "var(--hue-grep)",
+  Skill: "var(--hue-agent)",
+  WebFetch: "var(--hue-web)",
+  WebSearch: "var(--hue-web)",
+  ToolSearch: "var(--hue-grep)",
+  SemanticSearch: "var(--hue-grep)",
 };
 
 /** @typedef {[string, string, string, "lower"|"higher"|"none", number?, number?]} CompareMetricRow */
@@ -242,31 +238,96 @@ export function buildCompareToolRows(a, b) {
   return toolRows;
 }
 
+/**
+ * Differences under 5% of the larger side are noise (95% vs 96% cache hit):
+ * they keep neutral colour so red and green only mark gaps worth reading.
+ */
+function isNoiseDelta(rawA, rawB) {
+  if (rawA === 0 || rawB === 0) return false;
+  const hi = Math.max(Math.abs(rawA), Math.abs(rawB));
+  return Math.abs(rawA - rawB) / hi < 0.05;
+}
+
+/** Rows whose B-vs-A ratio reads naturally ("2.1×", "−40%"). */
+const DELTA_LABELS = new Set(["Duration", "Turns", "Tool calls", "Cost", "Input tokens", "Output tokens"]);
+
+/** How B differs from A, shown after B's value; empty when it would mislead. */
+function deltaChipHtml(label, rawA, rawB) {
+  if (!DELTA_LABELS.has(label) || !rawA || !rawB || rawA === rawB) return "";
+  const ratio = rawB / rawA;
+  let text;
+  if (ratio >= 1.95) text = (Math.round(ratio * 10) / 10) + "×";
+  else if (ratio <= 1 / 1.95) text = "÷" + (Math.round((1 / ratio) * 10) / 10);
+  else {
+    const pct = Math.round((ratio - 1) * 100);
+    if (pct === 0) return "";
+    text = (pct > 0 ? "+" : "−") + Math.abs(pct) + "%";
+  }
+  return '<span class="cmp-delta" title="B relative to A">' + esc(text) + "</span>";
+}
+
+/**
+ * One plain sentence above the worksheet: which run was faster, cheaper and
+ * cleaner, so the reader knows the answer before scanning sixteen rows.
+ */
+export function buildCompareVerdictHtml(a, b) {
+  const ratioPhrase = (x, y, more, less) => {
+    if (!x || !y || isNoiseDelta(x, y)) return null;
+    const r = y / x;
+    return r > 1
+      ? (r >= 1.95 ? (Math.round(r * 10) / 10) + "× " + more : Math.round((r - 1) * 100) + "% " + more)
+      : (1 / r >= 1.95 ? (Math.round((1 / r) * 10) / 10) + "× " + less : Math.round((1 - r) * 100) + "% " + less);
+  };
+  const parts = [];
+  const dur = ratioPhrase(a.durationMs, b.durationMs, "longer", "faster");
+  if (dur) parts.push("ran " + dur);
+  const cost = ratioPhrase(a.cost, b.cost, "more", "less");
+  if (cost) parts.push("cost " + cost);
+  const errs = a.errors !== b.errors
+    ? b.errors + " error" + (b.errors === 1 ? "" : "s") + " to its " + a.errors
+    : "";
+  const sideA = '<span class="cmp-verdict-side a">' + esc(a.id) + "</span>";
+  const sideB = '<span class="cmp-verdict-side b">' + esc(b.id) + "</span>";
+  if (!parts.length && !errs) {
+    return '<p class="cmp-verdict">These runs are within 5% on time and cost and had the same number of errors.</p>';
+  }
+  if (!parts.length) {
+    return '<p class="cmp-verdict">' + sideB + " had " + esc(b.errors + " error" + (b.errors === 1 ? "" : "s") + " to") + " " + sideA + "&#8217;s " + esc(String(a.errors)) + "; time and cost are within 5%.</p>";
+  }
+  return (
+    '<p class="cmp-verdict">' + sideB + " " + esc(parts.join(" and ")) + " than " + sideA +
+    (errs ? ", with " + esc(errs) : "") + ".</p>"
+  );
+}
+
 export function buildMetricTableHtml(rows) {
   let html = "";
   for (const row of rows) {
     const [label, valA, valB, pref, rawA, rawB] = row;
     let aClass = "";
     let bClass = "";
-    if (pref !== "none" && rawA != null && rawB != null && rawA !== rawB) {
+    if (pref !== "none" && rawA != null && rawB != null && rawA !== rawB && !isNoiseDelta(rawA, rawB)) {
       const aWins = pref === "lower" ? rawA < rawB : rawA > rawB;
       aClass = aWins ? "delta-good" : "delta-bad";
       bClass = aWins ? "delta-bad" : "delta-good";
     }
     html +=
       "<tr>" +
-      '<td class="cmp-val ' +
+      '<td class="cmp-label">' +
+      esc(label) +
+      "</td>" +
+      '<td data-side="a" class="cmp-val ' +
       aClass +
       '">' +
       esc(valA) +
       "</td>" +
-      '<td class="cmp-label">' +
-      esc(label) +
-      "</td>" +
-      '<td class="cmp-val ' +
+      '<td data-side="b" class="cmp-val ' +
       bClass +
       '">' +
       esc(valB) +
+      "</td>" +
+      '<td class="cmp-delta-cell">' +
+      deltaChipHtml(label, rawA, rawB) +
       "</td>" +
       "</tr>";
   }
@@ -281,7 +342,7 @@ export function buildToolComparisonHtml(toolRows, limit = 12) {
     const maxVal = Math.max(ca, cb, 1);
     const pctA = ((ca / maxVal) * 100) | 0;
     const pctB = ((cb / maxVal) * 100) | 0;
-    const color = TOOL_COLORS_CMP[tool] || (tool.startsWith("mcp__") ? "#5dadec" : "#7a7a85");
+    const color = TOOL_COLORS_CMP[tool] || (tool.startsWith("mcp__") ? "var(--hue-web)" : "var(--hue-other)");
     const toolDisplay = tool.startsWith("mcp__") ? fmtMcpName(tool) : tool;
     html +=
       '<div class="tool-cmp-row">' +
@@ -292,7 +353,7 @@ export function buildToolComparisonHtml(toolRows, limit = 12) {
       '"></div><span class="tool-cmp-count">' +
       ca +
       "</span></div>" +
-      '<div class="tool-cmp-name" style="color:' +
+      '<div class="tool-cmp-name" style="--hue:' +
       color +
       '">' +
       esc(toolDisplay) +
@@ -324,7 +385,7 @@ export function buildOutcomeSideHtml(side) {
 
   return (
     '<div class="cmp-outcome-side">' +
-    '<div style="font-size:11px;font-family:var(--mono);color:var(--fg3);margin-bottom:4px">' +
+    '<div class="cmp-outcome-id">' +
     esc(side.id) +
     " (" +
     q.chapters +
@@ -362,43 +423,39 @@ export function compareViewUrl(session, summary) {
 export function buildSessionCardHtml(summary, _session, viewUrl, sessionClass) {
   const displayModel = shortModel(summary.model) || "—";
   const badgeColor = SOURCE_COLORS[summary.source] || "#888";
+  const side = sessionClass === "session-a" ? "A" : "B";
   return (
     '<div class="cmp-session ' +
     sessionClass +
     '">' +
-    '<div class="cmp-session-label">' +
-    (sessionClass === "session-a" ? "session A" : "session B") +
+    '<div class="cmp-session-label"><span class="cmp-side">' + side + "</span>Session " + side + "</div>" +
+    '<div class="cmp-session-prompt">' +
+    (summary.prompt ? esc(summary.prompt) : '<span class="cmp-muted">No prompt recorded</span>') +
     "</div>" +
     '<div class="cmp-session-id">' +
-    esc(summary.id) +
-    '<span class="cmp-source-badge" style="background:' +
+    '<span class="cmp-source-badge" style="--hue:' +
     badgeColor +
     '">' +
     esc(summary.source) +
-    "</span></div>" +
-    '<div class="cmp-session-model">' +
+    "</span>" +
+    '<span class="cmp-session-model">' +
     esc(displayModel) +
-    "</div>" +
-    '<div class="cmp-session-prompt">' +
-    esc(summary.prompt) +
-    "</div>" +
+    "</span>" +
+    '<span class="cmp-session-hash">' + esc(summary.id) + "</span></div>" +
     '<a class="cmp-session-link" href="' +
     viewUrl +
-    '">view full session &rarr;</a>' +
+    '">View full session &rarr;</a>' +
     "</div>"
   );
 }
 
 export function buildColHeadersHtml(idA, idB) {
   return (
-    '<div class="cmp-col-headers">' +
-    '<div class="cmp-col-a">' +
-    esc(idA) +
-    "</div>" +
-    '<div class="cmp-col-label"></div>' +
-    '<div class="cmp-col-b">' +
-    esc(idB) +
-    "</div>" +
-    "</div>"
+    "<thead><tr>" +
+    '<th class="cmp-col-label"></th>' +
+    '<th class="cmp-col-a"><span class="cmp-side">A</span>' + esc(idA) + "</th>" +
+    '<th class="cmp-col-b"><span class="cmp-side">B</span>' + esc(idB) + "</th>" +
+    '<th class="cmp-col-delta">B vs A</th>' +
+    "</tr></thead>"
   );
 }

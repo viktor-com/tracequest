@@ -372,6 +372,19 @@ export function appTopHtml({ crumbHtml, extraHtml = "", nav = "" } = {}) {
   <div class="usage-row" id="usageRow" hidden role="dialog" aria-label="Plan limits"></div>`;
 }
 
+/**
+ * The same top bar for script-free pages (Insights, which is served to the
+ * hub and never ships a script): wordmark, section nav and a New run link.
+ * Theme follows the system there.
+ */
+export function appTopStaticHtml(nav) {
+  return `<header class="app-top">
+    <a class="app-wordmark" href="/" aria-label="tracequest — Chat">${MARK_SVG}<span>tracequest</span></a>
+    ${appNavHtml(nav)}
+    <a class="new-run-btn app-top-push" href="/?launch=1" title="Start an agent run">${ICON_PLUS}<span>New run</span></a>
+  </header>`;
+}
+
 export const APP_TOP_CSS = `
 /* ---- app shell: top bar ---- */
 .app-top {
@@ -417,6 +430,7 @@ export const APP_TOP_CSS = `
 .app-top > .theme-toggle { order: 3; }
 .app-top > .cmdk-trigger { order: 4; }
 .app-top > .new-run-btn { order: 5; }
+.app-top > .app-top-push { margin-left: auto; }
 .app-limits-btn {
   display: inline-flex; align-items: center; gap: 6px; height: var(--control-md); padding: 0 10px;
   border-radius: var(--radius-pill); color: var(--text-2); transition: background var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
