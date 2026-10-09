@@ -273,7 +273,7 @@ describe("comparePage navigation", () => {
       emptyCompareSession({ source: "cursor", events: [{ type: "user", text: "hi" }] }),
       emptyCompareSession({ sessionId: "bbbbbbbb-cccc-dddd-eeee-ffffffffffff", _path: "/tmp/b.jsonl" }),
     );
-    assert.match(html, /#c4e86b/);
+    assert.match(html, /--hue:var\(--hue-cursor\)/);
     assert.match(html, />cursor</);
   });
 });
