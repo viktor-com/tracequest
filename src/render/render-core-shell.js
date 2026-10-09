@@ -339,7 +339,7 @@ export const CORE_SHELL_JS = `
 
     const totalTok = s.totalInputTokens + s.totalOutputTokens;
     if (totalTok > 0) {
-      items.push(summaryItem('tokens', fmtTokens(totalTok), ''));
+      items.push(summaryItem('tokens', fmtTokens(totalTok), 'ss-tokens'));
     }
 
     if (s.errors > 0) {
@@ -724,7 +724,7 @@ export const CORE_SHELL_JS = `
       dot.style.background = color;
       return h('span', { className: 'activity-timeline-legend-item' }, dot, text);
     }
-    legend.appendChild(legendItem('var(--hue-claude)', 'active'));
+    legend.appendChild(legendItem('var(--text-3)', 'active'));
     legend.appendChild(legendItem('var(--warn)', 'idle over 5 min'));
     legend.appendChild(legendItem('var(--line-3)', 'chapter boundary'));
     var totalIdleMs = gaps.reduce(function(s, g) { return s + g.duration; }, 0);

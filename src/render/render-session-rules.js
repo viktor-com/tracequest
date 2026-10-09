@@ -41,7 +41,8 @@ export const SESSION_VIEWER_RULES = `
 .meta-grid { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: var(--text-xs); }
 .meta-item { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
 .meta-label { color: var(--text-3); }
-.meta-value { color: var(--text-2); font-family: var(--font-mono); font-size: 11.5px; overflow-wrap: anywhere; }
+.meta-value { color: var(--text-2); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.meta-item:nth-child(2) .meta-value { font-family: var(--font-mono); font-size: 11.5px; }
 
 /* ---- overview: grade + headline numbers ---- */
 .sv-overview { display: flex; flex-direction: column; gap: 0; border-radius: var(--radius-lg); background: var(--surface-1); box-shadow: inset 0 0 0 1px var(--line-1); overflow: hidden; }
@@ -52,24 +53,27 @@ export const SESSION_VIEWER_RULES = `
 .session-summary-item .ss-label { font-size: var(--text-xs); color: var(--text-3); }
 .session-summary-item .ss-value { font-size: var(--text-lg); color: var(--text); letter-spacing: var(--track-tight); font-variant-numeric: tabular-nums; }
 .session-summary-item.ss-cost .ss-value { color: var(--text); }
-.session-summary-item.ss-errors .ss-value { color: var(--bad); }
-.session-summary-item.ss-commits .ss-value { color: var(--ok); }
+/* the stats strip below already carries tokens and errors */
+.sv-overview .session-summary-item.ss-tokens, .sv-overview .session-summary-item.ss-errors { display: none; }
+.session-summary-item.ss-errors .ss-value { color: var(--text); }
+.session-summary-item.ss-commits .ss-value { color: var(--text); }
 .session-summary-item.ss-duration .ss-value { color: var(--text); }
-.session-summary-item.ss-quality-mixed .ss-value { color: var(--warn); }
-.session-summary-item.ss-waste .ss-value { color: var(--warn); font-size: var(--text-sm); }
+.session-summary-item.ss-quality-mixed .ss-value { color: var(--text); }
+.session-summary-item.ss-waste .ss-value { color: var(--text-2); font-size: var(--text-sm); }
 .session-grade { display: flex; align-items: center; gap: var(--space-4); padding-right: var(--space-6); margin-right: var(--space-1); box-shadow: inset -1px 0 0 var(--line-2); }
 .session-grade-letter {
   width: 52px; height: 52px; border-radius: var(--radius-lg); display: grid; place-items: center;
   font-size: 28px; line-height: 1; letter-spacing: -0.02em; color: var(--text); background: var(--surface-3);
 }
+.session-grade-letter[class*="grade-"] { background: var(--surface-3) !important; }
 .session-grade-letter.grade-a { color: var(--ok); background: var(--ok-soft); }
 .session-grade-letter.grade-b { color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, transparent); }
-.session-grade-letter.grade-c { color: var(--warn); background: var(--warn-soft); }
-.session-grade-letter.grade-d { color: var(--warn); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.session-grade-letter.grade-c { color: var(--text); background: var(--warn-soft); }
+.session-grade-letter.grade-d { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
 .session-grade-letter.grade-f { color: var(--bad); background: var(--bad-soft); }
 .session-grade-detail { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .session-grade-score { font-size: var(--text-sm); color: var(--text); font-variant-numeric: tabular-nums; }
-.session-grade-breakdown { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.session-grade-breakdown { display: none; }
 .session-grade-factor { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-3); }
 .session-grade-factor-bar { position: relative; display: inline-block; width: 36px; height: 3px; border-radius: 999px; background: var(--surface-4); overflow: hidden; }
 .session-grade-factor-fill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; }
@@ -81,14 +85,14 @@ export const SESSION_VIEWER_RULES = `
 .stat { background: var(--surface-1); padding: var(--space-3) var(--space-5); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .stat-value { font-size: var(--text-lg); color: var(--text); letter-spacing: var(--track-tight); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stat-value.red { color: var(--bad); }
-.stat-value.green { color: var(--ok); }
+.stat-value.green { color: var(--text); }
 .stat-label { font-size: var(--text-xs); color: var(--text-3); }
 .stats-note { grid-column: 1 / -1; background: var(--surface-1); padding: 8px var(--space-5); font-size: var(--text-xs); color: var(--text-3); }
 
 /* ---- sections ---- */
-.sv-section { margin-top: var(--space-10); display: flex; flex-direction: column; gap: var(--space-3); }
+.sv-section { margin-top: var(--space-16); display: flex; flex-direction: column; gap: var(--space-4); }
 .sv-section-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; padding: 0 2px; }
-.sv-section-title { font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-regular); letter-spacing: var(--track-tight); color: var(--text); }
+.sv-section-title { font-size: var(--text-xl); line-height: var(--lh-xl); font-weight: var(--weight-regular); letter-spacing: var(--track-tight); color: var(--text); }
 .sv-section-sub { font-size: var(--text-xs); color: var(--text-3); }
 .sv-section > div:empty { display: none; }
 .sv-panel, .activity-timeline, .waveform-wrap, .cost-chart, .tool-flow, .tool-perf, .file-hotspot, .git-timeline, .error-summary {
@@ -124,6 +128,7 @@ export const SESSION_VIEWER_RULES = `
 .error-list-ch { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3); white-space: nowrap; }
 .error-list-more { flex-basis: 100%; font-size: var(--text-xs); color: var(--text-3); }
 .error-timeline { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; padding-top: 2px; }
+.sv-errors .error-timeline { display: none; }
 .error-dot { width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: var(--surface-4); transition: transform var(--dur-1) var(--ease-out); }
 .error-dot:hover { transform: scale(1.3); }
 .error-dot.has-error { background: var(--bad); }

@@ -56,7 +56,7 @@ html, body { min-height: 100%; }
   font-size: var(--text-xs); color: var(--text-3); line-height: 1.8;
 }
 .filter-legend span { font-family: var(--font-mono); color: var(--text-2); }
-.filter-wrap:focus-within .filter-legend { display: block; }
+.filter-wrap:focus-within:has(.filter-input:placeholder-shown) .filter-legend { display: block; }
 .filter-wrap:focus-within .suggestions.open ~ .filter-legend { display: none; }
 .chip {
   display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 4px 0 9px;
@@ -257,8 +257,8 @@ body.runs-loading #sessions { opacity: 0.55; transition: opacity var(--dur-3) va
 .session-meta > * + *::before { content: none; }
 .session-meta .session-project { color: var(--text-2); }
 .session-badge { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: var(--radius-pill); font-size: 11px; white-space: nowrap; }
-.session-badge.error-badge { color: var(--bad); background: var(--bad-soft); }
-.session-badge.commit-badge { color: var(--ok); background: var(--ok-soft); }
+.session-badge.error-badge { color: var(--bad); background: none; padding: 0; }
+.session-badge.commit-badge { color: var(--text-3); background: none; padding: 0; }
 .session-badge.cost-badge { display: none; }
 .run-activity { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); color: var(--text-2); min-width: 0; }
 .run-activity-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); flex: none; animation: ui-pulse 2.2s var(--ease-out) infinite; }
@@ -315,6 +315,9 @@ body.runs-loading #sessions { opacity: 0.55; transition: opacity var(--dur-3) va
 .session-continue-send:disabled { opacity: 0.5; cursor: default; }
 
 .runs-inventory .empty, .runs-inventory .fetch-error { padding: 0; }
+.runs-inventory:has(#sessions > .empty) .runs-table-head, .runs-inventory:has(#sessions > .fetch-error) .runs-table-head { display: none; }
+.runs-inventory .ui-empty { padding-top: 96px; }
+.runs-inventory .ui-empty-title { font-size: var(--text-xl); line-height: var(--lh-xl); }
 .fetch-error .ui-empty-body { font-family: var(--font-mono); font-size: var(--text-xs); }
 #sentinel, .sentinel { height: 1px; }
 

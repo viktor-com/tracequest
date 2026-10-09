@@ -23,22 +23,20 @@ export const COMPARE_PAGE_CSS = `
   display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 8px; border-radius: 5px;
   font-size: 11px; font-weight: var(--weight-medium); color: var(--paper); background: var(--ink); vertical-align: 1px;
 }
-.session-b .cmp-side, .cmp-col-b .cmp-side, .tool-cmp-head > span:last-child .cmp-side { background: var(--accent); color: #fff; }
+.session-b .cmp-side, .cmp-col-b .cmp-side, .tool-cmp-head > span:last-child .cmp-side { background: var(--surface-4); color: var(--text); }
+.cmp-side { background: var(--surface-4); color: var(--text); }
 
 .cmp-verdict {
   margin: 0 0 var(--space-6); font-size: var(--text-xl); line-height: 1.45; letter-spacing: var(--track-tight); color: var(--text); max-width: 860px;
 }
-.cmp-verdict-side { font-family: var(--font-mono); font-size: 0.82em; padding: 1px 6px; border-radius: var(--radius-xs); }
-.cmp-verdict-side.a { color: var(--text); background: var(--surface-3); }
-.cmp-verdict-side.b { color: var(--accent-text); background: var(--accent-soft); }
+.cmp-verdict-side { color: var(--text-2); }
 
 .cmp-sessions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-bottom: var(--space-8); }
 .cmp-session {
   display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; padding: var(--space-5);
   border-radius: var(--radius-lg); background: var(--surface-1); box-shadow: inset 0 0 0 1px var(--line-1);
 }
-.cmp-session.session-b { box-shadow: inset 0 0 0 1px var(--line-1), inset 0 2px 0 var(--accent); }
-.cmp-session.session-a { box-shadow: inset 0 0 0 1px var(--line-1), inset 0 2px 0 var(--ink); }
+
 .cmp-session-label { display: flex; align-items: center; font-size: var(--text-xs); color: var(--text-3); }
 .cmp-session-prompt {
   font-size: var(--text-md); line-height: var(--lh-md); color: var(--text); overflow-wrap: anywhere;
@@ -72,7 +70,7 @@ export const COMPARE_PAGE_CSS = `
 .cmp-table tbody tr:last-child td { box-shadow: none; }
 .cmp-label { color: var(--text-2); white-space: nowrap; }
 .cmp-val { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.cmp-val.delta-good { color: var(--ok); }
+.cmp-val.delta-good { color: var(--text); }
 .cmp-val.delta-bad { color: var(--bad); }
 .cmp-delta-cell { text-align: right; white-space: nowrap; }
 .cmp-delta {

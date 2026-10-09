@@ -13,7 +13,7 @@ import { sessionHash } from "../sessions/session-hash.js";
 import { sessionMtimeMs } from "../sessions/session-list.js";
 import { generateMarkdown } from "../export/markdown-export.js";
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
-import { THEME_BOOT_SCRIPT, appTopHtml, APP_TOP_CSS, APP_SHELL_JS } from "../browser/app-chrome.js";
+import { THEME_BOOT_SCRIPT, appTopHtml, appTopStaticHtml, APP_TOP_CSS, APP_SHELL_JS } from "../browser/app-chrome.js";
 import { fetchSession } from "../server/server-helpers.js";
 import { send } from "../server/server-http.js";
 import { isSessionPath } from "../server/server-session-path.js";
@@ -113,20 +113,16 @@ function sendCompareLoadError(res, side, error) {
  * status, the handle that failed, the server's message and a way back.
  */
 const ROUTE_ERROR_CSS = `
-.route-error-page { min-height: 100vh; display: grid; place-items: start center; padding: 16vh var(--space-6) var(--space-8); }
-.route-error { width: min(560px, 100%); display: flex; flex-direction: column; gap: var(--space-3); }
-.route-error-kicker { display: inline-flex; align-items: center; gap: 8px; font-size: var(--text-xs); color: var(--text-3); }
+.route-error-page { min-height: calc(100vh - var(--shell-top)); display: grid; place-items: start center; padding: 22vh var(--space-6) var(--space-8); }
+.route-error { width: min(480px, 100%); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); text-align: center; }
+.route-error-kicker { font-size: var(--text-xs); color: var(--text-3); }
 .route-error-kicker::first-letter { text-transform: uppercase; }
-.route-error-kicker::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--bad); }
 .route-error-title { font-size: var(--text-2xl); line-height: var(--lh-2xl); font-weight: var(--weight-regular); letter-spacing: var(--track-display); color: var(--text); }
 .route-error-message { font-size: var(--text-md); color: var(--text-2); line-height: var(--lh-md); }
-.route-error-status { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3); }
-.route-error-handle {
-  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-2); overflow-wrap: anywhere;
-  padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--surface-1); box-shadow: inset 0 0 0 1px var(--line-1);
-}
+.route-error-meta { display: inline-flex; gap: 8px; font-size: var(--text-xs); color: var(--text-3); overflow-wrap: anywhere; justify-content: center; flex-wrap: wrap; }
+.route-error-status, .route-error-handle { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-3); }
 .route-error-link {
-  align-self: flex-start; margin-top: var(--space-2); display: inline-flex; align-items: center; height: var(--control-md); padding: 0 16px;
+  margin-top: var(--space-3); display: inline-flex; align-items: center; height: var(--control-md); padding: 0 16px;
   border-radius: var(--radius-pill); background: var(--ink); color: var(--paper); font-size: var(--text-sm);
 }
 .route-error-link:hover { background: color-mix(in oklab, var(--ink) 86%, var(--paper)); }
@@ -142,17 +138,18 @@ function routeErrorDocument({ docTitle, stateAttr, kicker, title, status, handle
 ${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
+${APP_TOP_CSS}
 ${ROUTE_ERROR_CSS}
 </style>
 </head>
 <body>
+${appTopStaticHtml("runs")}
 <div class="route-error-page">
   <div class="route-error" role="alert" ${stateAttr}="error">
     <div class="route-error-kicker">${esc(kicker)}</div>
     <div class="route-error-title">${esc(title)}</div>
     <div class="route-error-message">${esc(message)}</div>
-    <div class="route-error-status">HTTP ${esc(status)}</div>
-    <div class="route-error-handle">${esc(handle)}</div>
+    <div class="route-error-meta"><span class="route-error-handle">${esc(handle)}</span><span aria-hidden="true">·</span><span class="route-error-status">HTTP ${esc(status)}</span></div>
     <a class="route-error-link" href="/sessions">&larr; Back to Runs</a>
   </div>
 </div>

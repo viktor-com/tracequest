@@ -73,7 +73,7 @@ export const CORE_JS = `  ${FORM_FIELD_GUARD_SRC}
       }
       var map = {
         grid: 'var(--line-1)', gridStrong: 'var(--line-2)', label: 'var(--text-3)', ink: 'var(--text-2)',
-        inkSoft: 'var(--line-3)', active: 'var(--hue-claude)', activeSoft: 'color-mix(in srgb, var(--hue-claude) 35%, transparent)',
+        inkSoft: 'var(--line-3)', active: 'var(--text-3)', activeSoft: 'var(--line-2)',
         idle: 'var(--warn)', accent: 'var(--accent)', accentSoft: 'var(--accent-soft)', bad: 'var(--bad)', ok: 'var(--ok)'
       };
       for (var k in map) { var c = resolve(map[k]); if (c) CHART_PALETTE[k] = c; }
