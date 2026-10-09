@@ -7,8 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-09
+
 ### Changed
 
+- **New UI, rewritten from scratch** on a design system measured from cursor.com/brand: warm paper and ink palette, one accent, pill controls, light and dark themes (follows the system; the top-bar toggle remembers your choice).
+- **One app shell** on every page: Chat, Runs and Insights navigation, search and ⌘K, plan limits in a popover, and New run. `g i` opens Insights.
+- **Runs:** two-line rows (the prompt is the title) with fixed number columns, readable project names, grades that explain their score, and empty and error states that offer the next step.
+- **Session view:** reads in job order, with "What went wrong" listing failures grouped by cause and jumping to where each first happened. Charts follow the theme.
+- **Compare:** opens with a one-sentence verdict and shows how B differs from A; differences under 5% are not coloured. `s` swaps the runs.
+- **Insights:** an empty scope now shows the command that fills it.
+- UI docs: `docs/ui-guidelines.md` and `docs/design-system.md` replace the old `docs/ui-*` guides.
 - README leads with screenshots and features; command, configuration and API guides live in `docs/` with an entry point for coding agents.
 
 ## [0.1.0] - 2026-10-08
