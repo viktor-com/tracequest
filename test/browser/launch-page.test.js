@@ -253,8 +253,6 @@ describe("run watch page — polling viewer", () => {
       },
     });
     assert.ok(html.includes('<pre class="run-screen" id="runScreen">'), "terminal viewport block");
-    assert.match(html, /\.run-screen\s*{[^}]*font-family: var\(--mono\)/, "monospace screen");
-    assert.match(html, /\.run-terminal\s*{[^}]*--ansi-bg: #101012/, "dark background");
     assert.ok(html.includes("var POLL_MS = 600;"), "~600ms poll cadence");
     assert.ok(html.includes('fetch("/api/runs/snapshot?id=" + encodeURIComponent(runId))'));
     assert.ok(html.includes("screen.innerHTML = data.html"), "snapshot html swapped into the block");

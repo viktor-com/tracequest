@@ -108,6 +108,22 @@ export function getModelRates(model) {
   };
 }
 
+/**
+ * Display-only project label. Agent logs often key projects by an encoded
+ * directory ("-Users-me--kandev-tasks-<uuid>-<uuid>"); that stays the filter
+ * value, but the UI shows it without the home prefix or code/ folder, and
+ * with short UUIDs.
+ */
+export function prettyProject(p) {
+  if (!p) return '';
+  const out = String(p)
+    .replace(/^-(Users|home)-[^-]+-/, '')
+    .replace(/^-+/, '')
+    .replace(/^code-(?=.)/, '')
+    .replace(/([0-9a-f]{8})-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '$1');
+  return out || String(p);
+}
+
 export function computeGrade(s) {
   if (s._gradeCache !== undefined) return s._gradeCache;
   const chapters = s.chapters || 0;
