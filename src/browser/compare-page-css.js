@@ -4,7 +4,8 @@
  * Side A is ink, side B is the accent, everywhere a side is named.
  */
 export const COMPARE_PAGE_CSS = `
-.container { max-width: 1040px; margin: 0 auto; padding: var(--space-6) var(--space-8) 120px; }
+.container { max-width: 1040px; margin: 0 auto; padding: var(--space-6) var(--space-8) 120px; min-width: 0; }
+.cmp-verdict, .cmp-session-prompt { overflow-wrap: anywhere; }
 
 .cmp-header { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-5); }
 .cmp-back { align-self: flex-start; font-size: var(--text-sm); color: var(--text-3); transition: color var(--dur-2) var(--ease-out); }
@@ -129,7 +130,16 @@ export const COMPARE_PAGE_CSS = `
   .cmp-grid { grid-template-columns: 1fr; gap: var(--space-4); }
   .cmp-outcome { grid-template-columns: 1fr; }
   .cmp-verdict { font-size: var(--text-lg); }
-  .cmp-table td, .cmp-table thead th { padding-left: 6px; padding-right: 6px; }
+  .cmp-table { table-layout: fixed; }
+  .cmp-table td, .cmp-table thead th { padding-left: 6px; padding-right: 6px; overflow: hidden; text-overflow: ellipsis; }
+  .cmp-col-delta, .cmp-delta-cell { display: none; }
+  .cmp-label { white-space: normal; }
+  .cmp-col-a, .cmp-col-b { white-space: nowrap; }
+  .cmp-session-id { gap: 4px 8px; }
+  .cmp-title-row { flex-wrap: wrap; }
+  .cmp-swap { margin-left: 0; }
+  .tool-cmp-head { font-size: 10.5px; }
+  .tool-cmp-head > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cmp-label { font-size: 12px; }
   .cmp-val { font-size: 12px; }
   .tool-cmp-row { grid-template-columns: 1fr auto 1fr; }

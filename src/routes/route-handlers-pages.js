@@ -708,6 +708,7 @@ body.embed-view { margin: 0; }
 body.embed-view #app { max-width: none; padding: 12px 16px 28px; }
 body.embed-view .header { padding: 10px 16px; margin-bottom: 10px; }
 body.embed-view .header-top,
+body.embed-view .header-top,
 body.embed-view .header-title,
 body.embed-view .header-prompt,
 body.embed-view .header-back,

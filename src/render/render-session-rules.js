@@ -554,6 +554,7 @@ export const SESSION_VIEWER_RULES = `
 /* flyout embed: the Runs flyout already shows identity and actions */
 body.embed-view #app { padding: var(--space-5) var(--space-5) 80px; max-width: none; }
 body.embed-view .header { padding-bottom: var(--space-4); }
+body.embed-view .header-top { display: none; }
 body.embed-view .header-prompt { font-size: var(--text-xl); line-height: var(--lh-xl); }
 body.embed-view .minimap { display: none; }
 body.embed-view .cmdk-trigger { display: none !important; }

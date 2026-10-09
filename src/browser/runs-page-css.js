@@ -10,7 +10,7 @@
 export const RUNS_PAGE_CSS = `
 html, body { min-height: 100%; }
 .runs-home {
-  --runs-pad: var(--space-6);
+  --runs-pad: var(--space-5);
   --runs-check: 28px;
   --runs-cols: 14px minmax(0, 1fr) 76px 72px 76px 76px 40px 64px 84px;
   max-width: 1440px; margin: 0 auto; padding: var(--space-6) var(--runs-pad) 120px;
