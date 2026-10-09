@@ -45,6 +45,60 @@ export const CORE_JS = `  ${FORM_FIELD_GUARD_SRC}
     target.classList.add('highlight');
   }
 
+  /**
+   * Canvas cannot read CSS variables, so charts draw from this palette. It
+   * starts with the dark design tokens and is re-resolved from the live
+   * theme (refreshChartPalette) before each render; a theme switch redraws.
+   */
+  var CHART_PALETTE = {
+    bg: 'rgba(0,0,0,0)', grid: 'rgba(237,236,236,0.07)', gridStrong: 'rgba(237,236,236,0.14)',
+    label: 'rgba(237,236,236,0.45)', ink: 'rgba(237,236,236,0.62)', inkSoft: 'rgba(237,236,236,0.18)',
+    active: '#c9b8a6', activeSoft: 'rgba(201,184,166,0.35)', idle: 'rgba(231,163,62,0.75)',
+    accent: '#f54e00', accentSoft: 'rgba(245,78,0,0.28)', bad: '#ec5a7c', ok: '#3fae84'
+  };
+  function chartInk(key, fallback) {
+    return (typeof CHART_PALETTE !== 'undefined' && CHART_PALETTE[key]) || fallback;
+  }
+  function refreshChartPalette() {
+    try {
+      if (typeof document === 'undefined' || typeof getComputedStyle !== 'function' || !document.body) return;
+      var probe = document.createElement('span');
+      probe.style.display = 'none';
+      document.body.appendChild(probe);
+      function resolve(expr) {
+        probe.style.color = '';
+        probe.style.color = expr;
+        var cs = getComputedStyle(probe);
+        return cs && cs.color ? cs.color : '';
+      }
+      var map = {
+        grid: 'var(--line-1)', gridStrong: 'var(--line-2)', label: 'var(--text-3)', ink: 'var(--text-2)',
+        inkSoft: 'var(--line-3)', active: 'var(--hue-claude)', activeSoft: 'color-mix(in srgb, var(--hue-claude) 35%, transparent)',
+        idle: 'var(--warn)', accent: 'var(--accent)', accentSoft: 'var(--accent-soft)', bad: 'var(--bad)', ok: 'var(--ok)'
+      };
+      for (var k in map) { var c = resolve(map[k]); if (c) CHART_PALETTE[k] = c; }
+      if (typeof TOOL_COLORS !== 'undefined') {
+        var tools = {
+          Bash: '--hue-bash', Edit: '--hue-edit', Write: '--hue-edit', Read: '--hue-read', Agent: '--hue-agent',
+          Grep: '--hue-grep', Glob: '--hue-grep', Skill: '--hue-agent', WebFetch: '--hue-web', WebSearch: '--hue-web',
+          ToolSearch: '--hue-grep', SemanticSearch: '--hue-grep', Delete: '--bad', Await: '--hue-other', Ask: '--hue-web',
+          CallMcpTool: '--hue-web', _mcp: '--hue-web', _text: '--text-3', _user: '--hue-read', _error: '--bad'
+        };
+        for (var t in tools) { var tc = resolve('var(' + tools[t] + ')'); if (tc) TOOL_COLORS[t] = tc; }
+      }
+      probe.remove();
+    } catch (_) { /* keep the defaults */ }
+  }
+  if (typeof document !== 'undefined' && typeof MutationObserver === 'function' && document.documentElement) {
+    new MutationObserver(function () {
+      if (typeof render === 'function') render();
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: light)');
+      if (mq && mq.addEventListener) mq.addEventListener('change', function () { if (typeof render === 'function') render(); });
+    }
+  }
+
   function setupHiDpiCanvas(canvas, logicalWidth, logicalHeight) {
     const dpr = window.devicePixelRatio || 1;
     canvas.width = logicalWidth * dpr;
@@ -83,26 +137,26 @@ export const CORE_JS = `  ${FORM_FIELD_GUARD_SRC}
   }
 ${CORE_SHELL_JS}
   const TOOL_COLORS = {
-    Bash:       '#59d4a0',
-    Edit:       '#e0c45e',
-    Write:      '#d89660',
-    Read:       '#6ba4e8',
-    Agent:      '#a78bfa',
-    Grep:       '#7a7a85',
-    Glob:       '#7a7a85',
-    Skill:      '#c88abd',
-    WebFetch:   '#6ba4e8',
-    WebSearch:  '#6ba4e8',
-    ToolSearch: '#7a7a85',
-    SemanticSearch: '#7a7a85',
-    Delete:     '#f07070',
-    Await:      '#8b8b92',
-    Ask:        '#6ba4e8',
-    CallMcpTool: '#5dadec',
-    _mcp:       '#5dadec',
-    _text:      '#a78bfa',
-    _user:      '#6ba4e8',
-    _error:     '#f07070',
+    Bash:       '#dfa88f',
+    Edit:       '#c0a8dd',
+    Write:      '#c0a8dd',
+    Read:       '#9fbbe0',
+    Agent:      '#e1c37a',
+    Grep:       '#9fc9a2',
+    Glob:       '#9fc9a2',
+    Skill:      '#e1c37a',
+    WebFetch:   '#8fc8d6',
+    WebSearch:  '#8fc8d6',
+    ToolSearch: '#9fc9a2',
+    SemanticSearch: '#9fc9a2',
+    Delete:     '#ec5a7c',
+    Await:      '#8a877f',
+    Ask:        '#8fc8d6',
+    CallMcpTool: '#8fc8d6',
+    _mcp:       '#8fc8d6',
+    _text:      '#8a877f',
+    _user:      '#9fbbe0',
+    _error:     '#ec5a7c',
   };
   function getToolColor(name) {
     if (TOOL_COLORS[name]) return TOOL_COLORS[name];

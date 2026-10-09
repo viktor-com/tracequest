@@ -347,7 +347,7 @@ export const SHARE_JS = `
     var privateHint = h('div', { className: 'hf-modal-hint', style: 'display:none;margin-top:4px;' }, 'Secret gists: gisthost previews require GitHub sign-in; use the raw gist link if needed.');
     modal.appendChild(privateHint);
 
-    var findingsPanel = h('div', { className: 'hf-modal-status', style: 'color:var(--yellow,#e0c45e);' });
+    var findingsPanel = h('div', { className: 'hf-modal-status', style: 'color:var(--warn);' });
     findingsPanel.style.display = 'none';
     modal.appendChild(findingsPanel);
 

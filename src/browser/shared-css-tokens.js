@@ -9,7 +9,3 @@ export const STANDALONE_BASE_CSS = DESIGN_SYSTEM_CSS;
 
 /** Session viewer and its exported/shared HTML. */
 export const SESSION_VIEWER_BASE_CSS = DESIGN_SYSTEM_CSS;
-
-/** Print uses the light tokens (see TOKENS_CSS @media print); nothing to splice. */
-export const CSS_PRINT_ROOT_MARKER = "__CSS_PRINT_ROOT_VARS__";
-export const CSS_PRINT_ROOT_VARS = "";

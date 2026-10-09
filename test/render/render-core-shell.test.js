@@ -1125,7 +1125,7 @@ describe('render-core-shell drawTimeline via renderActivityTimeline', () => {
         idleLabels: idleLabels,
         legendItems: legend.children.length,
         hasIdleLegend: legend.children.some(function(c) {
-          return (c.children || []).some(function(x) { return x === 'idle >5m'; });
+          return (c.children || []).some(function(x) { return x === 'idle over 5 min'; });
         }),
       };
     `,

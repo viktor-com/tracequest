@@ -13,7 +13,7 @@ import { sessionHash } from "../sessions/session-hash.js";
 import { sessionMtimeMs } from "../sessions/session-list.js";
 import { generateMarkdown } from "../export/markdown-export.js";
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
-import { THEME_BOOT_SCRIPT } from "../browser/app-chrome.js";
+import { THEME_BOOT_SCRIPT, appTopHtml, APP_TOP_CSS, APP_SHELL_JS } from "../browser/app-chrome.js";
 import { fetchSession } from "../server/server-helpers.js";
 import { send } from "../server/server-http.js";
 import { isSessionPath } from "../server/server-session-path.js";
@@ -589,59 +589,45 @@ function liveRunChipFor(sessionPath, mods) {
 
 const VIEW_RUN_CHIP_CSS = `<style>
 .view-run-chip {
-  position: fixed; right: 18px; bottom: 18px; z-index: 300;
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 8px 14px; border-radius: 999px;
-  background: var(--surface, #1a1a1e); border: 1px solid rgba(74,222,128,0.35);
-  color: var(--fg, #e8e8ea); font-family: var(--mono, monospace); font-size: 12px;
-  text-decoration: none; box-shadow: 0 6px 24px rgba(0,0,0,0.35);
-  transition: border-color 0.12s;
+  position: fixed; right: var(--space-5, 20px); bottom: var(--space-5, 20px); z-index: var(--z-popover, 200);
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 14px;
+  border-radius: 999px; background: var(--surface-pop); box-shadow: var(--shadow-pop);
+  color: var(--text); font-size: var(--text-sm, 13px); text-decoration: none;
+  transition: background var(--dur-2, 160ms) var(--ease-out, ease);
 }
-.view-run-chip:hover { border-color: rgba(74,222,128,0.7); }
-.view-run-chip .chip-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: #4ade80;
-  animation: chip-pulse 2s ease-in-out infinite;
-}
+.view-run-chip:hover { background: var(--surface-3); }
+.view-run-chip .chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: ui-pulse 2.2s var(--ease-out, ease) infinite; }
 .view-run-chip .chip-dot[data-status="exited"],
-.view-run-chip .chip-dot[data-status="idle"] { background: #8b8b92; animation: none; }
-.view-run-chip[data-status="exited"],
-.view-run-chip[data-status="idle"] { border-color: rgba(255,255,255,0.14); }
-@keyframes chip-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.view-run-chip .chip-dot[data-status="idle"] { background: var(--text-4); animation: none; }
 </style>
 `;
 
 /** Standalone CSS for the /view continue composer (never mentions the run chip). */
 const VIEW_CONTINUE_CHIP_CSS = `<style>
 .view-continue-chip {
-  position: fixed; right: 18px; bottom: 18px; z-index: 300;
-  display: flex; flex-direction: column; gap: 6px;
-  width: 340px; max-width: calc(100vw - 36px);
-  padding: 9px 10px 9px 14px; border-radius: 22px;
-  background: var(--surface, #1a1a1e); border: 1px solid rgba(255,255,255,0.12);
-  color: var(--fg, #e8e8ea); font-family: var(--sans, sans-serif); font-size: 13px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
-  transition: border-color 0.12s;
+  position: fixed; right: var(--space-5, 20px); bottom: var(--space-5, 20px); z-index: var(--z-popover, 200);
+  display: flex; flex-direction: column; gap: 6px; width: 380px; max-width: calc(100vw - 40px);
+  padding: 6px 6px 6px 16px; border-radius: 22px; background: var(--surface-pop); box-shadow: var(--shadow-pop);
+  color: var(--text); font-size: var(--text-sm, 13px);
+  transition: box-shadow var(--dur-2, 160ms) var(--ease-out, ease);
 }
-.view-continue-chip:focus-within { border-color: rgba(255,255,255,0.28); }
+.view-continue-chip:focus-within { box-shadow: var(--shadow-pop), 0 0 0 1px var(--focus); }
 .view-continue-chip[data-busy="true"] { opacity: 0.7; }
-.vc-msg { font-size: 11px; line-height: 1.45; color: #f0a070; overflow-wrap: anywhere; }
+.vc-msg { font-size: var(--text-xs, 12px); line-height: 1.45; color: var(--warn); overflow-wrap: anywhere; padding-top: 6px; }
 .vc-msg[hidden] { display: none; }
 .vc-row { display: flex; align-items: center; gap: 8px; }
-.vc-glyph { flex: none; color: var(--fg3, #6e6e76); font-size: 11px; }
-.view-continue-input {
-  flex: 1; min-width: 0; background: none; border: none; outline: none;
-  color: var(--fg, #e8e8ea); font-family: inherit; font-size: 13px;
-}
-.view-continue-input::placeholder { color: rgba(232,232,234,0.45); }
+.vc-glyph { flex: none; color: var(--text-3); font-size: 11px; }
+.view-continue-input { flex: 1; min-width: 0; height: 30px; background: none; border: 0; outline: none; color: var(--text); font: inherit; }
+.view-continue-input::placeholder { color: var(--text-3); }
 .vc-send {
-  flex: none; width: 24px; height: 24px; display: inline-flex;
-  align-items: center; justify-content: center; border: none; border-radius: 50%;
-  background: var(--fg, #e4e4e7); color: var(--bg, #111113); cursor: pointer;
+  flex: none; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%; background: var(--ink); color: var(--paper); cursor: pointer;
 }
-.vc-send:hover { opacity: 0.85; }
-.vc-send:disabled { opacity: 0.5; cursor: default; }
-.view-continue-chip[data-mode="cwd"] { border-color: rgba(240,160,112,0.6); }
-.view-continue-chip[data-mode="cwd"] .vc-glyph { color: rgba(240,160,112,0.9); }
+.vc-send:hover { background: color-mix(in oklab, var(--ink) 86%, var(--paper)); }
+.vc-send:disabled { opacity: 0.4; cursor: default; }
+.view-continue-chip[data-mode="cwd"] { box-shadow: var(--shadow-pop), 0 0 0 1px var(--warn); }
+.view-continue-chip[data-mode="cwd"] .vc-glyph { color: var(--warn); }
+@media print { .view-run-chip, .view-continue-chip { display: none !important; } }
 </style>
 `;
 
@@ -801,6 +787,8 @@ body.embed-view #app { max-width: none; padding: 12px 16px 28px; }
 body.embed-view .header { padding: 10px 16px; margin-bottom: 10px; }
 body.embed-view .header-top,
 body.embed-view .header-title,
+body.embed-view .header-prompt,
+body.embed-view .header-back,
 body.embed-view .header-actions,
 body.embed-view .view-run-chip,
 body.embed-view .view-continue-chip,
@@ -815,6 +803,24 @@ body.embed-view .cmdk-trigger { display: none !important; }
     out = css + out;
   }
   return out;
+}
+
+
+/**
+ * The served session viewer wears the app shell (top bar, section nav,
+ * theme) and is marked data-tq-served so the document shows "← Runs".
+ * Exported and shared files are rendered without either.
+ */
+export function withViewAppShell(html) {
+  let out = html.replace(/<html\b/, "<html data-tq-served");
+  const top = appTopHtml({ crumbHtml: '<span class="app-crumb">Run</span>', nav: "runs" });
+  const css = `<style id="tq-app-shell">${APP_TOP_CSS}\nbody { padding-top: 0; }</style>`;
+  out = out.includes("</head>") ? out.replace("</head>", `${THEME_BOOT_SCRIPT}\n${css}\n</head>`) : css + out;
+  out = out.replace(/<body([^>]*)>/, (m) => `${m}\n${top}`);
+  // New run here opens the launcher on the Runs page.
+  const js = `<script>${APP_SHELL_JS}\n(function(){var b=document.getElementById("newRunBtn");if(b)b.addEventListener("click",function(){location.href="/?launch=1";});})();</script>`;
+  const at = out.lastIndexOf("</body>");
+  return at >= 0 ? out.slice(0, at) + js + "\n" + out.slice(at) : out + js;
 }
 
 export async function handleView(_req, res, url, _deps = null) {
@@ -840,6 +846,7 @@ export async function handleView(_req, res, url, _deps = null) {
       html = at >= 0 ? html.slice(0, at) + chip + "\n" + html.slice(at) : html + chip;
     }
     html = await injectLivePalette(html);
+    html = withViewAppShell(html);
   }
   send(
     res,
