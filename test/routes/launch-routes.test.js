@@ -1618,7 +1618,7 @@ describe("launch routes — GET /run watch page handler", () => {
     const body = String(res.body);
     assert.ok(body.includes('<pre class="run-screen" id="runScreen">'));
     assert.ok(body.includes('var runId = "@5";'));
-    assert.match(body, /<span class="session-source" style="background:#a78bfa">claude<\/span>/);
+    assert.match(body, /<span class="session-source" style="--hue:#a78bfa">claude<\/span>/);
     assert.ok(body.includes(">/w</span>"), "cwd embedded");
     assert.ok(body.includes("2026-08-10T00:00:00.000Z"), "startedAt embedded");
     assert.ok(body.includes('data-status="running"'));
