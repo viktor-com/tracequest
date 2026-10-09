@@ -121,7 +121,7 @@ describe("tracequest-api comparePage import", () => {
     );
     assert.equal(typeof html, "string");
     assert.ok(html.startsWith("<!DOCTYPE html>"));
-    assert.match(html, /session comparison/);
+    assert.match(html, /Compare runs/);
     assert.match(html, /cmp-col-b/);
   });
 });

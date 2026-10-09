@@ -122,7 +122,7 @@ describe("session hash routes", () => {
         deps
       );
       assert.equal(byHash.res.status, 200);
-      assert.match(byHash.res.body, /session comparison/);
+      assert.match(byHash.res.body, /Compare runs/);
 
       const byPath = captureResponse();
       await handleView({}, byPath.res, new URL(`http://localhost:7777/view?path=${encodeURIComponent(a)}`), deps);

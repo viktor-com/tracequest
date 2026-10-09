@@ -17,7 +17,7 @@ describe("comparePage document shell", () => {
     assert.equal((html.match(/:root\s*\{/g) || []).length, 1);
     assert.ok(html.includes(STANDALONE_BASE_CSS.trim().slice(0, 40)));
     assert.match(html, /\.cmp-session/);
-    assert.match(html, /session comparison/);
+    assert.match(html, /Compare runs/);
     assert.match(html, /cmp-col-b/);
     assert.match(html, /bbbbbbbb/);
   });
@@ -29,9 +29,9 @@ describe("comparePage document shell", () => {
     }));
     assert.match(html, /session-a/);
     assert.match(html, /session-b/);
-    assert.match(html, /session A/);
-    assert.match(html, /session B/);
-    assert.match(html, /view full session/);
+    assert.match(html, /Session A/);
+    assert.match(html, /Session B/);
+    assert.match(html, /View full session/);
   });
 
   test("escapes HTML in session prompts", () => {
@@ -92,7 +92,7 @@ describe("comparePage metrics table", () => {
       durationMs: 5000,
     });
     const html = comparePage(same, { ...same, sessionId: "bbbbbbbb-cccc-dddd-eeee-ffffffffffff", _path: "/tmp/b.jsonl" });
-    const errorsRow = html.match(/cmp-val[^>]*>2<\/td>\s*<td class="cmp-label">Errors<\/td>\s*<td class="cmp-val[^>]*>2<\/td>/);
+    const errorsRow = html.match(/<td class="cmp-label">Errors<\/td>\s*<td data-side="a" class="cmp-val[^>]*>2<\/td>\s*<td data-side="b" class="cmp-val[^>]*>2<\/td>/);
     assert.ok(errorsRow, "Errors row should show matching values");
     const rowSnippet = html.slice(html.indexOf('cmp-label">Errors'), html.indexOf('cmp-label">Errors') + 200);
     assert.doesNotMatch(rowSnippet, /delta-good/);
@@ -214,13 +214,13 @@ describe("comparePage chapter quality", () => {
     });
     const html = comparePage(struggling, clean);
     const strugglingRow = html.match(
-      /cmp-val[^>]*>(\d+)<\/td>\s*<td class="cmp-label">Struggling chapters<\/td>\s*<td class="cmp-val[^>]*>(\d+)<\/td>/,
+      /<td class="cmp-label">Struggling chapters<\/td>\s*<td data-side="a" class="cmp-val[^>]*>(\d+)<\/td>\s*<td data-side="b" class="cmp-val[^>]*>(\d+)<\/td>/,
     );
     assert.ok(strugglingRow);
     assert.equal(Number(strugglingRow[1]), 1);
     assert.equal(Number(strugglingRow[2]), 0);
     const cleanRow = html.match(
-      /cmp-val[^>]*>(\d+)<\/td>\s*<td class="cmp-label">Clean chapters<\/td>\s*<td class="cmp-val[^>]*>(\d+)<\/td>/,
+      /<td class="cmp-label">Clean chapters<\/td>\s*<td data-side="a" class="cmp-val[^>]*>(\d+)<\/td>\s*<td data-side="b" class="cmp-val[^>]*>(\d+)<\/td>/,
     );
     assert.ok(cleanRow);
     assert.equal(Number(cleanRow[1]), 0);
@@ -273,7 +273,7 @@ describe("comparePage navigation", () => {
       emptyCompareSession({ source: "cursor", events: [{ type: "user", text: "hi" }] }),
       emptyCompareSession({ sessionId: "bbbbbbbb-cccc-dddd-eeee-ffffffffffff", _path: "/tmp/b.jsonl" }),
     );
-    assert.match(html, /#c4e86b/);
+    assert.match(html, /--hue:var\(--hue-cursor\)/);
     assert.match(html, />cursor</);
   });
 });

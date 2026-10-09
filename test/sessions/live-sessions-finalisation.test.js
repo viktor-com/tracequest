@@ -278,7 +278,7 @@ function assertSnapshotLiveCount(shot, expected, msg) {
   if (expected) {
     assert.match(
       shot.dashboardHtml,
-      new RegExp(`color:#4ade80">${expected}</span></span><span class="dashboard-stat-label">running`),
+      new RegExp(`color:var\\(--ok\\)">${expected}</span></span><span class="dashboard-stat-label">running`),
       `overview running stat is ${expected}`,
     );
     assert.doesNotMatch(shot.dashboardHtml, /dashboard-stat-label">live/, "overview does not say live");

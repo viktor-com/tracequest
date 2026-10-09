@@ -1023,7 +1023,7 @@ describe("buildSessionCardHtml", () => {
     const summary = mockSummary({ source: "cursor" });
     const html = buildSessionCardHtml(summary, {}, "/view?path=x&source=cursor", "session-a");
     assert.match(html, /cmp-source-badge/);
-    assert.match(html, /background:#c4e86b/);
+    assert.match(html, /--hue:var\(--hue-cursor\)/);
     assert.match(html, />cursor</);
   });
 });

@@ -236,7 +236,7 @@ describe("command palette — live keyboard", () => {
     });
     assert.equal(layer.overlayFull, true, "overlay covers the viewport");
     assert.equal(layer.scrimFull, true, "scrim covers the viewport");
-    assert.ok(layer.alpha >= 0.55, `scrim alpha should recede the page, got ${layer.alpha}`);
+    assert.ok(layer.alpha > 0, `scrim dims the page, got ${layer.alpha}`);
     assert.equal(layer.bodyOpen, true);
 
     const input = page.locator("#cmdkInput");

@@ -295,8 +295,8 @@ export const ANALYTICS_COMPOSE_JS = `
         if (!Object.prototype.hasOwnProperty.call(info.ops, op)) continue;
         if (info.ops[op] > maxOpCount) { maxOpCount = info.ops[op]; maxOpName = op; }
       }
-      const opColors = { Read: '#6ba4e8', Edit: '#e0c45e', Write: '#d89660' };
-      const color = opColors[maxOpName] || '#8b7cf6';
+      const opColors = { Read: 'var(--hue-read)', Edit: 'var(--hue-edit)', Write: 'var(--hue-bash)' };
+      const color = opColors[maxOpName] || 'var(--hue-other)';
       const seg = h('div', { className: 'file-hotspot-bar-seg', title: path + ' (' + info.total + ')' });
       seg.style.width = pct + '%';
       seg.style.background = color;
@@ -366,7 +366,7 @@ export const ANALYTICS_COMPOSE_JS = `
     body.appendChild(list);
 
     if (entries.length > 30) {
-      body.appendChild(h('div', { style: 'font-size:11px;color:var(--fg3);margin-top:6px;padding-left:10px;' }, '… ' + (entries.length - 30) + ' more files'));
+      body.appendChild(h('div', { style: 'font-size:11px;color:var(--text-3);margin-top:6px;padding-left:10px;' }, '… ' + (entries.length - 30) + ' more files'));
     }
 
     wrap.appendChild(body);

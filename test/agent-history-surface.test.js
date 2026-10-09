@@ -122,7 +122,7 @@ describe("agentHistory surface contract", () => {
     assert.doesNotMatch(html, new RegExp(SIDECAR_MARKER));
     assert.doesNotMatch(html, /agentHistory|agent-sidecar|Agent history/i);
     assert.match(html, /parent prompt/);
-    assert.match(html, /session comparison/);
+    assert.match(html, /Compare runs/);
   });
 
   it("renderHTML works with agentHistory on session (field not required; cache ignores it)", () => {

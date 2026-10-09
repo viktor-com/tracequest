@@ -4,11 +4,11 @@ import { FORM_FIELD_GUARD_SRC } from "../browser/is-form-field.js";
 export const INTERACTIONS_NAV_JS = `
   ${FORM_FIELD_GUARD_SRC}
   const TOOL_DOT_COLORS = {
-    Bash: '#e8a44c', Read: '#8b7cf6', Edit: '#4ade80', Write: '#60a5fa',
-    Agent: '#f472b6', Grep: '#94a3b8', Skill: '#c084fc', WebSearch: '#38bdf8',
-    WebFetch: '#2dd4bf', TaskCreate: '#fb923c',
-    SemanticSearch: '#94a3b8', Delete: '#f87171', Await: '#9ca3af',
-    Ask: '#38bdf8', CallMcpTool: '#5dadec'
+    Bash: 'var(--hue-bash)', Read: 'var(--hue-read)', Edit: 'var(--hue-edit)', Write: 'var(--hue-edit)',
+    Agent: 'var(--hue-agent)', Grep: 'var(--hue-grep)', Skill: 'var(--hue-agent)', WebSearch: 'var(--hue-web)',
+    WebFetch: 'var(--hue-web)', TaskCreate: 'var(--hue-agent)',
+    SemanticSearch: 'var(--hue-grep)', Delete: 'var(--bad)', Await: 'var(--hue-other)',
+    Ask: 'var(--hue-web)', CallMcpTool: 'var(--hue-web)'
   };
 
   var tooltipEl = null;
@@ -44,11 +44,11 @@ export const INTERACTIONS_NAV_JS = `
     if (toolNames.length > 0) {
       html += '<div class="chapter-tooltip-tools">';
       for (var i = 0; i < Math.min(toolNames.length, 8); i++) {
-        var tColor = TOOL_DOT_COLORS[toolNames[i]] || (typeof toolNames[i] === 'string' && toolNames[i].startsWith('mcp__') ? '#5dadec' : '#6b7280');
+        var tColor = TOOL_DOT_COLORS[toolNames[i]] || (typeof toolNames[i] === 'string' && toolNames[i].startsWith('mcp__') ? 'var(--hue-web)' : 'var(--hue-other)');
         var tTitle = fmtMcpName(toolNames[i]);
         html += '<span class="chapter-tooltip-tool" style="background:' + tColor + '" title="' + esc(tTitle) + ' ' + ch.toolCounts[toolNames[i]] + '"></span>';
       }
-      if (toolNames.length > 8) html += '<span style="color:var(--fg3);font-size:10px">+' + (toolNames.length - 8) + '</span>';
+      if (toolNames.length > 8) html += '<span style="color:var(--text-3);font-size:10px">+' + (toolNames.length - 8) + '</span>';
       html += '</div>';
     }
 
@@ -64,7 +64,7 @@ export const INTERACTIONS_NAV_JS = `
         var short = shortToolPath(filePaths[fi]);
         html += '<div class="chapter-tooltip-file">' + esc(short) + '</div>';
       }
-      if (filePaths.length > 3) html += '<div class="chapter-tooltip-file" style="color:var(--fg3)">+' + (filePaths.length - 3) + ' more</div>';
+      if (filePaths.length > 3) html += '<div class="chapter-tooltip-file" style="color:var(--text-3)">+' + (filePaths.length - 3) + ' more</div>';
       html += '</div>';
     }
 
@@ -79,7 +79,7 @@ export const INTERACTIONS_NAV_JS = `
         mcpFirst = false;
         mcpSummary += srv.replace(/_/g, ' ') + ' \\u00d7' + mcpServers[srv];
       }
-      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">MCP</span><span class="chapter-tooltip-value" style="color:#5dadec">' + esc(mcpSummary) + '</span></div>';
+      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">MCP</span><span class="chapter-tooltip-value" style="color:var(--hue-web)">' + esc(mcpSummary) + '</span></div>';
     }
 
     var endMs = new Date(ch.endTimestamp).getTime();
@@ -94,7 +94,7 @@ export const INTERACTIONS_NAV_JS = `
     }
 
     if (ch.deps && ch.deps.fixesFrom.length > 0) {
-      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">fixes</span><span class="chapter-tooltip-value" style="color:var(--green)">ch ' + ch.deps.fixesFrom.map(function(r){return r+1;}).join(', ') + '</span></div>';
+      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">fixes</span><span class="chapter-tooltip-value" style="color:var(--ok)">ch ' + ch.deps.fixesFrom.map(function(r){return r+1;}).join(', ') + '</span></div>';
     } else if (ch.deps && ch.deps.continuesFrom.length > 0) {
       html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">continues</span><span class="chapter-tooltip-value" style="color:var(--accent)">ch ' + ch.deps.continuesFrom.map(function(r){return r+1;}).join(', ') + '</span></div>';
     }
@@ -103,9 +103,9 @@ export const INTERACTIONS_NAV_JS = `
     html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">quality</span><span class="chapter-tooltip-value ' + outcome + '">' + outcome + '</span></div>';
 
     if (ch.efficiency && ch.efficiency.isWasteful) {
-      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">efficiency</span><span class="chapter-tooltip-value" style="color:var(--orange)">' + ch.efficiency.score + '/100 \\u26a0</span></div>';
+      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">efficiency</span><span class="chapter-tooltip-value" style="color:var(--warn)">' + ch.efficiency.score + '/100 \\u26a0</span></div>';
     } else if (ch.efficiency && ch.efficiency.score < 70) {
-      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">efficiency</span><span class="chapter-tooltip-value" style="color:var(--fg2)">' + ch.efficiency.score + '/100</span></div>';
+      html += '<div class="chapter-tooltip-row"><span class="chapter-tooltip-label">efficiency</span><span class="chapter-tooltip-value" style="color:var(--text-2)">' + ch.efficiency.score + '/100</span></div>';
     }
 
     tip.innerHTML = html;

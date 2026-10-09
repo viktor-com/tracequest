@@ -1582,7 +1582,7 @@ describe("launch routes — GET /run watch page handler", () => {
       assert.match(res.headers["Content-Type"], /text\/html/);
       assert.ok(String(res.body).includes('data-run-state="error"'));
       assert.ok(String(res.body).includes("HTTP 400"));
-      assert.ok(String(res.body).includes('href="/"'));
+      assert.ok(String(res.body).includes('href="/sessions"'));
       assert.equal(deps.listWindows.mock.calls.length, 0, `id ${String(id)} must not touch tmux`);
     }
   });
@@ -1606,7 +1606,7 @@ describe("launch routes — GET /run watch page handler", () => {
       assert.match(res.headers["Content-Type"], /text\/html/);
       assert.ok(String(res.body).includes('data-run-state="error"'));
       assert.ok(String(res.body).includes(id));
-      assert.ok(String(res.body).includes('href="/"'));
+      assert.ok(String(res.body).includes('href="/sessions"'));
     }
   });
 
@@ -1618,7 +1618,7 @@ describe("launch routes — GET /run watch page handler", () => {
     const body = String(res.body);
     assert.ok(body.includes('<pre class="run-screen" id="runScreen">'));
     assert.ok(body.includes('var runId = "@5";'));
-    assert.match(body, /<span class="session-source" style="background:#a78bfa">claude<\/span>/);
+    assert.match(body, /<span class="session-source" style="--hue:var\(--hue-claude\)">claude<\/span>/);
     assert.ok(body.includes(">/w</span>"), "cwd embedded");
     assert.ok(body.includes("2026-08-10T00:00:00.000Z"), "startedAt embedded");
     assert.ok(body.includes('data-status="running"'));

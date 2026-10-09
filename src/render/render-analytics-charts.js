@@ -1,4 +1,21 @@
 export const ANALYTICS_CHARTS_JS = `
+  /** Theme-resolved chart colour (see refreshChartPalette); plain fallback outside the viewer. */
+  function ink(key, fallback) {
+    return typeof chartInk === 'function' ? chartInk(key, fallback) : fallback;
+  }
+  /** The same colour at an alpha, for hex or rgb() inputs (what the palette resolves to). */
+  function withAlpha(color, a) {
+    var c = String(color || '');
+    var m = c.match(/^#([0-9a-f]{6})$/i);
+    if (m) return '#' + m[1] + ('0' + Math.round(a * 255).toString(16)).slice(-2);
+    m = c.match(/^rgba?\\(([^)]+)\\)$/i);
+    if (m) {
+      var parts = m[1].split(',').slice(0, 3).join(',');
+      return 'rgba(' + parts + ',' + a + ')';
+    }
+    return c;
+  }
+
   function drawWaveform(canvas, turns, gaps, userMsgs, maxOut, maxIn, height) {
     const HEIGHT = height;
     const MID = HEIGHT * 0.5;
@@ -9,10 +26,10 @@ export const ANALYTICS_CHARTS_JS = `
     const outRange = MID - 8;
     const inRange = MID - 8;
 
-    ctx.fillStyle = '#111113';
+    ctx.fillStyle = ink('bg', 'rgba(0,0,0,0)');
     ctx.fillRect(0, 0, W, HEIGHT);
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.strokeStyle = ink('grid', 'rgba(255,255,255,0.06)');
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, MID);
@@ -30,7 +47,7 @@ export const ANALYTICS_CHARTS_JS = `
 
       const outGrad = ctx.createLinearGradient(0, MID - outH, 0, MID);
       outGrad.addColorStop(0, color);
-      outGrad.addColorStop(1, color + '20');
+      outGrad.addColorStop(1, withAlpha(color, 0.12));
       ctx.globalAlpha = alpha;
       ctx.fillStyle = outGrad;
       ctx.fillRect(x + 0.25, MID - outH, colW - 0.5, outH);
@@ -40,8 +57,8 @@ export const ANALYTICS_CHARTS_JS = `
       ctx.fillRect(x + 0.25, MID - outH, colW - 0.5, Math.min(2, outH));
 
       const inGrad = ctx.createLinearGradient(0, MID, 0, MID + inH);
-      inGrad.addColorStop(0, color + '40');
-      inGrad.addColorStop(1, color + '08');
+      inGrad.addColorStop(0, withAlpha(color, 0.25));
+      inGrad.addColorStop(1, withAlpha(color, 0.03));
       ctx.globalAlpha = alpha * 0.6;
       ctx.fillStyle = inGrad;
       ctx.fillRect(x + 0.25, MID + 1, colW - 0.5, inH);
@@ -65,7 +82,7 @@ export const ANALYTICS_CHARTS_JS = `
     ctx.globalAlpha = 1;
     for (const gap of gaps) {
       const x = gap.idx * colW;
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.strokeStyle = ink('gridStrong', 'rgba(255,255,255,0.08)');
       ctx.lineWidth = 1;
       ctx.setLineDash([2, 2]);
       ctx.beginPath();
@@ -76,7 +93,7 @@ export const ANALYTICS_CHARTS_JS = `
 
       const label = formatDuration(gap.delta);
       ctx.font = '9px ' + getComputedStyle(document.body).fontFamily;
-      ctx.fillStyle = '#5c5c63';
+      ctx.fillStyle = ink('label', '#5c5c63');
       ctx.textAlign = 'center';
       ctx.fillText(label, x, HEIGHT - 2);
     }
@@ -97,7 +114,7 @@ export const ANALYTICS_CHARTS_JS = `
 
     ctx.globalAlpha = 1;
     ctx.setLineDash([]);
-    ctx.strokeStyle = 'rgba(139, 124, 246, 0.18)';
+    ctx.strokeStyle = ink('inkSoft', 'rgba(139, 124, 246, 0.18)');
     ctx.lineWidth = 1;
     for (let c = 1; c < userMsgs.length; c++) {
       const x = Math.min(userMsgs[c].idx, turns.length) * colW;
@@ -121,7 +138,7 @@ export const ANALYTICS_CHARTS_JS = `
     const numCh = chapterCosts.length;
     const barW = W / numCh;
 
-    ctx.fillStyle = '#111113';
+    ctx.fillStyle = ink('bg', 'rgba(0,0,0,0)');
     ctx.fillRect(0, 0, W, HEIGHT);
 
     if (maxSingle > 0) {
@@ -130,7 +147,7 @@ export const ANALYTICS_CHARTS_JS = `
         const barH = Math.max(1, (c.cost / maxSingle) * (chartH * 0.4));
         const x = i * barW;
         const y = HEIGHT - PAD_BOTTOM - barH;
-        ctx.fillStyle = 'rgba(232, 164, 76, 0.15)';
+        ctx.fillStyle = withAlpha(ink('accent', '#e8a44c'), 0.16);
         ctx.fillRect(x + 1, y, barW - 2, barH);
       }
     }
@@ -149,8 +166,8 @@ export const ANALYTICS_CHARTS_JS = `
       ctx.closePath();
 
       const grad = ctx.createLinearGradient(0, PAD_TOP, 0, HEIGHT - PAD_BOTTOM);
-      grad.addColorStop(0, 'rgba(232, 164, 76, 0.4)');
-      grad.addColorStop(1, 'rgba(232, 164, 76, 0.02)');
+      grad.addColorStop(0, withAlpha(ink('accent', '#e8a44c'), 0.32));
+      grad.addColorStop(1, withAlpha(ink('accent', '#e8a44c'), 0.02));
       ctx.fillStyle = grad;
       ctx.fill();
 
@@ -161,7 +178,7 @@ export const ANALYTICS_CHARTS_JS = `
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
-      ctx.strokeStyle = 'rgba(232, 164, 76, 0.9)';
+      ctx.strokeStyle = ink('accent', 'rgba(232, 164, 76, 0.9)');
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
@@ -171,13 +188,13 @@ export const ANALYTICS_CHARTS_JS = `
           const y = PAD_TOP + chartH - (chapterCosts[i].cumulative / maxCumulative) * chartH;
           ctx.beginPath();
           ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(232, 164, 76, 0.9)';
+          ctx.fillStyle = ink('accent', 'rgba(232, 164, 76, 0.9)');
           ctx.fill();
         }
       }
     }
 
-    ctx.fillStyle = '#5c5c63';
+    ctx.fillStyle = ink('label', '#5c5c63');
     ctx.font = '9px ' + getComputedStyle(document.body).fontFamily;
     ctx.textAlign = 'left';
     const topLabel = fmtCost(maxCumulative, { prefix: '$' });
@@ -349,7 +366,7 @@ export const ANALYTICS_CHARTS_JS = `
     wrap.appendChild(cursor);
 
     const regionHL = document.createElement('div');
-    regionHL.style.cssText = 'position:absolute;background:rgba(139,124,246,0.06);pointer-events:none;display:none;border-radius:2px;z-index:5;';
+    regionHL.style.cssText = 'position:absolute;background:var(--hover);pointer-events:none;display:none;border-radius:2px;z-index:5;';
     wrap.appendChild(regionHL);
 
     let canvasW = 0;
@@ -397,7 +414,7 @@ export const ANALYTICS_CHARTS_JS = `
         tooltip.style.left = (oL + tx) + 'px';
         tooltip.style.top = (oT + 14) + 'px';
         tooltip.innerHTML =
-          '<span style="color:var(--fg3)">chapter ' + (chIdx + 1) + '</span> · ' +
+          '<span style="color:var(--text-3)">chapter ' + (chIdx + 1) + '</span> · ' +
           (turn.timestamp ? '<b>' + formatTime(turn.timestamp) + '</b> ' : '') +
           (turn.tools.length ? turn.tools.join(', ') : 'text') +
           '<br>out: ' + fmtTokens(turn.output) +
@@ -539,8 +556,8 @@ export const ANALYTICS_CHARTS_JS = `
       const cumStr = fmtCost(c.cumulative, { prefix: '$' });
       tooltip.innerHTML =
         '<b>chapter ' + (idx + 1) + '</b><br>' +
-        'cost: <span style="color:var(--orange)">' + costStr + '</span> · ' +
-        'cumulative: <span style="color:var(--orange)">' + cumStr + '</span>';
+        'cost: <span style="color:var(--warn)">' + costStr + '</span> · ' +
+        'cumulative: <span style="color:var(--warn)">' + cumStr + '</span>';
 
       const oL = canvas.offsetLeft;
       const oT = canvas.offsetTop;

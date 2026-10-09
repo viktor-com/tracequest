@@ -17,7 +17,7 @@ import {
 } from "./browser-client-dashboard.js";
 import { LAUNCHER_CLIENT_JS } from "./launch-page.js";
 import { COMMAND_PALETTE_CLIENT_JS } from "./command-palette.js";
-import { SESSION_STAT_CHIPS_HTML_SRC, SESSION_STATS_HTML_SRC, LIVE_NOW_SRC, USAGE_LIMITS_CLIENT_SRC } from "./app-chrome.js";
+import { SESSION_STAT_CHIPS_HTML_SRC, SESSION_STATS_HTML_SRC, LIVE_NOW_SRC, USAGE_LIMITS_CLIENT_SRC, APP_SHELL_JS } from "./app-chrome.js";
 import { joinBundleParts } from "../render/join-bundle.js";
 import { includesLower, INDEX_OF_LOWER_JS, sumToolCounts } from "../parse/parse-utils.js";
 import { FORM_FIELD_GUARD_SRC } from "./is-form-field.js";
@@ -34,25 +34,25 @@ const INCLUDES_LOWER_SRC = includesLower.toString().replace(/^export /, "");
 const BROWSER_CLIENT_PREP_AND_FORMATS_JS = `var _fetchController = null;
 
 var TOOL_COLORS = {
-  Bash: '#59d4a0', Edit: '#e0c45e', Write: '#d89660', Read: '#6ba4e8',
-  Agent: '#a78bfa', Grep: '#7a7a85', Glob: '#7a7a85', Skill: '#c88abd',
-  WebFetch: '#6ba4e8', WebSearch: '#6ba4e8', ToolSearch: '#7a7a85',
-  SemanticSearch: '#7a7a85', Delete: '#f07070', Await: '#8b8b92',
-  Ask: '#6ba4e8', CallMcpTool: '#5dadec'
+  Bash: 'var(--hue-bash)', Edit: 'var(--hue-edit)', Write: 'var(--hue-edit)', Read: 'var(--hue-read)',
+  Agent: 'var(--hue-agent)', Grep: 'var(--hue-grep)', Glob: 'var(--hue-grep)', Skill: 'var(--hue-agent)',
+  WebFetch: 'var(--hue-web)', WebSearch: 'var(--hue-web)', ToolSearch: 'var(--hue-grep)',
+  SemanticSearch: 'var(--hue-grep)', Delete: 'var(--bad)', Await: 'var(--hue-other)',
+  Ask: 'var(--hue-web)', CallMcpTool: 'var(--hue-web)'
 };
 function getToolClr(name) {
   if (TOOL_COLORS[name]) return TOOL_COLORS[name];
-  if (typeof name === 'string' && name.startsWith('mcp__')) return '#5dadec';
-  return '#7a7a85';
+  if (typeof name === 'string' && name.startsWith('mcp__')) return 'var(--hue-web)';
+  return 'var(--hue-other)';
 }
 var SOURCE_COLORS = {
-  claude: '#a78bfa', codex: '#59d4a0', factory: '#e0c45e',
-  cursor: '#c4e86b', 'cursor-cloud': '#4dd0e1', opencode: '#6ba4e8', grok: '#f07070'
+  claude: 'var(--hue-claude)', codex: 'var(--hue-codex)', factory: 'var(--hue-factory)',
+  cursor: 'var(--hue-cursor)', 'cursor-cloud': 'var(--hue-cursor-cloud)', opencode: 'var(--hue-opencode)', grok: 'var(--hue-grok)'
 };
 var KEY_COLORS = {
-  project: '#a78bfa', source: '#59d4a0', host: '#c4e86b', tool: '#e0c45e',
-  model: '#6ba4e8', grade: '#59d4a0', errors: '#f07070',
-  size: '#7a7a85', age: '#7a7a85', live: '#4ade80', text: '#8b8b92'
+  project: 'var(--text-2)', source: 'var(--text-2)', host: 'var(--text-2)', tool: 'var(--text-2)',
+  model: 'var(--text-2)', grade: 'var(--text-2)', errors: 'var(--bad)',
+  size: 'var(--text-3)', age: 'var(--text-3)', live: 'var(--ok)', text: 'var(--text-3)'
 };
 var FILTER_KEYS = ['project', 'source', 'host', 'tool', 'model', 'grade', 'errors', 'size', 'age', 'live'];
 
@@ -81,6 +81,50 @@ ${INCLUDES_LOWER_SRC}
 ${GET_MODEL_RATES_SRC}
 ${ESTIMATE_COST_SRC}
 ${COMPUTE_GRADE_SRC}
+
+/**
+ * Display-only project label. Agent logs often key projects by an encoded
+ * directory ("-Users-me--kandev-tasks-<uuid>-<uuid>"); that stays the filter
+ * value, but the list shows it without the home prefix, without a code/
+ * folder, and with 8-character UUIDs.
+ */
+function prettyProject(p) {
+  if (!p) return '';
+  var out = String(p).replace(/^-(Users|home)-[^-]+-/, '').replace(/^-+/, '').replace(/^code-(?=.)/, '');
+  out = out.replace(/([0-9a-f]{8})-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '$1');
+  return out || String(p);
+}
+/** Project chip: readable label, raw value in the title only when it differs. */
+function projectSpanHtml(raw, title) {
+  var label = prettyProject(raw);
+  var tip = title || (label !== raw ? raw : '');
+  return '<span class="session-project"' + (tip ? ' title="' + escH(tip) + '"' : '') + '>' + escH(label) + '</span>';
+}
+/** Grade chip that explains itself: letter, score and what drives it. */
+function gradeBadgeHtml(s) {
+  var g = computeGrade(s);
+  if (!g.cls) return '<span class="session-grade-badge" hidden></span>';
+  var why = 'Grade ' + g.letter + ' \\u00b7 ' + g.score + '/100 \\u2014 from tool-call error rate, errors per chapter and cache hit rate';
+  return '<span class="session-grade-badge ' + g.cls + '" title="' + escH(why) + '">' + g.letter + '</span>';
+}
+/** Agent identity: a small hue square and the agent name (plus @host). */
+function sourceChipHtml(source, host) {
+  return '<span class="session-source" style="--hue:' + (SOURCE_COLORS[source] || 'var(--hue-other)') + '">' + escH(source) + (host ? '@' + escH(host) : '') + '</span>';
+}
+/** Tool mix as one thin stacked bar; the breakdown lives in the title. */
+function toolSparkHtml(tc) {
+  var total = 0, entries = [];
+  for (var k in tc) { if (tc.hasOwnProperty(k)) { total += tc[k]; entries.push([k, tc[k]]); } }
+  if (!total) return '';
+  entries.sort(function(a, b) { return b[1] - a[1]; });
+  var tip = entries.slice(0, 6).map(function(e) { return fmtMcpName(e[0]) + ' ' + e[1]; }).join(' \\u00b7 ');
+  var html = '<span class="tool-sparkline" title="' + escH(tip) + '">';
+  for (var i = 0; i < entries.length; i++) {
+    var pct = (entries[i][1] / total * 100).toFixed(1);
+    html += '<span class="tool-spark-seg" style="width:' + pct + '%;background:' + getToolClr(entries[i][0]) + '"></span>';
+  }
+  return html + '</span>';
+}
 var currentSort = 'recent';
 var compareSet = new Set(); // stores session paths (stable across sort/filter)
 `;
@@ -162,7 +206,9 @@ function renderPagination() {
   var end = pageEnd();
   var html = '';
 
-  html += '<button class="page-btn" data-page="prev" aria-label="Previous page"' + (currentPage <= 1 ? ' disabled' : '') + '>&laquo; Prev</button>';
+  html += '<span class="page-info"><strong>' + start + '</strong>&ndash;<strong>' + end + '</strong> of <strong>' + SERVER_TOTAL + '</strong></span>';
+  html += '<span class="page-nav">';
+  html += '<button class="page-btn" data-page="prev" aria-label="Previous page"' + (currentPage <= 1 ? ' disabled' : '') + '>&larr;</button>';
 
   var pages = [];
   if (tp <= 7) {
@@ -188,12 +234,11 @@ function renderPagination() {
     }
   }
 
-  html += '<button class="page-btn" data-page="next" aria-label="Next page"' + (currentPage >= tp ? ' disabled' : '') + '>Next &raquo;</button>';
-
-  html += '<span class="page-info"><strong>' + start + '</strong>&ndash;<strong>' + end + '</strong> of <strong>' + SERVER_TOTAL + '</strong></span>';
+  html += '<button class="page-btn" data-page="next" aria-label="Next page"' + (currentPage >= tp ? ' disabled' : '') + '>&rarr;</button>';
+  html += '</span>';
 
   html += '<span class="page-size-wrap">'
-    + '<label for="pageSizeSelect">per page:</label>'
+    + '<label for="pageSizeSelect">Per page</label>'
     + '<select class="page-size-select" id="pageSizeSelect">';
   var sizes = [25, 50, 100, 200];
   for (var si = 0; si < sizes.length; si++) {
@@ -467,6 +512,7 @@ function fetchSessions(callback, options) {
   _fetchError = null;
   _staleRefreshError = null;
   setRefreshStatus('pending', 'refreshing');
+  if (!preserveStaleOnError && typeof document !== 'undefined' && document.body) document.body.classList.add('runs-loading');
   fetch('/api/sessions?' + params.toString(), { signal: _fetchController.signal })
     .then(function(r) {
       if (!r.ok) {
@@ -480,6 +526,7 @@ function fetchSessions(callback, options) {
     })
     .then(function(data) {
       _fetching = false;
+      if (typeof document !== 'undefined' && document.body) document.body.classList.remove('runs-loading');
       _fetchError = null;
       _staleRefreshError = null;
       setRefreshStatus(null, '');
@@ -493,6 +540,7 @@ function fetchSessions(callback, options) {
     })
     .catch(function(err) {
       _fetching = false;
+      if (typeof document !== 'undefined' && document.body) document.body.classList.remove('runs-loading');
       if (err.name === 'AbortError') return;
       var message = err.message || String(err);
       if (preserveStaleOnError && ALL && ALL.length) {
@@ -547,6 +595,7 @@ fetch('/api/agents')
 
 ${USAGE_LIMITS_CLIENT_SRC}
 startUsageLimitsPolling(60000);
+${APP_SHELL_JS}
 
 function continueAgentForSource(source, host) {
   if (host) return null;
@@ -560,7 +609,7 @@ function continueBtnHtml(sessionPath, agent, label) {
   return '<button class="session-continue" type="button" data-continue-session="' + escH(sessionPath) + '"'
     + (agent ? ' data-continue-agent="' + escH(agent) + '"' : '')
     + ' title="Continue this conversation as a new tracequest run — type your follow-up right here (' + escH(agent || '') + ' resumes the session in tmux)"'
-    + ' aria-label="Continue session as a new run">&#9654;&#xFE0E; ' + (label || 'continue') + '</button>';
+    + ' aria-label="Continue session as a new run">' + (label || 'Continue') + '</button>';
 }
 
 /* --- Inline continue composer: typing IS the continue ---
@@ -745,8 +794,7 @@ function liveAgentRowHtml(o) {
     + (o.origin ? ' data-run-origin="' + escH(o.origin) + '"' : '')
     + ' data-href="' + o.href + '" aria-label="' + o.ariaLabel + '">'
     + '<span class="run-state-badge" data-status="' + escH(o.status) + '">' + escH(o.status) + '</span>'
-    + '<span class="session-source" style="background:' + (SOURCE_COLORS[o.source] || '#7a7a85') + '">' + escH(o.source) + '</span>'
-    + '<span class="session-id">' + escH(o.idLabel) + '</span>'
+    + '<span class="session-main">'
     + '<span class="session-primary">'
     + '<span class="session-prompt">' + (o.prompt ? escH(o.prompt) : '') + '</span>';
   var activity = o.activity;
@@ -758,20 +806,19 @@ function liveAgentRowHtml(o) {
       + (running ? '<span class="run-activity-dot"></span>' : '')
       + '<span class="run-activity-text">' + escH(activity) + '</span></span>';
   }
-  if (o.chips) html += o.chips;
   html += '</span>'
-    + '<span class="session-project"' + (o.projectTitle ? ' title="' + escH(o.projectTitle) + '"' : '') + '>' + escH(o.project) + '</span>'
+    + '<span class="session-meta">'
+    + sourceChipHtml(o.source)
+    + projectSpanHtml(o.project, o.projectTitle)
     + (o.model ? '<span class="session-model">' + escH(o.model) + '</span>' : '<span class="session-model" hidden></span>')
+    + '<span class="session-id">' + escH(o.idLabel) + '</span>'
+    + (o.chips || '')
+    + '</span>'
+    + '</span>'
     + (o.timeMs ? '<span class="session-time">' + escH(timeAgo(o.timeMs)) + '</span>' : '<span class="session-time"></span>')
     + (o.stats ? sessionStatsHtml(o.stats) : '<div class="session-stats"></div>');
-  if (o.graded) {
-    var grade = computeGrade(o.graded);
-    if (grade.cls) html += '<span class="session-grade-badge ' + grade.cls + '">' + grade.letter + '</span>';
-    else html += '<span class="session-grade-badge" hidden></span>';
-  } else {
-    html += '<span class="session-grade-badge" hidden></span>';
-  }
-  html += '<span class="session-tools"></span>'
+  html += o.graded ? gradeBadgeHtml(o.graded) : '<span class="session-grade-badge" hidden></span>';
+  html += '<span class="session-tools">' + (o.stats && o.stats.toolCounts ? toolSparkHtml(o.stats.toolCounts) : '') + '</span>'
     + '<span class="session-actions">' + (o.controls || '') + '</span>'
     + '</div></div>';
   return html;
@@ -875,7 +922,7 @@ function render() {
   renderedCount = 0;
   sessionsEl.innerHTML = '';
   if (_fetchError) {
-    sessionsEl.insertAdjacentHTML('afterbegin', '<div class="fetch-error">Failed to load runs: ' + escH(_fetchError) + '</div>');
+    sessionsEl.insertAdjacentHTML('afterbegin', '<div class="fetch-error" role="alert"><div class="ui-empty"><div class="ui-empty-title">Couldn\u2019t load runs</div><div class="ui-empty-body">Failed to load runs: ' + escH(_fetchError) + '</div><div class="ui-empty-actions"><button type="button" class="ui-btn ui-btn--primary" data-empty-action="retry">Try again</button></div></div></div>');
     document.getElementById('count').textContent = '—';
     renderDashboard();
     buildQfBar();
@@ -897,9 +944,9 @@ function render() {
   if (appLiveEl) {
     var liveN = liveNow();
     appLiveEl.hidden = !liveN;
-    appLiveEl.textContent = '\\u25CF ' + liveN + ' running';
+    appLiveEl.textContent = liveN + ' running';
   }
-  if (!filtered.length && !runsHtml) sessionsEl.insertAdjacentHTML('afterbegin', '<div class="empty">No runs match</div>');
+  if (!filtered.length && !runsHtml) sessionsEl.insertAdjacentHTML('afterbegin', emptyStateHtml());
   renderDashboard();
   buildQfBar();
   renderPagination();
@@ -915,9 +962,43 @@ function render() {
 ${SESSION_STAT_CHIPS_HTML_SRC}
 ${SESSION_STATS_HTML_SRC}
 
+/**
+ * Empty list: say why it is empty and the one action that fixes it. A
+ * filter that matches nothing offers to clear it; a machine with no
+ * recordings yet says where tracequest looks and offers a new run.
+ */
+function emptyStateHtml() {
+  var expr = filterInput.value.trim();
+  var filteredOut = expr || qfState.grade || qfState.model || qfState.source || qfState.errorsOnly || qfState.age;
+  var search = '<circle cx="7" cy="7" r="4.25"/><path d="m10.25 10.25 3 3"/>';
+  var inbox = '<path d="M2.5 9 4 3.5h8L13.5 9v3.5h-11z"/><path d="M2.5 9h3l1 1.5h3l1-1.5h3"/>';
+  function mark(paths) {
+    return '<div class="ui-empty-mark"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg></div>';
+  }
+  if (filteredOut) {
+    return '<div class="empty ui-empty">' + mark(search)
+      + '<div class="ui-empty-title">No runs match' + (expr ? ' <code>' + escH(expr) + '</code>' : ' these filters') + '</div>'
+      + '<div class="ui-empty-body">Filters combine with AND. Try a shorter word, drop a filter, or widen the time range.</div>'
+      + '<div class="ui-empty-actions"><button type="button" class="ui-btn ui-btn--primary" data-empty-action="clear">Clear filters</button></div>'
+      + '</div>';
+  }
+  return '<div class="empty ui-empty">' + mark(inbox)
+    + '<div class="ui-empty-title">No runs recorded yet</div>'
+    + '<div class="ui-empty-body">tracequest reads sessions from Claude Code, Codex CLI, Cursor, Droid, OpenCode and Grok CLI on this machine. Run any of them, or start one here.</div>'
+    + '<div class="ui-empty-actions"><button type="button" class="ui-btn ui-btn--primary" data-empty-action="new-run">New run</button></div>'
+    + '</div>';
+}
+sessionsEl.addEventListener('click', function(e) {
+  var btn = e.target && e.target.closest ? e.target.closest('[data-empty-action]') : null;
+  if (!btn) return;
+  var act = btn.getAttribute('data-empty-action');
+  if (act === 'clear') { clearAll(); filterInput.focus(); }
+  else if (act === 'retry') { fetchSessions(function() { render(); }); }
+  else { var nr = document.getElementById('newRunBtn'); if (nr) nr.click(); }
+});
+
 function renderRow(s, idx) {
   var model = shortModel(s.model);
-  var srcColor = SOURCE_COLORS[s.source] || '#888';
   var viewUrl = '/view?id=' + encodeURIComponent(s.id) + (s.source !== 'claude' ? '&source=' + s.source : '');
   var rowClasses = 'session-row';
   if (s.errors > 2) rowClasses += ' has-errors';
@@ -931,42 +1012,22 @@ function renderRow(s, idx) {
     + '<input type="checkbox" class="compare-cb" data-idx="' + idx + '" data-path="' + escH(s.path) + '"' + checked + ' title="Select for comparison" aria-label="Select run ' + escH(s.id) + ' for comparison">'
     + '<a class="' + rowClasses + '" href="' + viewUrl + '">'
     + (live ? '<span class="live-indicator">running</span>' : '<span class="run-state-slot" aria-hidden="true"></span>')
-    + '<span class="session-source" style="background:' + srcColor + '">' + escH(s.source) + (s.host ? '@' + escH(s.host) : '') + '</span>'
-    + '<span class="session-id">' + escH(s.id) + '</span>'
+    + '<span class="session-main">'
     + '<span class="session-primary"><span class="session-prompt">' + (s.prompt ? escH(s.prompt) : '') + '</span></span>'
-    + '<span class="session-project">' + escH(s.project) + '</span>'
+    + '<span class="session-meta">'
+    + sourceChipHtml(s.source, s.host)
+    + projectSpanHtml(s.project)
     + (model ? '<span class="session-model">' + escH(model) + '</span>' : '<span class="session-model" hidden></span>')
-    + '<span class="session-time">' + timeAgo(s.mtime) + '</span>'
+    + '<span class="session-id">' + escH(s.id) + '</span>';
+  if (s.errors > 0) html += '<span class="session-badge error-badge">' + s.errors + ' error' + (s.errors !== 1 ? 's' : '') + '</span>';
+  if (s.commits > 0) html += '<span class="session-badge commit-badge">' + s.commits + ' commit' + (s.commits !== 1 ? 's' : '') + '</span>';
+  html += '</span></span>'
+    + '<span class="session-time" title="' + escH(new Date(s.mtime).toLocaleString()) + '">' + timeAgo(s.mtime) + '</span>'
     + '<span class="session-size">' + s.sizeKB + ' KB</span>';
   html += sessionStatsHtml(s);
-  var grade = computeGrade(s);
-  if (grade.cls) html += '<span class="session-grade-badge ' + grade.cls + '">' + grade.letter + '</span>';
-  else html += '<span class="session-grade-badge" hidden></span>';
-  if (s.errors > 2) html += '<span class="session-badge error-badge">' + s.errors + ' errors</span>';
-  if (s.commits > 0) html += '<span class="session-badge commit-badge">' + s.commits + ' commit' + (s.commits !== 1 ? 's' : '') + '</span>';
-  if (s.totalTokens > 2000000) html += '<span class="session-badge cost-badge">' + fmtTokens(s.totalTokens) + '</span>';
-  html += '<span class="session-tools">';
-  if (s.tools && s.tools.length) {
-    var tc = s.toolCounts || {};
-    var tcTotal = 0;
-    var tcEntries = [];
-    for (var _tk in tc) { tcTotal += tc[_tk]; tcEntries.push([_tk, tc[_tk]]); }
-    if (tcTotal > 0) {
-      tcEntries.sort(function(a, b) { return b[1] - a[1]; });
-      html += '<span class="tool-sparkline" title="Tool usage distribution">';
-      for (var _ti = 0; _ti < tcEntries.length; _ti++) {
-        var _tn = tcEntries[_ti][0], _tc = tcEntries[_ti][1];
-        var pct = (_tc / tcTotal * 100).toFixed(1);
-        var col = TOOL_COLORS[_tn] || '#7a7a85';
-        html += '<span class="tool-spark-seg" style="width:' + pct + '%;background:' + col + '"><span class="tool-spark-tip">' + escH(fmtMcpName(_tn)) + ' ' + _tc + '</span></span>';
-      }
-      html += '</span>';
-    }
-    for (var t of s.tools) {
-      html += '<span class="session-tool" style="color:' + (TOOL_COLORS[t] || '#7a7a85') + '">' + escH(fmtMcpName(t)) + '</span>';
-    }
-  }
-  html += '</span><span class="session-actions">';
+  html += gradeBadgeHtml(s);
+  html += '<span class="session-tools">' + (s.tools && s.tools.length ? toolSparkHtml(s.toolCounts || {}) : '') + '</span>';
+  html += '<span class="session-actions">';
   var contAgent = continueAgentForSource(s.source, s.host);
   if (contAgent) html += continueBtnHtml(s.path, contAgent);
   return html + '</span></a></div>';
@@ -1169,8 +1230,8 @@ function appliedChipsHtml() {
   if (qfState.errorsOnly) chips += appliedChipHtml('Errors', '>', '0', 'errors');
   if (!chips) return '';
   return '<div class="applied-chips" id="appliedChips">' + chips
-    + '<button class="qf-clear qf-visible" id="qfClear">clear filters</button>'
     + '<span class="applied-match">Match all filters</span>'
+    + '<button class="qf-clear qf-visible" id="qfClear">Clear</button>'
     + '</div>';
 }
 
@@ -1271,8 +1332,7 @@ function buildQfBar() {
     for (var si = 0; si < sourceEntries.length; si++) {
       var sn = sourceEntries[si][0];
       var sc = sourceEntries[si][1];
-      var sColor = SOURCE_COLORS[sn] || '#888';
-      html += '<button class="qf-chip" data-source="' + escH(sn) + '" aria-pressed="false" style="border-color: ' + sColor + '30"><span style="color:' + sColor + '">' + escH(sn) + '</span> <span class="qf-chip-count">' + sc + '</span></button>';
+      html += '<button class="qf-chip qf-chip--source" data-source="' + escH(sn) + '" aria-pressed="false" style="--hue:' + (SOURCE_COLORS[sn] || 'var(--hue-other)') + '">' + escH(sn) + ' <span class="qf-chip-count">' + sc + '</span></button>';
     }
     html += '</span>';
     html += '</div>';

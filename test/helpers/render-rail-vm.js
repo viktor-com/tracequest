@@ -112,7 +112,7 @@ export function assertChatRailLiveCount(shot, expected, msg) {
     assert.equal(shot.railCount, `${expected} running`, `${prefix}railCount is ${expected} running`);
     assert.match(
       shot.overviewHtml,
-      new RegExp(`color:#4ade80">${expected}</span></span><span class="dashboard-stat-label">running`),
+      new RegExp(`color:var\\(--ok\\)">${expected}</span></span><span class="dashboard-stat-label">running`),
       `${prefix}overview running stat is ${expected}`,
     );
     assert.doesNotMatch(shot.overviewHtml, /dashboard-stat-label">live/, `${prefix}overview does not say live`);

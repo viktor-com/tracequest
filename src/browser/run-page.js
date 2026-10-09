@@ -65,10 +65,12 @@
  * that ends first keeps undelivered rows under an honest note).
  */
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
+import { CHAT_SHELL_CSS, CHAT_PAGE_CSS } from "./chat-page-css.js";
 import { ansiPaletteCss } from "../render/ansi-html.js";
 import { esc } from "../server/server-html-helpers.js";
 import {
   computeGrade,
+  prettyProject,
   shortModel,
   estimateCost,
   getModelRates,
@@ -93,6 +95,8 @@ import {
 } from "./command-palette.js";
 import {
   appTopHtml,
+  APP_SHELL_JS,
+  THEME_BOOT_SCRIPT,
   APP_TOP_CSS,
   IDENTITY_ROW_CSS,
   SOURCE_COLORS,
@@ -133,508 +137,14 @@ export const RAIL_POLL_MS = 3000;
 /* ------------------------------------------------------------------ */
 
 const APP_SHELL_CSS = `
-/* ---- app shell: shared app bar + session rail + chat pane ---- */
-.tq-shell { display: flex; flex-direction: column; height: 100%; }
 ${APP_TOP_CSS}
 ${IDENTITY_ROW_CSS}
-.shell-main { display: flex; flex: 1; min-height: 0; }
-
-.agent-rail {
-  width: 320px;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border-right: 1px solid var(--border);
-  background: var(--surface);
-}
-.rail-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 11px 10px 7px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--fg3);
-  flex: none;
-}
-.rail-count { font-family: var(--mono); font-weight: 400; }
-.rail-filter-toggle {
-  margin-left: auto;
-  flex: none;
-  width: 24px;
-  height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--fg3);
-  cursor: pointer;
-  padding: 0;
-}
-.rail-filter-toggle:hover { color: var(--fg); background: var(--surface2); }
-.rail-filter-toggle[aria-expanded="true"],
-.rail-filter-toggle.has-value {
-  color: var(--fg);
-  border-color: var(--accent);
-  background: rgba(139,124,246,0.08);
-}
-.rail-filter-toggle svg { width: 13px; height: 13px; display: block; }
-.agent-rail:not(.filters-open) .rail-filters-extra { display: none; }
-.rail-list { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 6px 8px; display: flex; flex-direction: column; gap: 2px; }
-.rail-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 7px 8px;
-  border-radius: 8px;
-  text-decoration: none;
-  color: var(--fg2);
-  min-width: 0;
-}
-.rail-row:hover { background: var(--surface2); }
-.rail-row[aria-current="page"] {
-  background: var(--surface2);
-  box-shadow: inset 0 0 28px 10px rgba(139, 124, 246, 0.14);
-}
-.rail-glyph {
-  flex: none;
-  width: 14px;
-  height: 14px;
-  margin-top: 2px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  color: var(--fg3);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-}
-.rail-glyph[data-status="running"] { border: none; }
-.rail-glyph[data-status="running"]::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--green);
-  animation: rail-pulse 1.6s ease-in-out infinite;
-}
-@keyframes rail-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-.rail-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.rail-title {
-  font-size: 12px;
-  line-height: 1.35;
-  color: var(--fg);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.rail-sub {
-  font-size: 11px;
-  color: var(--fg3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.rail-sub .rail-agent { font-weight: 600; }
-.rail-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
-.rail-time { font-size: 10px; color: var(--fg3); font-family: var(--mono); white-space: nowrap; }
-.rail-grade { font-size: 10px; padding: 0 4px; }
-.rail-empty { padding: 10px 10px; font-size: 11px; color: var(--fg3); }
-.rail-all {
-  flex: none;
-  display: block;
-  padding: 9px 14px;
-  border-top: 1px solid var(--border);
-  font-size: 11px;
-  font-family: var(--mono);
-  color: var(--fg3);
-  text-decoration: none;
-}
-.rail-all:hover { color: var(--accent); }
-
-/* ---- previous-home filters, stacked in the session rail ---- */
-.rail-filters {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px 8px 8px;
-  border-bottom: 1px solid var(--border);
-  max-height: 46%;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-.rail-filter-wrap { position: relative; }
-.rail-filters .filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 30px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 2px 8px;
-  cursor: text;
-  transition: border-color 0.15s;
-}
-.rail-filters .filter-bar:focus-within { border-color: rgba(255,255,255,0.14); }
-.rail-filters .filter-input {
-  flex: 1;
-  min-width: 0;
-  background: none;
-  border: none;
-  color: var(--fg);
-  font-family: var(--sans);
-  font-size: 12px;
-  outline: none;
-  padding: 4px 0;
-}
-.rail-filters .filter-input::placeholder { color: var(--fg3); }
-.rail-filters .filter-hint {
-  color: var(--fg3);
-  font-size: 10px;
-  font-family: var(--mono);
-  background: var(--surface2);
-  padding: 1px 5px;
-  border-radius: 4px;
-  pointer-events: none;
-  opacity: 0.7;
-  flex-shrink: 0;
-}
-.rail-filters .filter-bar:focus-within .filter-hint { display: none; }
-.rail-toolbar {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
-}
-.rail-filters .toolbar-pop { position: static; min-width: 0; }
-.rail-filters .toolbar-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  width: 100%;
-  height: 28px;
-  padding: 0 8px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  color: var(--fg2);
-  font-size: 11px;
-  font-family: var(--sans);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
-}
-.rail-filters .toolbar-btn:hover { color: var(--fg); border-color: rgba(255,255,255,0.14); }
-.rail-filters .toolbar-btn[aria-expanded="true"],
-.rail-filters .toolbar-btn.active {
-  color: var(--fg);
-  border-color: var(--accent);
-  background: rgba(139,124,246,0.08);
-}
-.rail-filters .toolbar-btn.has-value { color: var(--fg); }
-.rail-filters .toolbar-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  min-width: 0;
-  max-height: 240px;
-  overflow-y: auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 4px;
-  z-index: 120;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-}
-.rail-filters .toolbar-menu[hidden] { display: none; }
-.rail-filters .toolbar-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  background: none;
-  border: none;
-  border-radius: 6px;
-  color: var(--fg2);
-  font-size: 12px;
-  font-family: var(--sans);
-  padding: 6px 8px;
-  cursor: pointer;
-  text-align: left;
-}
-.rail-filters .toolbar-option:hover { background: var(--surface2); color: var(--fg); }
-.rail-filters .toolbar-option.active { color: var(--fg); background: rgba(139,124,246,0.08); }
-.rail-filters .toolbar-option-count { font-size: 11px; color: var(--fg3); font-family: var(--mono); }
-.rail-filters .sort-bar {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
-  min-width: 168px;
-}
-.rail-filters .sort-label {
-  margin: 2px 8px 4px;
-  font-size: 10px;
-  color: var(--fg3);
-  font-family: var(--mono);
-}
-.rail-filters .sort-btn {
-  background: none;
-  border: none;
-  border-radius: 6px;
-  color: var(--fg3);
-  font-size: 12px;
-  font-family: var(--sans);
-  padding: 6px 8px;
-  cursor: pointer;
-  text-align: left;
-}
-.rail-filters .sort-btn:hover { color: var(--fg); background: var(--surface2); }
-.rail-filters .sort-btn.active { color: var(--fg); background: rgba(139,124,246,0.08); }
-.rail-overview {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.rail-overview .dashboard-header {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.rail-overview .dashboard-title {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--fg3);
-}
-.rail-overview .dashboard-scope {
-  font-size: 11px;
-  color: var(--fg3);
-  font-family: var(--mono);
-}
-.rail-overview .dashboard-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px 10px;
-  font-family: var(--mono);
-}
-.rail-overview .dashboard-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  min-width: 0;
-  flex-wrap: nowrap;
-}
-.rail-overview .dashboard-stat-val {
-  font-weight: 600;
-  color: var(--fg);
-  font-variant-numeric: tabular-nums;
-  font-size: 12px;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.rail-overview .dashboard-stat-label {
-  color: var(--fg3);
-  font-size: 11px;
-}
-.rail-overview .dashboard-tools {
-  border-top: 1px solid var(--border);
-  padding-top: 6px;
-}
-.rail-overview.collapsed .dashboard-tools { display: none; }
-.rail-overview .dashboard-tools-title {
-  font-size: 10px;
-  color: var(--fg3);
-  margin-bottom: 4px;
-  font-family: var(--mono);
-}
-.rail-overview .dashboard-tools-list { display: flex; flex-wrap: wrap; gap: 3px; }
-.rail-overview .dashboard-tool-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  font-family: var(--mono);
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-}
-.rail-overview .dashboard-tool-count { opacity: 0.7; }
-.rail-overview .dashboard-toggle {
-  background: none;
-  border: none;
-  color: var(--fg3);
-  font-size: 10px;
-  font-family: var(--mono);
-  cursor: pointer;
-  padding: 0;
-  align-self: flex-start;
-}
-.rail-overview .dashboard-toggle:hover { color: var(--fg2); }
-.rail-filters .qf-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.rail-filters .qf-bar[hidden] { display: none; }
-.rail-filters .qf-pickers {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 6px 8px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-.rail-filters .qf-pickers[hidden] { display: none; }
-.rail-filters .qf-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-}
-.rail-filters .qf-section {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 3px;
-}
-.rail-filters .qf-section-label {
-  font-size: 11px;
-  color: var(--fg3);
-  font-family: var(--mono);
-  margin-right: 2px;
-}
-.rail-filters .qf-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  font-family: var(--mono);
-  padding: 1px 6px;
-  border-radius: 5px;
-  border: 1px solid var(--border);
-  background: none;
-  color: var(--fg3);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.rail-filters .qf-chip:hover { color: var(--fg2); border-color: rgba(255,255,255,0.14); background: var(--surface2); }
-.rail-filters .qf-chip.qf-active { color: var(--fg); border-color: var(--accent); background: rgba(139,124,246,0.10); }
-.rail-filters .qf-chip-count { font-size: 9px; opacity: 0.6; }
-.rail-filters .qf-grade {
-  font-weight: 700;
-  font-size: 11px;
-  width: 22px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  background: none;
-  cursor: pointer;
-  padding: 0;
-  font-family: var(--mono);
-}
-.rail-filters .qf-grade:hover { border-color: rgba(255,255,255,0.14); }
-.rail-filters .qf-grade.qf-active { border-width: 2px; }
-.rail-filters .qf-grade.qf-g-a { color: var(--green); }
-.rail-filters .qf-grade.qf-g-a.qf-active { border-color: var(--green); background: rgba(74,222,128,0.10); }
-.rail-filters .qf-grade.qf-g-b { color: var(--green); opacity: 0.8; }
-.rail-filters .qf-grade.qf-g-b.qf-active { border-color: var(--green); background: rgba(74,222,128,0.07); opacity: 1; }
-.rail-filters .qf-grade.qf-g-c { color: var(--orange); }
-.rail-filters .qf-grade.qf-g-c.qf-active { border-color: var(--orange); background: rgba(232,164,76,0.10); }
-.rail-filters .qf-grade.qf-g-d { color: #d97740; }
-.rail-filters .qf-grade.qf-g-d.qf-active { border-color: #d97740; background: rgba(217,119,64,0.10); }
-.rail-filters .qf-grade.qf-g-f { color: var(--red); }
-.rail-filters .qf-grade.qf-g-f.qf-active { border-color: var(--red); background: rgba(240,112,112,0.10); }
-.rail-filters .qf-grade.qf-disabled { opacity: 0.25; cursor: default; }
-.rail-filters .qf-error-toggle {
-  display: inline-flex;
-  align-items: center;
-  font-size: 10px;
-  font-family: var(--mono);
-  padding: 1px 6px;
-  border-radius: 5px;
-  border: 1px solid var(--border);
-  background: none;
-  color: var(--fg3);
-  cursor: pointer;
-}
-.rail-filters .qf-error-toggle.qf-active { color: var(--red); border-color: var(--red); background: rgba(240,112,112,0.08); }
-.rail-filters .applied-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-}
-.rail-filters .chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 2px 5px 2px 6px;
-  font-size: 11px;
-  max-width: 100%;
-}
-.rail-filters .chip-key { color: var(--fg2); font-weight: 500; }
-.rail-filters .chip-op { color: var(--fg3); font-size: 10px; }
-.rail-filters .chip-value { color: var(--fg); font-family: var(--mono); font-size: 10px; overflow: hidden; text-overflow: ellipsis; }
-.rail-filters .chip-remove {
-  background: none;
-  border: none;
-  color: var(--fg3);
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  padding: 0 1px;
-}
-.rail-filters .chip-remove:hover { color: var(--red); }
-.rail-filters .qf-clear {
-  font-size: 10px;
-  font-family: var(--mono);
-  color: var(--fg3);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px 4px;
-}
-.rail-filters .qf-clear:hover { color: var(--accent); }
-.rail-filters .qf-clear.qf-visible { display: inline-block; }
-
-.chat-app { flex: 1; min-width: 0; min-height: 0; }
-
-/* the chat header wears the record's LIST identity row (shared classes
-   from IDENTITY_ROW_CSS) — entering the chat is the same row expanding */
-.chat-top-spacer { flex: 1; }
-.chat-identity { min-width: 0; }
-.chat-identity .session-id { white-space: nowrap; }
-.chat-head-stats { margin-top: 3px; }
-.chat-head-stats[hidden] { display: none; }
-
-/* the rail is the way back on wide screens; the text escape hatch
-   only appears when the rail is hidden */
-@media (min-width: 881px) { .run-back { display: none; } }
-@media (max-width: 880px) { .agent-rail { display: none; } }
+${CHAT_SHELL_CSS}
 ${ANALYTICS_PANEL_CSS}
 `;
 
 /** The shared app bar (same builder the dashboard uses) — ONE noun: sessions. */
-const APP_TOP_HTML = appTopHtml({ crumbHtml: '<span class="app-crumb">sessions</span>' });
+const APP_TOP_HTML = appTopHtml({ crumbHtml: '<span class="app-crumb">sessions</span>', nav: 'chat' });
 
 /** The persistent session rail (client-rendered rows) — same noun as the dashboard. */
 const AGENT_RAIL_HTML = `<aside class="agent-rail" aria-label="Sessions">
@@ -692,6 +202,7 @@ const AGENT_RAIL_HTML = `<aside class="agent-rail" aria-label="Sessions">
     </aside>`;
 
 const COMPUTE_GRADE_SRC = computeGrade.toString();
+const PRETTY_PROJECT_SRC = prettyProject.toString();
 const SUM_TOOL_COUNTS_SRC = sumToolCounts.toString().replace(/^export /, "");
 const SHORT_MODEL_SRC = shortModel.toString().replace(/^export /, "");
 const INCLUDES_LOWER_SRC = includesLower.toString().replace(/^export /, "");
@@ -723,6 +234,7 @@ function shellClientScript({ current, defaultCwd }) {
   var SOURCE_COLORS = ${JSON.stringify(SOURCE_COLORS)};
 ${SUM_TOOL_COUNTS_SRC}
 ${COMPUTE_GRADE_SRC}
+${PRETTY_PROJECT_SRC}
 ${SHORT_MODEL_SRC}
 ${INCLUDES_LOWER_SRC}
 ${GET_MODEL_RATES_SRC}
@@ -754,6 +266,7 @@ ${SESSION_STAT_CHIPS_HTML_SRC}
   var appLive = document.getElementById("appLive");
 ${USAGE_LIMITS_CLIENT_SRC}
   startUsageLimitsPolling(60000);
+  ${APP_SHELL_JS}
   var gradeBadge = document.getElementById("runGrade");
   var headIdEl = document.getElementById("chatSessionId");
   var headModelEl = document.getElementById("chatModel");
@@ -784,20 +297,20 @@ ${RUN_IDENTITY_STATUS_SRC}
   var toolsOpen = false;
   var AGE_OPTIONS = { "": "All time", "<1d": "Past 24 hours", "<7d": "Past 7 days", "<30d": "Past 30 days" };
   var TOOL_COLORS = {
-    Bash: "#59d4a0", Edit: "#e0c45e", Write: "#d89660", Read: "#6ba4e8",
-    Agent: "#a78bfa", Grep: "#7a7a85", Glob: "#7a7a85", Skill: "#c88abd",
-    WebFetch: "#6ba4e8", WebSearch: "#6ba4e8", ToolSearch: "#7a7a85",
-    SemanticSearch: "#7a7a85", Delete: "#f07070", Await: "#8b8b92",
-    Ask: "#6ba4e8", CallMcpTool: "#5dadec"
+    Bash: "var(--hue-bash)", Edit: "var(--hue-edit)", Write: "var(--hue-edit)", Read: "var(--hue-read)",
+    Agent: "var(--hue-agent)", Grep: "var(--hue-grep)", Glob: "var(--hue-grep)", Skill: "var(--hue-agent)",
+    WebFetch: "var(--hue-web)", WebSearch: "var(--hue-web)", ToolSearch: "var(--hue-grep)",
+    SemanticSearch: "var(--hue-grep)", Delete: "var(--bad)", Await: "var(--hue-other)",
+    Ask: "var(--hue-web)", CallMcpTool: "var(--hue-web)"
   };
   var filterInput = document.getElementById("filterInput");
   var qfBarEl = document.getElementById("qfBar");
   var _filterTimer = null;
 
   function agentBit(name, project) {
-    var color = SOURCE_COLORS[name] || "#7a7a85";
-    var html = '<span class="rail-agent" style="color:' + color + '">' + railEsc(name) + "</span>";
-    if (project) html += " &middot; " + railEsc(project);
+    var color = SOURCE_COLORS[name] || "var(--hue-other)";
+    var html = '<span class="rail-agent" style="--hue:' + color + '">' + railEsc(name) + "</span>";
+    if (project) html += " &middot; " + railEsc(prettyProject(project));
     return html;
   }
   function gradeHtml(s) {
@@ -998,8 +511,7 @@ ${RUN_IDENTITY_STATUS_SRC}
       for (var si = 0; si < sourceEntries.length; si++) {
         var sn = sourceEntries[si][0];
         var sc = sourceEntries[si][1];
-        var sColor = SOURCE_COLORS[sn] || "#888";
-        html += '<button type="button" class="qf-chip" data-source="' + railEsc(sn) + '" aria-pressed="false" style="border-color:' + sColor + '40"><span style="color:' + sColor + '">' + railEsc(sn) + '</span> <span class="qf-chip-count">' + sc + "</span></button>";
+        html += '<button type="button" class="qf-chip qf-chip--source" data-source="' + railEsc(sn) + '" aria-pressed="false" style="--hue:' + (SOURCE_COLORS[sn] || "var(--hue-other)") + '">' + railEsc(sn) + ' <span class="qf-chip-count">' + sc + "</span></button>";
       }
       html += "</span></div>";
     }
@@ -1125,7 +637,7 @@ ${RUN_IDENTITY_STATUS_SRC}
       return '<span class="dashboard-stat"><span class="dashboard-stat-val">' + val + '</span><span class="dashboard-stat-label">' + label + "</span></span>";
     }
     var html = "";
-    if (liveCount) html += dashStat('<span style="color:#4ade80">' + liveCount + "</span>", "running");
+    if (liveCount) html += dashStat('<span class="dash-live-n" style="color:var(--ok)">' + liveCount + "</span>", "running");
     html += dashStat(totalSessions || "0", "runs");
     html += dashStat(fmtCost(_stats.totalCost || 0, { prefix: "$", zeroLabel: "$0" }), "cost");
     html += dashStat(fmtTokens(totalInputTok + totalOutputTok + totalCacheRead) || "--", "tokens");
@@ -1172,7 +684,7 @@ ${RUN_IDENTITY_STATUS_SRC}
       for (var ti = 0; ti < top.length; ti++) {
         var tName = top[ti][0];
         var tCount = top[ti][1];
-        var tColor = TOOL_COLORS[tName] || (String(tName).indexOf("mcp__") === 0 ? "#5dadec" : "#7a7a85");
+        var tColor = TOOL_COLORS[tName] || (String(tName).indexOf("mcp__") === 0 ? "var(--hue-web)" : "var(--hue-other)");
         tHtml += '<span class="dashboard-tool-chip" style="color:' + tColor + '">' + railEsc(fmtMcpName(tName)) + ' <span class="dashboard-tool-count">' + tCount + "</span></span>";
       }
       tHtml += "</div>";
@@ -1279,7 +791,7 @@ ${RUN_IDENTITY_STATUS_SRC}
     railCount.textContent = liveN ? liveN + " running" : "";
     if (appLive) {
       appLive.hidden = !liveN;
-      appLive.textContent = "\\u25CF " + liveN + " running";
+      appLive.textContent = liveN + " running";
     }
     renderOverview(liveN);
     updateHeaderIdentity();
@@ -1535,984 +1047,7 @@ ${COMMAND_PALETTE_CLIENT_JS}`;
 }
 
 const RUN_PAGE_CSS = `
-html, body { height: 100%; }
-body { overflow: hidden; }
-.chat-app { display: flex; flex-direction: column; height: 100%; }
-
-/* ---- top bar: the record's LIST identity row + its stat chips ---- */
-.chat-top {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 18px 9px;
-  border-bottom: 1px solid var(--border);
-  flex: none;
-  min-width: 0;
-}
-.run-started { font-size: 11px; color: var(--fg3); font-family: var(--mono); white-space: nowrap; }
-.run-back { color: var(--accent); font-size: 12px; text-decoration: none; white-space: nowrap; }
-.run-back:hover { text-decoration: underline; }
-.run-view-link { color: var(--fg3); font-size: 12px; font-family: var(--mono); text-decoration: none; white-space: nowrap; }
-.run-view-link:hover { color: var(--accent); text-decoration: underline; }
-.run-view-link[hidden] { display: none; }
-
-/* provenance: this run continues an earlier session */
-.run-continued-from {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-family: var(--mono);
-  color: var(--fg3);
-  text-decoration: none;
-  white-space: nowrap;
-  padding: 1px 7px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-}
-.run-continued-from:hover { color: var(--accent); border-color: var(--accent); }
-
-/* ---- conversation column + optional click-to-inspect output pane ----
-   Default completed-turn view keeps the pane closed so chat-col stays
-   ~760px and the finished answer (prompt → whole prose → named output)
-   is one reading block. The pane is a sibling the user can open. */
-.chat-body { flex: 1; display: flex; flex-direction: row; min-height: 0; min-width: 0; }
-.chat-main { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-.chat-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
-.chat-col { max-width: 760px; margin: 0 auto; padding: 14px 26px 24px; }
-.chat-output-pane[hidden] { display: none !important; }
-.chat-app[data-has-output="1"] .chat-output-pane {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 62%;
-  min-width: 700px;
-  max-width: 72%;
-  min-height: 0;
-  border-left: 1px solid var(--border);
-  background: var(--bg);
-  overflow: auto;
-}
-@media (max-width: 1200px) {
-  .chat-app[data-has-output="1"] .chat-output-pane {
-    min-width: 360px;
-    max-width: 56%;
-    flex-basis: 48%;
-  }
-}
-.chat-output-pane > .chat-card.chat-output {
-  flex: none;
-  margin: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  min-width: 0;
-}
-/* Keep advertised lines one-to-one with source lines so Lines 1-N fit
-   in the pane viewport (pre-wrap in a narrow pane doubled the height). */
-.chat-output-pane .chat-tool-body {
-  white-space: pre;
-}
-
-.chat-user {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 9px 14px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--fg);
-  margin: 10px 0 8px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.chat-thread > .chat-user:first-child { margin-top: 2px; }
-
-.chat-assistant {
-  position: relative;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--fg);
-  margin: 4px 2px 10px;
-  overflow-wrap: break-word;
-}
-/* Live generating: prior assistant events are parked off the fold
-   (height 0). Advertised bytes stay in the node so full-text /
-   incremental stamps hold — no 22px data-trail costume. */
-.chat-assistant[data-contained="parked"],
-.chat-card.chat-output[data-contained="parked"],
-.chat-thought[data-contained="parked"],
-.chat-marker[data-contained="parked"] {
-  max-height: 0 !important;
-  height: 0 !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-}
-/* assistant prose is one undivided subject; named output follows it */
-.chat-assistant + .tool-card { margin-top: 8px; }
-.tool-card + .tool-card { margin-top: 6px; }
-.chat-assistant p { margin: 4px 0; white-space: pre-wrap; }
-.chat-assistant code {
-  font-family: var(--mono);
-  font-size: 12px;
-  background: var(--surface2);
-  border-radius: 4px;
-  padding: 1px 5px;
-}
-.chat-h { font-weight: 600; margin: 12px 0 4px; }
-.chat-code {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin: 8px 0;
-  overflow-x: auto;
-}
-.chat-code code {
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.5;
-  background: none;
-  padding: 0;
-  white-space: pre;
-}
-.chat-list { margin: 6px 0 6px 4px; padding-left: 16px; }
-.chat-list li { margin: 4px 0; }
-.chat-check { list-style: none; position: relative; padding-left: 4px; }
-.chat-check::before { content: "\\25CB"; color: var(--fg3); position: absolute; left: -14px; }
-.chat-check[data-done="true"]::before { content: "\\2713"; color: var(--green); }
-
-/* markers: "Thought briefly", "Explored 4 searches", "Planning next moves" */
-.chat-marker { font-size: 13px; margin: 12px 2px 8px; }
-.chat-marker .m1 { color: var(--fg2); }
-.chat-marker .m2 { color: var(--fg3); }
-.chat-thought { margin: 12px 2px 8px; }
-.chat-thought-toggle {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--fg2);
-}
-.chat-thought-toggle .m2 { color: var(--fg3); }
-.chat-thought-toggle:hover .m1 { color: var(--fg); }
-.chat-thinking {
-  margin: 6px 0 6px 2px;
-  padding: 8px 12px;
-  border-left: 2px solid var(--border);
-  color: var(--fg2);
-  font-size: 12.5px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-family: var(--sans);
-}
-
-/* tool cards */
-.chat-card {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 10px;
-  padding: 8px 12px;
-  margin: 6px 0;
-  font-size: 12.5px;
-  min-width: 0;
-}
-.chat-card-head {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-}
-.chat-card .card-icon { flex: none; color: var(--fg3); }
-.chat-card .card-title {
-  color: var(--fg);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-.chat-card .card-title.mono { font-family: var(--mono); font-size: 12px; }
-.chat-card .card-bins { color: var(--fg3); flex: none; }
-.chat-card .card-err {
-  flex: none;
-  margin-left: auto;
-  color: var(--red);
-  font-size: 10px;
-  font-family: var(--mono);
-}
-.chat-card.err { border-color: rgba(240,112,112,0.35); }
-.chat-card.running .card-title { color: var(--fg); }
-
-/* edit/write file cards with diffstat */
-.chat-card.file .file-name { color: var(--fg); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-card.file .plus { color: var(--green); font-family: var(--mono); font-size: 12px; flex: none; }
-.chat-card.file .minus { color: var(--red); font-family: var(--mono); font-size: 12px; flex: none; }
-
-/* plain tool lines (Read) — title stays a single ellipsized row; the body is full */
-.chat-toolline { font-size: 13px; margin: 8px 2px; }
-.chat-toolline-head { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-toolline .tl1 { color: var(--fg2); }
-.chat-toolline .tl2 { color: var(--fg3); }
-
-/* named output card: a closed file object (header + line-snapped body).
-   overflow stays visible — leftover overflow:hidden sheared the last
-   painted glyph. Interior padding lives on the card (below the
-   scroller) so the next line cannot paint into the pad. */
-.chat-card.chat-output {
-  padding: 0 0 12px;
-  gap: 0;
-  overflow: visible;
-  cursor: pointer;
-}
-.chat-output-head { padding: 7px 12px; }
-.chat-output-name {
-  color: var(--fg);
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-.chat-output-meta {
-  color: var(--fg3);
-  font-size: 11.5px;
-  font-family: var(--mono);
-  flex: none;
-  margin-left: auto;
-}
-.chat-card.chat-output[data-shown="1"] { border-color: rgba(255, 255, 255, 0.22); }
-.chat-tool-body {
-  margin: 0;
-  padding: 8px 10px;
-  max-width: 100%;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--fg2);
-  background: var(--surface2);
-  border-radius: 6px;
-}
-/* File-object body: containNamedOutput sets an inline height from
-   measured line boxes (Range) plus interior padding so the last
-   visible line is whole. A leftover-column overflow:hidden clip and
-   a fixed 18em cap are both forbidden. overflow:auto + a stable
-   gutter keep every advertised line in the DOM and show the scroller. */
-.chat-card.chat-output .chat-tool-body {
-  overflow: auto;
-  overflow-x: auto;
-  overflow-y: scroll;
-  white-space: pre;
-  border-radius: 0;
-  background: var(--bg);
-  border-top: 1px solid var(--border);
-  padding: 8px 12px 0;
-  font-size: 11.5px;
-  line-height: 1.4;
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-}
-.chat-card.chat-output .chat-tool-body::-webkit-scrollbar { width: 8px; }
-.chat-card.chat-output .chat-tool-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
-  border-radius: 4px;
-}
-
-.chat-errnote {
-  border-left: 2px solid var(--red);
-  color: var(--fg2);
-  font-size: 12.5px;
-  padding: 6px 10px;
-  margin: 8px 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-/* in-progress / pending activity */
-.chat-activity { min-height: 26px; margin: 4px 2px 0; font-size: 13px; }
-.shimmer {
-  display: inline-block;
-  background: linear-gradient(90deg, var(--fg3) 20%, var(--fg) 50%, var(--fg3) 80%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: chat-shimmer 1.8s linear infinite;
-}
-@keyframes chat-shimmer { from { background-position: 200% 0; } to { background-position: 0% 0; } }
-.spinner {
-  flex: none;
-  width: 11px;
-  height: 11px;
-  border: 1.5px solid var(--fg3);
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: chat-spin 0.8s linear infinite;
-}
-@keyframes chat-spin { to { transform: rotate(360deg); } }
-.chat-activity-sub { color: var(--fg3); font-size: 12px; margin-top: 4px; }
-.chat-empty { color: var(--fg3); font-size: 13px; margin: 10px 2px; }
-
-/* exited/gone banner */
-.run-banner {
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  margin-top: 14px;
-}
-.run-banner[data-kind="exited"] { color: var(--orange); background: rgba(232,164,76,0.08); }
-.run-banner[data-kind="gone"] { color: var(--red); background: rgba(240,112,112,0.08); }
-.run-banner[hidden] { display: none; }
-
-/* collapsed raw terminal */
-.chat-terminal { margin-top: 16px; }
-.chat-terminal summary {
-  cursor: pointer;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--fg3);
-  user-select: none;
-}
-.chat-terminal summary:hover { color: var(--fg2); }
-.run-terminal {
-  --ansi-fg: #d4d4d4;
-  --ansi-bg: #101012;
-  background: var(--ansi-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 14px;
-  margin-top: 8px;
-  overflow-x: auto;
-}
-.run-screen {
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.45;
-  white-space: pre;
-  min-width: 80ch;
-  color: var(--ansi-fg);
-}
-.run-terminal[data-status="exited"] .run-screen,
-.run-terminal[data-status="gone"] .run-screen { opacity: 0.55; }
-
-/* ---- composer (Cursor-style input card + run-status strip) ---- */
-.chat-composer { flex: none; background: var(--bg); }
-.chat-composer-inner { max-width: 760px; margin: 0 auto; padding: 0 26px 14px; }
-
-/* status strip directly above the input card: state + stop/kill */
-.composer-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 32px;
-  padding: 2px 6px 6px;
-  font-size: 12px;
-  color: var(--fg2);
-}
-.status-dot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--green);
-  animation: composer-pulse 1.6s ease-in-out infinite;
-}
-@keyframes composer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-.composer-status[data-state="exited"] .status-dot { background: var(--orange); animation: none; }
-.composer-status[data-state="gone"] .status-dot { background: var(--red); animation: none; }
-.status-text { color: var(--fg2); }
-.status-spacer { flex: 1; }
-/* Stop / Kill run are REAL buttons — bordered pill shapes with a rest-state
-   shape (not bare labels), and the destructive kill is red-tinted before you
-   read it so the interrupt/destroy distinction is visible at a glance. */
-.status-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  padding: 3px 11px;
-  border-radius: 999px;
-  font: inherit;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--fg);
-  cursor: pointer;
-  transition: color 0.12s, background 0.12s, border-color 0.12s;
-}
-.status-btn:hover { background: var(--surface2); border-color: rgba(255, 255, 255, 0.28); }
-.status-btn:active { background: rgba(255, 255, 255, 0.1); }
-/* keycap hint inside a pill button reads as plain muted glyphs (Cursor's
-   "Stop ⇧⌘⌫"), not a second nested box */
-.status-btn .kbd { border: none; background: none; padding: 0; min-width: 0; color: var(--fg3); }
-.status-btn:hover .kbd { color: var(--fg2); }
-.status-btn.danger {
-  color: var(--red);
-  background: rgba(240, 112, 112, 0.08);
-  border-color: rgba(240, 112, 112, 0.38);
-}
-.status-btn.danger:hover { color: var(--red); background: rgba(240, 112, 112, 0.16); border-color: rgba(240, 112, 112, 0.6); }
-.status-btn:disabled { opacity: 0.4; cursor: default; }
-.status-btn[hidden] { display: none; }
-/* Continue: the exited run's primary next step — contained accent pill */
-.status-btn.continue {
-  color: var(--accent);
-  background: rgba(139, 124, 246, 0.07);
-  border-color: rgba(139, 124, 246, 0.5);
-}
-.status-btn.continue:hover { background: rgba(139, 124, 246, 0.15); color: var(--accent); border-color: var(--accent); }
-
-/* kbd glyph chips ("^C", "esc") used in the strip and the keys menu */
-.kbd {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  line-height: 1.5;
-  color: var(--fg3);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0 4px;
-  min-width: 17px;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-/* the input card */
-.composer-card {
-  display: block;
-  background: var(--surface);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
-  padding: 10px 12px 9px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
-  transition: border-color 0.15s;
-}
-.composer-card:focus-within { border-color: rgba(255, 255, 255, 0.18); }
-.composer-card[hidden] { display: none; }
-
-/* context chip row: @-mention button + run cwd chip */
-.composer-context { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
-.ctx-at {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--fg3);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  transition: color 0.12s, border-color 0.12s, background 0.12s;
-}
-.ctx-at:hover { color: var(--fg); border-color: rgba(255, 255, 255, 0.28); background: var(--surface2); }
-.ctx-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--fg2);
-  max-width: 280px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ctx-chip svg { flex: none; color: var(--fg3); }
-
-.run-input {
-  display: block;
-  width: 100%;
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--fg);
-  font-family: var(--sans);
-  font-size: 13.5px;
-  line-height: 1.5;
-  padding: 2px 2px 12px;
-}
-.run-input::placeholder { color: var(--fg3); }
-
-/* bottom control row: caret-marked disclosure chips (agent+model open the
-   run-details popover, Keys opens the key menu) and the round send button */
-.composer-row { display: flex; align-items: center; gap: 4px; }
-.chip-wrap { position: relative; display: flex; min-width: 0; }
-.keys-overlay, .run-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.48);
-  z-index: 450;
-}
-.keys-overlay[hidden], .run-overlay[hidden] { display: none; }
-.chip-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  border-radius: 7px;
-  padding: 3px 8px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--fg2);
-  cursor: pointer;
-  min-width: 0;
-  transition: color 0.12s, background 0.12s;
-}
-.chip-btn:hover, .chip-btn[aria-expanded="true"] { color: var(--fg); background: var(--surface2); }
-.chip-btn .caret { flex: none; color: var(--fg3); transition: transform 0.15s; }
-.chip-btn[aria-expanded="true"] .caret { transform: rotate(180deg); }
-.chip-btn[hidden] { display: none; }
-.mode-chip { background: var(--surface2); font-weight: 600; color: var(--fg); padding: 3px 9px; }
-.mode-chip:hover, .mode-chip[aria-expanded="true"] { background: rgba(255, 255, 255, 0.12); color: var(--fg); }
-.mode-chip svg { color: var(--fg2); }
-.chip-kbd { font-family: var(--mono); font-size: 10.5px; font-weight: 400; color: var(--fg3); }
-.model-chip .model-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* run-details popover: what this run IS (agent/model/dir/recording) and an
-   honest note on what can still be steered mid-run */
-.run-menu {
-  position: absolute;
-  left: 0;
-  bottom: 34px;
-  width: 340px;
-  max-width: 72vw;
-  background: #1d1d21;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 6px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
-  z-index: 10;
-}
-.run-menu[hidden] { display: none; }
-.run-menu-grid { display: grid; grid-template-columns: 82px 1fr; gap: 5px 10px; padding: 3px 7px 7px; font-size: 12px; }
-.rm-k { color: var(--fg3); }
-.rm-v { color: var(--fg); overflow-wrap: anywhere; }
-.rm-v.mono { font-family: var(--mono); font-size: 11.5px; color: var(--fg2); }
-.rm-v a { color: var(--accent); text-decoration: none; }
-.rm-v a:hover { text-decoration: underline; }
-.run-menu-note {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  margin-top: 2px;
-  padding: 7px 7px 4px;
-  font-size: 11px;
-  line-height: 1.55;
-  color: var(--fg3);
-}
-.composer-spacer { flex: 1; }
-.keys-wrap { position: relative; display: flex; }
-.keys-btn { color: var(--fg2); }
-.keys-menu {
-  position: absolute;
-  right: 0;
-  bottom: 32px;
-  min-width: 168px;
-  background: #1d1d21;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 5px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
-  z-index: 10;
-}
-.keys-menu[hidden] { display: none; }
-.keys-title {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--fg3);
-  padding: 3px 7px 5px;
-}
-.run-key-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  background: none;
-  border: none;
-  padding: 5px 7px;
-  border-radius: 6px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--fg2);
-  text-align: left;
-  cursor: pointer;
-}
-.run-key-btn:hover { background: var(--surface2); color: var(--fg); }
-.run-key-btn .kbd { margin-left: auto; }
-
-.run-send-btn {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #111;
-  cursor: pointer;
-  transition: opacity 0.12s, transform 0.12s, background 0.15s, color 0.15s;
-}
-.run-send-btn:hover { opacity: 0.85; }
-.run-send-btn:active { transform: scale(0.94); }
-/* Empty input: the send arrow visibly stands down (muted circle, faint
-   arrow) instead of reading fully active — typing lights it accent. */
-.composer-card[data-empty="true"] .run-send-btn { background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.4); }
-.composer-card[data-empty="true"] .run-send-btn:hover { opacity: 1; background: rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.6); }
-/* send-morphs-to-stop: over an EMPTY input while the agent is generating,
-   the round button becomes a high-contrast STOP control (square glyph) —
-   clicking it interrupts (^C), it never submits. Two icons live in the
-   button; data-busy + data-empty pick which one shows. */
-.run-send-btn .icon-stop { display: none; }
-.composer-card[data-busy="true"][data-empty="true"] .run-send-btn {
-  background: rgba(255, 255, 255, 0.92);
-  color: #17171a;
-}
-.composer-card[data-busy="true"][data-empty="true"] .run-send-btn:hover { opacity: 1; background: #fff; color: #111; }
-.composer-card[data-busy="true"][data-empty="true"] .run-send-btn .icon-send { display: none; }
-.composer-card[data-busy="true"][data-empty="true"] .run-send-btn .icon-stop { display: block; }
-
-/* live run feedback: while the linked session is generating, the strip text
-   IS the run's current activity ("Generating", "Running npm test",
-   "Editing fetch.js") with an animated typing ellipsis — never a static
-   "Running" lie. The dots are real characters with staggered pulses (no
-   content-in-keyframes tricks), shown only under data-busy. */
-.status-dots { display: none; letter-spacing: 1px; margin-left: -6px; }
-.composer-status[data-busy="true"] .status-dots { display: inline; }
-.status-dots i {
-  font-style: normal;
-  animation: status-dot-pulse 1.2s ease-in-out infinite;
-}
-.status-dots i:nth-child(2) { animation-delay: 0.2s; }
-.status-dots i:nth-child(3) { animation-delay: 0.4s; }
-@keyframes status-dot-pulse { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
-
-/* ---- client-held follow-up queue (there is NO server-side queue) ----
-   Follow-ups submitted mid-generation are held HERE, visible above the
-   status strip: "N in queue" collapsible header, rows with a Cursor-style
-   ring glyph, click-to-edit text, and send-now / remove controls. */
-.composer-queue { padding: 0 6px 2px; }
-.composer-queue[hidden] { display: none; }
-.queue-head {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: none;
-  border: none;
-  border-radius: 6px;
-  padding: 3px 6px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--fg2);
-  cursor: pointer;
-}
-.queue-head:hover { color: var(--fg); background: var(--surface2); }
-.queue-head .caret { flex: none; color: var(--fg3); transition: transform 0.15s; }
-.queue-head[aria-expanded="false"] .caret { transform: rotate(-90deg); }
-.queue-list { padding: 1px 0 3px; }
-.queue-list[hidden] { display: none; }
-.queue-item {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 4px 6px;
-  border-radius: 7px;
-  font-size: 12.5px;
-  color: var(--fg);
-}
-.queue-item:hover { background: var(--surface2); }
-.queue-item[data-sending="true"] { opacity: 0.55; }
-.queue-ring {
-  flex: none;
-  width: 12px;
-  height: 12px;
-  border: 1.5px solid var(--fg3);
-  border-radius: 50%;
-}
-.queue-text {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-.queue-act {
-  flex: none;
-  background: none;
-  border: none;
-  border-radius: 5px;
-  padding: 1px 6px;
-  font: inherit;
-  font-size: 11.5px;
-  color: var(--fg3);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.12s, color 0.12s, background 0.12s;
-  white-space: nowrap;
-}
-.queue-item:hover .queue-act, .queue-act:focus-visible { opacity: 1; }
-.queue-act:hover { color: var(--fg); background: rgba(255, 255, 255, 0.08); }
-.queue-note {
-  font-size: 11px;
-  color: var(--orange);
-  padding: 1px 6px 4px;
-}
-.queue-note[hidden] { display: none; }
-
-.run-input-error {
-  color: var(--red);
-  font-size: 12px;
-  font-family: var(--mono);
-  overflow-wrap: anywhere;
-  margin-top: 6px;
-}
-.run-input-error[hidden] { display: none; }
-
-/* ---- continue mode: the finished thread keeps a live composer ----
-   The SAME input card the running composer uses, re-armed so typing IS the
-   continue: submit forks the recorded session into a NEW run with the
-   follow-up delivered. Terminal-only controls (Send key) retire; a chip
-   states the fork semantics honestly. */
-.composer-card[data-mode="continue"] .keys-wrap { display: none; }
-.ctx-continue {
-  color: var(--accent);
-  border-color: rgba(139, 124, 246, 0.45);
-}
-.ctx-continue[hidden] { display: none; }
-.composer-card[data-mode="continue"] { border-color: rgba(139, 124, 246, 0.28); }
-.composer-card[data-mode="continue"]:focus-within { border-color: rgba(139, 124, 246, 0.55); }
-
-/* vanished-cwd recovery: inline directory prompt inside the composer card */
-.continue-cwd { display: flex; align-items: center; gap: 8px; margin: 0 2px 10px; }
-.continue-cwd[hidden] { display: none; }
-.continue-cwd-label {
-  flex: none;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--orange);
-}
-.continue-cwd-input {
-  flex: 1;
-  min-width: 0;
-  background: none;
-  border: 1px solid rgba(240, 160, 112, 0.45);
-  border-radius: 7px;
-  padding: 4px 9px;
-  outline: none;
-  color: var(--fg);
-  font-family: var(--mono);
-  font-size: 12px;
-}
-.continue-cwd-input:focus { border-color: rgba(240, 160, 112, 0.8); }
-
-/* the follow-up in flight: an honest pending bubble until the fork
-   recording links and the transcript carries the message for real */
-.chat-user-pending { border-style: dashed; opacity: 0.9; }
-
-/* observer variant: the continue composer sits under the observer card */
-.observer-card + .composer-card { margin-top: 10px; }
-
-/* ---- external live-session watch (read-only observer variant) ---- */
-.composer-status[data-state="idle"] .status-dot { background: var(--fg3); animation: none; }
-.readonly-chip {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--fg3);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1px 6px;
-  white-space: nowrap;
-}
-.observer-card {
-  background: var(--surface);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
-  padding: 12px 14px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
-}
-.observer-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--fg);
-}
-.observer-title svg { flex: none; color: var(--fg3); }
-.observer-note {
-  margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--fg2);
-}
-.observer-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-.observer-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 4px 10px;
-  font-size: 12px;
-  color: var(--fg2);
-  text-decoration: none;
-  transition: color 0.12s, border-color 0.12s;
-}
-.observer-btn:hover { color: var(--fg); border-color: rgba(255, 255, 255, 0.25); }
-.observer-btn.accent { color: var(--accent); }
-button.observer-btn { background: none; font: inherit; font-size: 12px; cursor: pointer; }
-button.observer-btn:disabled { opacity: 0.5; cursor: default; }
-
-/* Exclusive footer slots. A growing/live recording ends the conversation
-   column on ONE slim generating composer (#liveTailForm): Send a follow-up
-   + Stop on the round send control. The archive ending (status strip,
-   observer card, takeover #continueForm) is a separate slot and leaves
-   the column — it is never restyled into the live tail, so Generating/Stop
-   cannot stack on a second Send-a-follow-up bar. */
-body[data-live-tail="1"] #archiveEnding,
-body[data-live-tail="1"] .observer-card,
-body[data-live-tail="1"] .readonly-chip,
-body[data-live-tail="1"] .composer-status,
-body[data-live-tail="1"] #continueForm { display: none; }
-body[data-live-tail="1"] .chat-activity { min-height: 72px; }
-body[data-live-tail="1"] .chat-col { padding-bottom: 56px; }
-
-/* Identity-idle watch page (detectLiveSessions, not QUIET_MS growth):
-   finished answer + one slim follow-up pill. The 350px archive pamphlet
-   leaves the default view. Exclusive Stop (#liveTailForm) is
-   data-live-tail, which follows identity generating — never the 4s
-   quiet window — so these rules cannot hide a generating spinner by
-   treating identity idle as "not growing". Idle #continueForm and live
-   #liveTailForm share one pill chrome so the idle↔running swap is only
-   the right control (send vs Stop). */
-body[data-watch="session"][data-run-state="idle"]:not([data-live-tail="1"]) .observer-card,
-body[data-watch="session"][data-run-state="idle"]:not([data-live-tail="1"]) .composer-status,
-body[data-watch="session"][data-run-state="idle"]:not([data-live-tail="1"]) .readonly-chip,
-body[data-watch="session"][data-run-state="idle"]:not([data-live-tail="1"]) .chat-activity {
-  display: none;
-}
-body[data-watch="session"][data-run-state="idle"] .chat-col {
-  padding-bottom: 4px;
-}
-/* File-less after-growth leftover is leftover-owned by the newest
-   turn occupying leftover as a reading block (prose + honest absence
-   + close). r9 collapsed leftover to a 55px pocket (flex:none +
-   justify-content:flex-end) so leftover ceded to unused chat-main.
-   Leftover (#chatScroll) fills leftover; newest prose sits at leftover
-   top; the first dump is not leftover-owned. */
-body[data-leftover-reading="1"] .chat-main {
-  justify-content: flex-start;
-}
-body[data-leftover-reading="1"] #chatScroll {
-  flex: 1;
-  min-height: 0;
-  margin-top: 0;
-}
-body[data-leftover-reading="1"][data-watch="session"][data-run-state="idle"] .chat-col {
-  padding-top: 14px;
-  padding-bottom: 4px;
-}
-/* Prior dump leaves leftover into #chatHistory for incremental stamps
-   and full-text innerText, but is not leftover-owned: parked off leftover
-   (not a 681px dump-on-fold sibling of leftover). r8 flex:1 leftover
-   history painted user + L001–L023 on leftover. */
-.chat-history {
-  display: none;
-  flex: none;
-}
-.chat-history[data-split="1"] {
-  display: block;
-  position: absolute;
-  left: -9999px;
-  top: 0;
-  width: 760px;
-  height: auto;
-  overflow: visible;
-  flex: none;
-  pointer-events: none;
-}
-body[data-watch="session"][data-run-state="idle"] .chat-composer-inner {
-  padding-top: 0;
-  padding-bottom: 14px;
-}
-body[data-watch="session"][data-run-state="idle"] #continueForm {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 8px 7px 16px;
-  border-radius: 22px;
-  margin-top: 0;
-  border-color: rgba(255, 255, 255, 0.10);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
-}
-body[data-watch="session"][data-run-state="idle"] #continueForm:focus-within {
-  border-color: rgba(255, 255, 255, 0.18);
-}
-body[data-watch="session"][data-run-state="idle"] #continueForm[hidden] { display: none; }
-body[data-watch="session"][data-run-state="idle"] #continueForm .composer-context { display: none; }
-body[data-watch="session"][data-run-state="idle"] #continueForm .run-input {
-  flex: 1;
-  min-width: 0;
-  padding: 4px 4px 4px 0;
-}
-body[data-watch="session"][data-run-state="idle"] #continueForm .composer-row { flex: none; }
-.composer-card.live-tail-card {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 8px 7px 16px;
-  border-radius: 22px;
-  border-color: rgba(255, 255, 255, 0.10);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
-}
-.live-tail-card .run-input {
-  flex: 1;
-  min-width: 0;
-  padding: 4px 4px 4px 0;
-}
-.live-tail-card .composer-row { flex: none; }
-.live-tail-card .run-send-btn {
-  background: rgba(255, 255, 255, 0.92);
-  color: #17171a;
-}
-.live-tail-card .run-send-btn .icon-send { display: none; }
-.live-tail-card .run-send-btn .icon-stop { display: block; }
-.live-tail-card[data-empty="false"][data-continuable="true"] .run-send-btn {
-  background: var(--accent);
-  color: #111;
-}
-.live-tail-card[data-empty="false"][data-continuable="true"] .run-send-btn .icon-send { display: block; }
-.live-tail-card[data-empty="false"][data-continuable="true"] .run-send-btn .icon-stop { display: none; }
-.live-tail-card[hidden] { display: none; }
-.archive-ending[hidden] { display: none; }
+${CHAT_PAGE_CSS}
 ${ansiPaletteCss()}
 `;
 
@@ -3871,6 +2406,7 @@ export function runPage({ run } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest — run ${esc(id)}</title>
+${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
 ${RUN_PAGE_CSS}
@@ -3888,7 +2424,7 @@ ${APP_TOP_HTML}
   <header class="chat-top">
     <div class="session-top chat-identity">
       <span class="run-state-badge" id="runStatus" data-status="${esc(identityStatus)}">${esc(identityStatus)}</span>
-      <span class="session-source" style="background:${sourceColor(agent)}">${esc(agent)}</span>
+      <span class="session-source" style="--hue:${sourceColor(agent)}">${esc(agent)}</span>
       <span class="session-id" id="chatSessionId" title="run ${esc(id)}">${esc(id)}</span>
       <span class="session-model" id="chatModel" hidden></span>
       <span class="session-project" title="${esc(cwd)}">${esc(cwd.split("/").filter(Boolean).pop() || cwd || "cwd")}</span>
@@ -4976,6 +3512,7 @@ export function liveSessionPage({ session } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest — ${esc(statusWord)} session ${esc(hash)}</title>
+${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
 ${RUN_PAGE_CSS}
@@ -4993,10 +3530,10 @@ ${APP_TOP_HTML}
   <header class="chat-top">
     <div class="session-top chat-identity">
       <span class="run-state-badge" id="runStatus" data-status="${esc(statusWord)}">${esc(statusWord)}</span>
-      <span class="session-source" style="background:${sourceColor(source)}">${esc(source)}</span>
+      <span class="session-source" style="--hue:${sourceColor(source)}">${esc(source)}</span>
       <span class="session-id" id="chatSessionId">${esc(hash)}</span>
       <span class="session-model" id="chatModel" hidden></span>
-      <span class="session-project" title="${esc(path)}">${esc(project || path.split("/").filter(Boolean).pop() || path)}</span>
+      <span class="session-project" title="${esc(path)}">${esc(prettyProject(project) || path.split("/").filter(Boolean).pop() || path)}</span>
       <span class="session-grade-badge run-grade" id="runGrade" hidden></span>
       <span class="run-origin" title="This session was started outside tracequest — its own terminal drives it">external</span>
       <span class="chat-top-spacer"></span>
@@ -5389,6 +3926,7 @@ export function chatHomePage({ defaultCwd } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest</title>
+${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
 ${RUN_PAGE_CSS}
@@ -5396,19 +3934,12 @@ ${APP_SHELL_CSS}
 ${LAUNCHER_MODAL_CSS}
 ${COMMAND_PALETTE_CSS}
 .chat-empty {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 56px 26px 24px;
-  color: var(--fg3);
-  font-size: 13px;
-  line-height: 1.5;
-  text-align: center;
+  max-width: 520px; margin: 0 auto; padding: 18vh 28px 24px;
+  color: var(--text-3); font-size: var(--text-md); line-height: var(--lh-md); text-align: center;
 }
 .chat-empty-title {
-  color: var(--fg2);
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 8px;
+  color: var(--text); font-size: var(--text-2xl); line-height: var(--lh-2xl); font-weight: var(--weight-regular);
+  letter-spacing: var(--track-display); margin-bottom: 8px;
 }
 </style>
 </head>

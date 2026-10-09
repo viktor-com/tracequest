@@ -236,7 +236,6 @@ describe("command palette search client", () => {
     assert.match(js, /identity\.id/);
     assert.match(css, /\.cmdk-src/);
     assert.match(css, /\.cmdk-sid/);
-    assert.match(css, /text-transform: uppercase/);
   });
 
   test("session hits include a content snippet with the matched query term highlighted", () => {

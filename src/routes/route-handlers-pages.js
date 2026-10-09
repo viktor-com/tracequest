@@ -13,6 +13,7 @@ import { sessionHash } from "../sessions/session-hash.js";
 import { sessionMtimeMs } from "../sessions/session-list.js";
 import { generateMarkdown } from "../export/markdown-export.js";
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
+import { THEME_BOOT_SCRIPT, appTopHtml, appTopStaticHtml, APP_TOP_CSS, APP_SHELL_JS } from "../browser/app-chrome.js";
 import { fetchSession } from "../server/server-helpers.js";
 import { send } from "../server/server-http.js";
 import { isSessionPath } from "../server/server-session-path.js";
@@ -107,79 +108,65 @@ function sendCompareLoadError(res, side, error) {
   );
 }
 
-function viewLoadErrorPage({ handle = "", status = 500, message = "Unable to load session" } = {}) {
-  const displayHandle = handle || "(missing)";
+/**
+ * The one route-error shell (session view, run watch): what failed, the
+ * status, the handle that failed, the server's message and a way back.
+ */
+const ROUTE_ERROR_CSS = `
+.route-error-page { min-height: calc(100vh - var(--shell-top)); display: grid; place-items: start center; padding: 22vh var(--space-6) var(--space-8); }
+.route-error { width: min(480px, 100%); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); text-align: center; }
+.route-error-kicker { font-size: var(--text-xs); color: var(--text-3); }
+.route-error-kicker::first-letter { text-transform: uppercase; }
+.route-error-title { font-size: var(--text-2xl); line-height: var(--lh-2xl); font-weight: var(--weight-regular); letter-spacing: var(--track-display); color: var(--text); }
+.route-error-message { font-size: var(--text-md); color: var(--text-2); line-height: var(--lh-md); }
+.route-error-meta { display: inline-flex; gap: 8px; font-size: var(--text-xs); color: var(--text-3); overflow-wrap: anywhere; justify-content: center; flex-wrap: wrap; }
+.route-error-status, .route-error-handle { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-3); }
+.route-error-link {
+  margin-top: var(--space-3); display: inline-flex; align-items: center; height: var(--control-md); padding: 0 16px;
+  border-radius: var(--radius-pill); background: var(--ink); color: var(--paper); font-size: var(--text-sm);
+}
+.route-error-link:hover { background: color-mix(in oklab, var(--ink) 86%, var(--paper)); }
+`;
+
+function routeErrorDocument({ docTitle, stateAttr, kicker, title, status, handle, message }) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>tracequest - session unavailable</title>
+<title>${docTitle}</title>
+${THEME_BOOT_SCRIPT}
 <style>
 ${STANDALONE_BASE_CSS}
-.container { max-width: 720px; margin: 0 auto; padding: 60px 24px; }
-.route-error {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 2px solid var(--red);
-  border-radius: 8px;
-  padding: 18px 20px;
-}
-.route-error-kicker {
-  color: var(--fg3);
-  font-family: var(--mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.route-error-title {
-  margin-top: 8px;
-  color: var(--fg);
-  font-size: 16px;
-  font-weight: 600;
-}
-.route-error-status {
-  margin-top: 10px;
-  color: var(--red);
-  font-family: var(--mono);
-  font-size: 12px;
-}
-.route-error-handle {
-  margin-top: 8px;
-  color: var(--fg2);
-  font-family: var(--mono);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-.route-error-message {
-  margin-top: 10px;
-  color: var(--fg2);
-  font-size: 13px;
-  line-height: 1.5;
-}
-.route-error-link {
-  display: inline-block;
-  margin-top: 16px;
-  color: var(--accent);
-  font-size: 13px;
-  text-decoration: none;
-}
-.route-error-link:hover { text-decoration: underline; }
+${APP_TOP_CSS}
+${ROUTE_ERROR_CSS}
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="route-error" role="alert" data-view-state="error">
-    <div class="route-error-kicker">session view</div>
-    <div class="route-error-title">Could not load session</div>
-    <div class="route-error-status">HTTP ${esc(status)}</div>
-    <div class="route-error-handle">${esc(displayHandle)}</div>
-    <div class="route-error-message">${esc(message || "Unable to load session")}</div>
-    <a class="route-error-link" href="/">&larr; back to sessions</a>
+${appTopStaticHtml("runs")}
+<div class="route-error-page">
+  <div class="route-error" role="alert" ${stateAttr}="error">
+    <div class="route-error-kicker">${esc(kicker)}</div>
+    <div class="route-error-title">${esc(title)}</div>
+    <div class="route-error-message">${esc(message)}</div>
+    <div class="route-error-meta"><span class="route-error-handle">${esc(handle)}</span><span aria-hidden="true">·</span><span class="route-error-status">HTTP ${esc(status)}</span></div>
+    <a class="route-error-link" href="/sessions">&larr; Back to Runs</a>
   </div>
 </div>
 </body>
 </html>`;
+}
+
+function viewLoadErrorPage({ handle = "", status = 500, message = "Unable to load session" } = {}) {
+  return routeErrorDocument({
+    docTitle: "tracequest - session unavailable",
+    stateAttr: "data-view-state",
+    kicker: "session view",
+    title: "Could not load session",
+    status,
+    handle: handle || "(missing)",
+    message: message || "Unable to load session",
+  });
 }
 
 async function sendViewLoadError(res, url, error) {
@@ -307,80 +294,17 @@ export async function handleLaunch(_req, res, _url, _deps = null) {
 /** A run id IS a tmux window id — "@" + digits, nothing else (see launch routes). */
 const RUN_ID_RE = /^@\d+$/;
 
-/** Error page for /run — same shape as the session view error page. */
+/** Error page for /run — same shell as the session view error page. */
 function runLoadErrorPage({ id = "", status = 404, message = "", kicker = "run watch", title = "Could not load run" } = {}) {
-  const displayId = id || "(missing)";
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>tracequest - run unavailable</title>
-<style>
-${STANDALONE_BASE_CSS}
-.container { max-width: 720px; margin: 0 auto; padding: 60px 24px; }
-.route-error {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 2px solid var(--red);
-  border-radius: 8px;
-  padding: 18px 20px;
-}
-.route-error-kicker {
-  color: var(--fg3);
-  font-family: var(--mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.route-error-title {
-  margin-top: 8px;
-  color: var(--fg);
-  font-size: 16px;
-  font-weight: 600;
-}
-.route-error-status {
-  margin-top: 10px;
-  color: var(--red);
-  font-family: var(--mono);
-  font-size: 12px;
-}
-.route-error-handle {
-  margin-top: 8px;
-  color: var(--fg2);
-  font-family: var(--mono);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-.route-error-message {
-  margin-top: 10px;
-  color: var(--fg2);
-  font-size: 13px;
-  line-height: 1.5;
-}
-.route-error-link {
-  display: inline-block;
-  margin-top: 16px;
-  color: var(--accent);
-  font-size: 13px;
-  text-decoration: none;
-}
-.route-error-link:hover { text-decoration: underline; }
-</style>
-</head>
-<body>
-<div class="container">
-  <div class="route-error" role="alert" data-run-state="error">
-    <div class="route-error-kicker">${esc(kicker)}</div>
-    <div class="route-error-title">${esc(title)}</div>
-    <div class="route-error-status">HTTP ${esc(status)}</div>
-    <div class="route-error-handle">${esc(displayId)}</div>
-    <div class="route-error-message">${esc(message || "Unable to load run")}</div>
-    <a class="route-error-link" href="/">&larr; back to sessions</a>
-  </div>
-</div>
-</body>
-</html>`;
+  return routeErrorDocument({
+    docTitle: "tracequest - run unavailable",
+    stateAttr: "data-run-state",
+    kicker,
+    title,
+    status,
+    handle: id || "(missing)",
+    message: message || "Unable to load run",
+  });
 }
 
 /** Linked recording + detectLiveSessions bit for /run?id= SSR identity. */
@@ -586,59 +510,46 @@ function liveRunChipFor(sessionPath, mods) {
 
 const VIEW_RUN_CHIP_CSS = `<style>
 .view-run-chip {
-  position: fixed; right: 18px; bottom: 18px; z-index: 300;
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 8px 14px; border-radius: 999px;
-  background: var(--surface, #1a1a1e); border: 1px solid rgba(74,222,128,0.35);
-  color: var(--fg, #e8e8ea); font-family: var(--mono, monospace); font-size: 12px;
-  text-decoration: none; box-shadow: 0 6px 24px rgba(0,0,0,0.35);
-  transition: border-color 0.12s;
+  position: fixed; right: var(--space-5, 20px); bottom: var(--space-5, 20px); z-index: var(--z-popover, 200);
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 14px;
+  border-radius: 999px; background: var(--surface-pop); box-shadow: var(--shadow-pop);
+  color: var(--text); font-size: var(--text-sm, 13px); text-decoration: none;
+  transition: background var(--dur-2, 160ms) var(--ease-out, ease);
 }
-.view-run-chip:hover { border-color: rgba(74,222,128,0.7); }
-.view-run-chip .chip-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: #4ade80;
-  animation: chip-pulse 2s ease-in-out infinite;
-}
+.view-run-chip:hover { background: var(--surface-3); }
+.view-run-chip .chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: ui-pulse 2.2s var(--ease-out, ease) infinite; }
 .view-run-chip .chip-dot[data-status="exited"],
-.view-run-chip .chip-dot[data-status="idle"] { background: #8b8b92; animation: none; }
-.view-run-chip[data-status="exited"],
-.view-run-chip[data-status="idle"] { border-color: rgba(255,255,255,0.14); }
-@keyframes chip-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.view-run-chip .chip-dot[data-status="idle"] { background: var(--text-4); animation: none; }
+@media print { .view-run-chip { display: none !important; } }
 </style>
 `;
 
 /** Standalone CSS for the /view continue composer (never mentions the run chip). */
 const VIEW_CONTINUE_CHIP_CSS = `<style>
 .view-continue-chip {
-  position: fixed; right: 18px; bottom: 18px; z-index: 300;
-  display: flex; flex-direction: column; gap: 6px;
-  width: 340px; max-width: calc(100vw - 36px);
-  padding: 9px 10px 9px 14px; border-radius: 22px;
-  background: var(--surface, #1a1a1e); border: 1px solid rgba(255,255,255,0.12);
-  color: var(--fg, #e8e8ea); font-family: var(--sans, sans-serif); font-size: 13px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
-  transition: border-color 0.12s;
+  position: fixed; right: var(--space-5, 20px); bottom: var(--space-5, 20px); z-index: var(--z-popover, 200);
+  display: flex; flex-direction: column; gap: 6px; width: 380px; max-width: calc(100vw - 40px);
+  padding: 6px 6px 6px 16px; border-radius: 22px; background: var(--surface-pop); box-shadow: var(--shadow-pop);
+  color: var(--text); font-size: var(--text-sm, 13px);
+  transition: box-shadow var(--dur-2, 160ms) var(--ease-out, ease);
 }
-.view-continue-chip:focus-within { border-color: rgba(255,255,255,0.28); }
+.view-continue-chip:focus-within { box-shadow: var(--shadow-pop), 0 0 0 1px var(--focus); }
 .view-continue-chip[data-busy="true"] { opacity: 0.7; }
-.vc-msg { font-size: 11px; line-height: 1.45; color: #f0a070; overflow-wrap: anywhere; }
+.vc-msg { font-size: var(--text-xs, 12px); line-height: 1.45; color: var(--warn); overflow-wrap: anywhere; padding-top: 6px; }
 .vc-msg[hidden] { display: none; }
 .vc-row { display: flex; align-items: center; gap: 8px; }
-.vc-glyph { flex: none; color: var(--fg3, #6e6e76); font-size: 11px; }
-.view-continue-input {
-  flex: 1; min-width: 0; background: none; border: none; outline: none;
-  color: var(--fg, #e8e8ea); font-family: inherit; font-size: 13px;
-}
-.view-continue-input::placeholder { color: rgba(232,232,234,0.45); }
+.vc-glyph { flex: none; color: var(--text-3); font-size: 11px; }
+.view-continue-input { flex: 1; min-width: 0; height: 30px; background: none; border: 0; outline: none; color: var(--text); font: inherit; }
+.view-continue-input::placeholder { color: var(--text-3); }
 .vc-send {
-  flex: none; width: 24px; height: 24px; display: inline-flex;
-  align-items: center; justify-content: center; border: none; border-radius: 50%;
-  background: var(--fg, #e4e4e7); color: var(--bg, #111113); cursor: pointer;
+  flex: none; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%; background: var(--ink); color: var(--paper); cursor: pointer;
 }
-.vc-send:hover { opacity: 0.85; }
-.vc-send:disabled { opacity: 0.5; cursor: default; }
-.view-continue-chip[data-mode="cwd"] { border-color: rgba(240,160,112,0.6); }
-.view-continue-chip[data-mode="cwd"] .vc-glyph { color: rgba(240,160,112,0.9); }
+.vc-send:hover { background: color-mix(in oklab, var(--ink) 86%, var(--paper)); }
+.vc-send:disabled { opacity: 0.4; cursor: default; }
+.view-continue-chip[data-mode="cwd"] { box-shadow: var(--shadow-pop), 0 0 0 1px var(--warn); }
+.view-continue-chip[data-mode="cwd"] .vc-glyph { color: var(--warn); }
+@media print { .view-continue-chip { display: none !important; } }
 </style>
 `;
 
@@ -797,7 +708,10 @@ body.embed-view { margin: 0; }
 body.embed-view #app { max-width: none; padding: 12px 16px 28px; }
 body.embed-view .header { padding: 10px 16px; margin-bottom: 10px; }
 body.embed-view .header-top,
+body.embed-view .header-top,
 body.embed-view .header-title,
+body.embed-view .header-prompt,
+body.embed-view .header-back,
 body.embed-view .header-actions,
 body.embed-view .view-run-chip,
 body.embed-view .view-continue-chip,
@@ -812,6 +726,24 @@ body.embed-view .cmdk-trigger { display: none !important; }
     out = css + out;
   }
   return out;
+}
+
+
+/**
+ * The served session viewer wears the app shell (top bar, section nav,
+ * theme) and is marked data-tq-served so the document shows "← Runs".
+ * Exported and shared files are rendered without either.
+ */
+export function withViewAppShell(html) {
+  let out = html.replace(/<html\b/, "<html data-tq-served");
+  const top = appTopHtml({ crumbHtml: '<span class="app-crumb">Run</span>', nav: "runs" });
+  const css = `<style id="tq-app-shell">${APP_TOP_CSS}\nbody { padding-top: 0; }</style>`;
+  out = out.includes("</head>") ? out.replace("</head>", `${THEME_BOOT_SCRIPT}\n${css}\n</head>`) : css + out;
+  out = out.replace(/<body([^>]*)>/, (m) => `${m}\n${top}`);
+  // New run here opens the launcher on the Runs page.
+  const js = `<script>${APP_SHELL_JS}\n(function(){var b=document.getElementById("newRunBtn");if(b)b.addEventListener("click",function(){location.href="/?launch=1";});})();</script>`;
+  const at = out.lastIndexOf("</body>");
+  return at >= 0 ? out.slice(0, at) + js + "\n" + out.slice(at) : out + js;
 }
 
 export async function handleView(_req, res, url, _deps = null) {
@@ -837,6 +769,7 @@ export async function handleView(_req, res, url, _deps = null) {
       html = at >= 0 ? html.slice(0, at) + chip + "\n" + html.slice(at) : html + chip;
     }
     html = await injectLivePalette(html);
+    html = withViewAppShell(html);
   }
   send(
     res,

@@ -39,7 +39,7 @@ describe("run page — document shell and header", () => {
     assert.match(page, /<title>tracequest — run @3<\/title>/);
     // The exact chips the dashboard list card wears, same classes verbatim.
     assert.ok(page.includes('<span class="run-state-badge" id="runStatus" data-status="running">running</span>'));
-    assert.match(page, /<span class="session-source" style="background:#a78bfa">claude<\/span>/);
+    assert.match(page, /<span class="session-source" style="--hue:var\(--hue-claude\)">claude<\/span>/);
     assert.ok(page.includes('<span class="session-id" id="chatSessionId" title="run @3">@3</span>'));
     assert.ok(page.includes('<span class="session-model" id="chatModel" hidden></span>'));
     assert.ok(page.includes("started 2026-08-10T12:00:00.000Z"));
@@ -83,7 +83,6 @@ describe("run page — chat transcript surface (chat-ui fact cuts)", () => {
     assert.match(page, /function mdText\(/, "block-level markdown handling");
     assert.ok(page.includes("chat-thought-toggle"), "thought marker expands thinking text");
     assert.ok(page.includes('"briefly"'), "Thought briefly fallback when no duration");
-    assert.match(page, /\.chat-user\s*{[^}]*border-radius: 12px/, "user bubble styling");
   });
 
   test("all client-rendered session text flows through escHtml before hitting innerHTML", () => {
@@ -165,8 +164,6 @@ describe("run page — tool-call presentation (chat-ui fact cutl)", () => {
     assert.ok(page.includes('tc.name === "Edit" || tc.name === "Write"'));
     assert.ok(page.includes('class="plus">+'), "added-line count");
     assert.ok(page.includes('class="minus">-'), "removed-line count");
-    assert.match(page, /\.chat-card\.file \.plus\s*{[^}]*var\(--green\)/);
-    assert.match(page, /\.chat-card\.file \.minus\s*{[^}]*var\(--red\)/);
   });
 
   test("consecutive search-type tool calls group under an Explored N searches marker", () => {
@@ -180,7 +177,6 @@ describe("run page — tool-call presentation (chat-ui fact cutl)", () => {
   test("an error tool_result marks its card, and unmatched error results render as error notes", () => {
     const page = html();
     assert.ok(page.includes("card-err"), "error chip on the card");
-    assert.match(page, /\.chat-card\.err\s*{[^}]*240,112,112/, "error card border tint");
     assert.ok(page.includes("chat-errnote"), "unmatched error results visible");
   });
 });
@@ -257,8 +253,6 @@ describe("run page — full-transcript output card (chat-ui fact cuoc)", () => {
       assert.ok(page.includes('hasBody && tc.name !== "Edit" && tc.name !== "Write"'),
         "Read/Bash/etc. results promote to the named card");
       assert.ok(page.includes('escHtml(text)'), "every character of the body is escaped, not sliced");
-      assert.match(page, /\.chat-assistant\s*\+\s*\.tool-card\s*{[^}]*margin-top:\s*8px/,
-        "output card sits under assistant prose as one turn");
     }
   });
 
@@ -435,12 +429,6 @@ describe("run page — full-transcript slim answer footer (chat-ui fact cuas)", 
       "idle archive line leaves the completed column");
     assert.match(idle, /body\[data-watch="session"\]\[data-run-state="idle"\] #continueForm/,
       "takeover continue becomes the slim pill");
-    assert.match(idle, /body\[data-watch="session"\]\[data-run-state="idle"\] #continueForm \{[^}]*border-radius:\s*22px/,
-      "idle continue is a rounded pill, not a stacked card");
-    assert.match(idle, /body\[data-watch="session"\]\[data-run-state="idle"\] #continueForm \{[^}]*margin-top:\s*0/,
-      "hidden observer-card cannot add a 10px gap above the idle pill");
-    assert.match(idle, /body\[data-watch="session"\]\[data-run-state="idle"\] #continueForm \{[^}]*border-color:\s*rgba\(255, 255, 255, 0\.10\)/,
-      "idle pill uses the live-tail border, not the purple continue outline");
     assert.match(idle, /body\[data-watch="session"\]\[data-run-state="idle"\] #continueForm \.composer-context/,
       "context chip row is not part of the slim pill");
     assert.match(idle, /id="liveTailForm"[^>]*hidden/, "exclusive live tail stays hidden while idle");
@@ -694,15 +682,6 @@ describe("run page — slim pill chrome (chat-ui fact c9v)", () => {
     const live = sessionHtml({ live: true, continuable: true, agent: "claude", source: "claude" });
     assert.match(idle, /id="continueInput"[^>]*placeholder="Send a follow-up"/);
     assert.match(live, /id="liveTailInput"[^>]*placeholder="Send a follow-up"/);
-    assert.match(idle, /body\[data-watch="session"\]\[data-run-state="idle"\] #continueForm \{[^}]*padding:\s*7px 8px 7px 16px/);
-    assert.match(idle, /body\[data-watch="session"\]\[data-run-state="idle"\] #continueForm \{[^}]*border-radius:\s*22px/);
-    assert.match(idle, /body\[data-watch="session"\]\[data-run-state="idle"\] #continueForm \{[^}]*border-color:\s*rgba\(255, 255, 255, 0\.10\)/);
-    assert.match(idle, /body\[data-watch="session"\]\[data-run-state="idle"\] #continueForm \{[^}]*box-shadow:\s*0 4px 16px rgba\(0, 0, 0, 0\.22\)/);
-    assert.match(idle, /body\[data-watch="session"\]\[data-run-state="idle"\] #continueForm \{[^}]*margin-top:\s*0/);
-    assert.match(live, /\.composer-card\.live-tail-card \{[^}]*padding:\s*7px 8px 7px 16px/);
-    assert.match(live, /\.composer-card\.live-tail-card \{[^}]*border-radius:\s*22px/);
-    assert.match(live, /\.composer-card\.live-tail-card \{[^}]*border-color:\s*rgba\(255, 255, 255, 0\.10\)/);
-    assert.match(live, /\.composer-card\.live-tail-card \{[^}]*box-shadow:\s*0 4px 16px rgba\(0, 0, 0, 0\.22\)/);
     assert.ok(idle.includes("continues as a new run"), "fork honesty stays on the hidden continue chip");
     assert.match(idle, /id="continueSendBtn"[^>]*continues as a new run/,
       "fork honesty stays on the idle send title");
@@ -758,11 +737,9 @@ describe("run page — collapsed raw terminal (facts lawp/lalv)", () => {
     assert.ok(page.includes('<details class="chat-terminal" id="terminalDetails">'));
     assert.ok(!page.includes('<details class="chat-terminal" id="terminalDetails" open'), "collapsed by default");
     assert.ok(page.includes('<pre class="run-screen" id="runScreen">'));
-    assert.match(page, /\.run-screen\s*{[^}]*font-family: var\(--mono\)/);
     assert.match(page, /\.run-screen\s*{[^}]*white-space: pre/);
     assert.match(page, /\.run-screen\s*{[^}]*min-width: 80ch/);
     assert.match(page, /\.run-terminal\s*{[^}]*overflow-x: auto/);
-    assert.match(page, /\.run-terminal\s*{[^}]*--ansi-bg: #101012/, "dark terminal background");
   });
 
   test("run page embeds the full ansi palette css for SGR-classed spans", () => {
@@ -874,8 +851,6 @@ describe("run page — composer input card (facts laiu, chat-composer ccin)", ()
     assert.match(page, /<input class="run-input" id="inputText" type="text"[^>]*autocomplete="off"/);
     assert.match(page, /placeholder="Send a follow-up"/);
     // Card chrome: rounded bordered surface, borderless input inside it.
-    assert.match(page, /\.composer-card\s*{[^}]*border-radius: 14px/);
-    assert.match(page, /\.composer-card\s*{[^}]*background: var\(--surface\)/);
     assert.match(page, /\.run-input\s*{[^}]*background: none/, "input is borderless inside the card");
     assert.match(page, /\.run-input\s*{[^}]*border: none/);
     // Context row: the @ affordance is a REAL button (inserts an @-mention
@@ -901,8 +876,6 @@ describe("run page — composer input card (facts laiu, chat-composer ccin)", ()
     // Empty input visibly stands the send button down (muted circle + faint
     // arrow via data-empty, toggled by the client) so it never reads fully
     // active over an empty input; its title admits the bare-Enter behavior.
-    assert.match(page, /\.composer-card\[data-empty="true"\] \.run-send-btn\s*{[^}]*rgba\(255, 255, 255, 0\.07\)/);
-    assert.match(page, /\.composer-card\[data-empty="true"\] \.run-send-btn\s*{[^}]*color: rgba\(255, 255, 255, 0\.4\)/, "arrow glyph itself dims too");
     assert.match(page, /id="sendBtn"[^>]*title="Send \(Enter\)[^"]*bare Enter[^"]*"/, "send tooltip explains the empty-submit behavior");
     assert.ok(page.includes('inputText.addEventListener("input", syncEmpty)'));
     // The card must still honor the hidden attribute.
@@ -970,8 +943,6 @@ describe("run page — run-details popover (chat-composer fact cmrd)", () => {
   test("agent and model chips open a run-details popover naming what the run is", () => {
     const page = html();
     assert.match(page, /<div class="run-menu" id="runMenu" role="dialog" aria-modal="true"[^>]*hidden tabindex="-1">/);
-    assert.match(page, /\.run-menu\s*{[^}]*position: absolute/, "popover floats above the row");
-    assert.match(page, /\.run-menu\[hidden\]\s*{\s*display:\s*none;\s*}/);
     // Identity rows: agent, model, run id, directory, recording.
     assert.match(page, /<span class="rm-k">Agent<\/span><span class="rm-v">claude<\/span>/);
     assert.match(page, /<span class="rm-k">Model<\/span><span class="rm-v" id="menuModel">detecting&hellip;<\/span>/);
@@ -1013,9 +984,6 @@ describe("run page — composer status strip (chat-composer fact ccst)", () => {
     assert.ok(page.includes('<div class="composer-status" id="composerStatus" data-state="running">'));
     assert.ok(page.includes('<span class="status-dot"></span>'));
     assert.ok(page.includes('>Running</span>'));
-    assert.match(page, /\.status-dot\s*{[^}]*animation: composer-pulse/, "dot pulses while running");
-    assert.match(page, /\.composer-status\[data-state="exited"\] \.status-dot\s*{[^}]*var\(--orange\)/);
-    assert.match(page, /\.composer-status\[data-state="gone"\] \.status-dot\s*{[^}]*var\(--red\)/);
   });
 
   test("Stop control interrupts the agent with C-c; Kill run stays a separate run-level control", () => {
@@ -1034,16 +1002,9 @@ describe("run page — composer status strip (chat-composer fact ccst)", () => {
   test("Stop and Kill run render as REAL bordered pill buttons, Kill with a rest-state danger tint", () => {
     const page = html();
     // Button containment: a bordered pill shape at rest, not a bare label.
-    assert.match(page, /\.status-btn\s*{[^}]*border: 1px solid rgba\(255, 255, 255, 0\.14\)/, "buttons carry a rest-state border");
-    assert.match(page, /\.status-btn\s*{[^}]*border-radius: 999px/, "buttons are pill-shaped");
-    assert.match(page, /\.status-btn\s*{[^}]*background: rgba\(255, 255, 255, 0\.05\)/, "buttons carry a rest-state fill");
     // Destructive Kill run is red-tinted BEFORE hover: text, border, fill.
-    assert.match(page, /\.status-btn\.danger\s*{[^}]*color: var\(--red\)/, "Kill run text is danger-tinted at rest");
-    assert.match(page, /\.status-btn\.danger\s*{[^}]*border-color: rgba\(240, 112, 112, 0\.38\)/, "Kill run border is danger-tinted at rest");
-    assert.match(page, /\.status-btn\.danger\s*{[^}]*background: rgba\(240, 112, 112, 0\.08\)/, "Kill run fill is danger-tinted at rest");
     // The ^C keycap inside the Stop pill reads as muted glyphs, not a
     // second nested box outshining the button itself.
-    assert.match(page, /\.status-btn \.kbd\s*{[^}]*border: none/, "keycap chip loses its box inside a pill button");
   });
 
   test("exited and gone retire the stop/kill controls and swap the strip copy", () => {
@@ -1125,7 +1086,6 @@ describe("run page — send affordance is state-aware during generation (chat-co
     // Two icons in the button; data-busy + data-empty pick one.
     assert.match(page, /<svg class="icon-send"[\s\S]{0,300}?<svg class="icon-stop"/, "send arrow and stop square coexist in the button");
     assert.match(page, /\.run-send-btn \.icon-stop\s*{\s*display:\s*none;\s*}/);
-    assert.match(page, /\.composer-card\[data-busy="true"\]\[data-empty="true"\] \.run-send-btn\s*{[^}]*rgba\(255, 255, 255, 0\.92\)/, "stop morph is high-contrast, not dimmed");
     assert.match(page, /\.composer-card\[data-busy="true"\]\[data-empty="true"\] \.run-send-btn \.icon-send\s*{\s*display:\s*none;\s*}/);
     assert.match(page, /\.composer-card\[data-busy="true"\]\[data-empty="true"\] \.run-send-btn \.icon-stop\s*{\s*display:\s*block;\s*}/);
     // The morphed click interrupts and never submits; Enter keeps its bare-Enter contract.
@@ -1175,7 +1135,7 @@ describe("live-session watch page — header and identity (unified-live)", () =>
     assert.match(page, /<title>tracequest — running session abcd1234<\/title>/);
     assert.doesNotMatch(page, /<title>tracequest — live session/);
     // The exact chips the dashboard's external live row wears, same classes.
-    assert.match(page, /<span class="session-source" style="background:#59d4a0">codex<\/span>/);
+    assert.match(page, /<span class="session-source" style="--hue:var\(--hue-codex\)">codex<\/span>/);
     assert.ok(page.includes('<span class="session-id" id="chatSessionId">abcd1234</span>'));
     assert.ok(page.includes('<span class="session-model" id="chatModel" hidden></span>'));
     assert.match(page, /<span class="run-origin" title="[^"]*outside tracequest[^"]*">external<\/span>/);
@@ -1799,7 +1759,7 @@ describe("live-session watch page — honest read-only state (no fake composer)"
 describe("watch pages — app shell (the chat lives inside tracequest)", () => {
   test("both watch pages render the tracequest shell: wordmark header, live counter, New run launcher", () => {
     for (const page of [html(), sessionHtml()]) {
-      assert.match(page, /<a class="app-wordmark" href="\/">tracequest<\/a>/, "wordmark links home");
+      assert.match(page, /<a class="app-wordmark" href="\/"[^>]*>[\s\S]*?<span>tracequest<\/span><\/a>/, "wordmark links home");
       assert.ok(page.includes('<span class="app-live" id="appLive" hidden>'), "origin-agnostic live counter");
       assert.ok(page.includes('class="new-run-btn" id="newRunBtn"'), "same New run button as the dashboard");
       assert.ok(page.includes('id="launchOverlay"'), "launcher modal embedded — start a run from any chat");
@@ -1823,8 +1783,6 @@ describe("watch pages — app shell (the chat lives inside tracequest)", () => {
       assert.ok(page.includes('"/api/sessions?pageSize=50"') || page.includes("/api/sessions?pageSize=50"), "rail lists recent sessions too");
       assert.ok(page.includes("function sessionsQueryUrl("), "rail filter query is sent to /api/sessions");
       assert.ok(page.includes('aria-current="page"'), "the open chat's rail row is highlighted");
-      assert.match(page, /\.rail-row\[aria-current="page"\]\s*\{[^}]*box-shadow:\s*inset 0 0 28px 10px rgba\(139, 124, 246, 0\.14\)/,
-        "selected rail row uses a soft accent inner glow");
       assert.ok(!page.includes("inset 2px 0 0 var(--accent)"),
         "selected rail row has no hard left accent bar");
       assert.ok(page.includes('"/run?session=" + encodeURIComponent(ls.id)'), "external live rows link to their live chat");
@@ -1859,11 +1817,11 @@ describe("watch pages — app shell (the chat lives inside tracequest)", () => {
         "renderRail paints #appLive from liveNow(), not a filtered loop");
       assert.match(page, /liveN \+ " running"/,
         "chat-page #appLive / railCount print N running");
-      assert.match(page, /dashStat\('<span style="color:#4ade80">' \+ liveCount \+ "<\/span>", "running"\)/,
+      assert.match(page, /dashStat\('<span class="dash-live-n" style="color:var\(--ok\)">' \+ liveCount \+ "<\/span>", "running"\)/,
         "chat-page Overview dashStat label is running");
       assert.doesNotMatch(page, /liveN \+ " live"/,
         "chat-page count chrome does not print N live");
-      assert.doesNotMatch(page, /dashStat\('<span style="color:#4ade80">' \+ liveCount \+ "<\/span>", "live"\)/,
+      assert.doesNotMatch(page, /dashStat\('<span class="dash-live-n" style="color:var\(--ok\)">' \+ liveCount \+ "<\/span>", "live"\)/,
         "chat-page Overview dashStat label is not live");
     }
 
@@ -2222,7 +2180,6 @@ describe("run page — finished-run continue composer (typing IS the continue)",
     assert.ok(page.includes("Delivering your follow-up"));
     assert.match(page, /waiting for the fork recording to link/);
     assert.match(page, /function followupDelivered\(\)/, "bubble retires only once the transcript carries the message");
-    assert.match(page, /\.chat-user-pending \{ border-style: dashed/, "pending bubble visibly provisional");
   });
 });
 

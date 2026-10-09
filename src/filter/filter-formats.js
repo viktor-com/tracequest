@@ -19,6 +19,7 @@ export function fmtMcpName(name) {
 export function fmtTokens(n, opts) {
   const zeroLabel = opts && opts.zeroLabel !== undefined ? opts.zeroLabel : '';
   if (!n) return zeroLabel;
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
   if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
   return String(n);
@@ -87,6 +88,12 @@ export function formatDuration(ms, opts = {}) {
   }
   const h = Math.floor(m / 60);
   const rm = m % 60;
+  // Past two days, hours stop being readable ("822h 40m"): show days + hours.
+  if (h >= 48) {
+    const d = Math.floor(h / 24);
+    const rh = h % 24;
+    return rh ? d + 'd ' + rh + 'h' : d + 'd';
+  }
   if (rm === 0 && !alwaysShowMinutes) return h + 'h';
   return h + 'h ' + rm + 'm';
 }
@@ -99,6 +106,22 @@ export function getModelRates(model) {
     outRate: isOpus ? 75 : 15,
     cacheReadRate: isOpus ? 1.5 : 0.3,
   };
+}
+
+/**
+ * Display-only project label. Agent logs often key projects by an encoded
+ * directory ("-Users-me--kandev-tasks-<uuid>-<uuid>"); that stays the filter
+ * value, but the UI shows it without the home prefix or code/ folder, and
+ * with short UUIDs.
+ */
+export function prettyProject(p) {
+  if (!p) return '';
+  const out = String(p)
+    .replace(/^-(Users|home)-[^-]+-/, '')
+    .replace(/^-+/, '')
+    .replace(/^code-(?=.)/, '')
+    .replace(/([0-9a-f]{8})-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '$1');
+  return out || String(p);
 }
 
 export function computeGrade(s) {

@@ -24,7 +24,7 @@ its notice must be added to that file in the same commit that vendors it.
 - Run tests: `npm test`
 - Run CLI: `node bin/tracequest.js --help` (or `npm run dev`)
 - Explore the codebase in `bin/`, `src/`, `test/`
-- For UI changes, start with [docs/ui-style-design-guidelines.md](docs/ui-style-design-guidelines.md); use [docs/ui-design-review-note-template.md](docs/ui-design-review-note-template.md) when a UI decision needs a short review trail.
+- For UI changes, start with [docs/ui-guidelines.md](docs/ui-guidelines.md) (jobs, information architecture, states) and [docs/design-system.md](docs/design-system.md) (tokens, components, themes).
 
 See [README.md](README.md) for the product overview and [docs/README.md](docs/README.md)
 for installation, usage examples and technical documentation.

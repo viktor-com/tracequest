@@ -69,9 +69,9 @@ export const CORE_SHELL_JS = `
   function renderHeader() {
     const s = session.stats;
     const sourceColors = { claude: '#a78bfa', codex: '#59d4a0', cursor: '#c4e86b', 'cursor-cloud': '#4dd0e1', factory: '#e0c45e', opencode: '#6ba4e8', grok: '#f07070' };
-    const srcColor = sourceColors[session.source] || '#888';
-    const srcBadge = session.source && session.source !== 'claude'
-      ? h('span', { style: 'background:' + srcColor + ';box-shadow:inset 0 0 0 999px rgba(17,17,19,0.78);color:var(--fg);font-family:var(--mono);font-size:11px;font-weight:500;padding:1px 8px;border-radius:999px;margin-left:8px;' }, session.source)
+    const srcHue = sourceColors[session.source] ? 'var(--hue-' + session.source + ', ' + sourceColors[session.source] + ')' : 'var(--hue-other)';
+    const srcBadge = session.source
+      ? h('span', { className: 'header-agent', style: '--hue:' + srcHue }, session.source)
       : null;
 
     const params = new URLSearchParams(window.location.search);
@@ -119,15 +119,30 @@ export const CORE_SHELL_JS = `
       if (typeof openShareModal === 'function') openShareModal();
     });
 
+    // Served from tracequest (not an exported or shared file): a way back.
+    const root = typeof document !== 'undefined' ? document.documentElement : null;
+    const inApp = !!(root && root.hasAttribute && root.hasAttribute('data-tq-served'));
+    const backLink = inApp ? h('a', { className: 'header-back', href: '/sessions' }, '\u2190 Runs') : null;
+    // The run's first prompt is its name: what was asked, in the person's words.
+    let promptText = '';
+    try {
+      const chs = typeof getChapters === 'function' ? getChapters() : [];
+      promptText = (chs[0] && chs[0].prompt) || '';
+    } catch (_) { promptText = ''; }
+    const project = session.cwd ? String(session.cwd).split('/').filter(Boolean).pop() : '';
+
     return h('div', { className: 'header' },
+      backLink,
       h('div', { className: 'header-top' },
         h('div', { className: 'header-title' },
-          'tracequest',
-          h('span', null, session.sessionHash || session.sessionId?.slice(0, 8) || 'session'),
-          srcBadge
+          h('span', { className: 'header-id' }, session.sessionHash || session.sessionId?.slice(0, 8) || 'session'),
+          srcBadge,
+          project ? h('span', { className: 'header-project', title: session.cwd }, project) : null,
+          session.gitBranch ? h('span', { className: 'header-branch' }, session.gitBranch) : null
         ),
         h('div', { className: 'header-actions' }, printBtn, mdBtn, exportBtn, shareBtn)
       ),
+      promptText ? h('h1', { className: 'header-prompt' }, promptText) : h('h1', { className: 'header-prompt is-empty' }, 'Untitled run'),
       h('div', { className: 'meta-grid' },
         metaItem('model', session.model || '—'),
         metaItem('cwd', session.cwd || '—'),
@@ -324,7 +339,7 @@ export const CORE_SHELL_JS = `
 
     const totalTok = s.totalInputTokens + s.totalOutputTokens;
     if (totalTok > 0) {
-      items.push(summaryItem('tokens', fmtTokens(totalTok), ''));
+      items.push(summaryItem('tokens', fmtTokens(totalTok), 'ss-tokens'));
     }
 
     if (s.errors > 0) {
@@ -477,7 +492,7 @@ export const CORE_SHELL_JS = `
 
     const wrap = h('div', { className: 'activity-timeline' });
     wrap.appendChild(h('div', { className: 'activity-timeline-label' },
-      'activity timeline — colored segments show active work, dim gaps show idle periods'));
+      'Activity — solid where the agent worked, gaps where it waited'));
 
     const canvas = document.createElement('canvas');
     canvas.className = 'activity-timeline-canvas';
@@ -573,7 +588,8 @@ export const CORE_SHELL_JS = `
       const W = canvas.parentElement?.clientWidth || 800;
       const ctx = setupHiDpiCanvas(canvas, W, HEIGHT);
 
-      ctx.fillStyle = '#111113';
+      const tInk = typeof chartInk === 'function' ? chartInk : function (_k, f) { return f; };
+      ctx.fillStyle = tInk('bg', 'rgba(0,0,0,0)');
       ctx.fillRect(0, 0, W, HEIGHT);
 
       function timeToX(ms) {
@@ -588,19 +604,19 @@ export const CORE_SHELL_JS = `
         const w = Math.max(1, x2 - x1);
         if (seg.type === 'active') {
           const grad = ctx.createLinearGradient(x1, barY, x1, barY + barH);
-          grad.addColorStop(0, 'rgba(139, 124, 246, 0.7)');
-          grad.addColorStop(1, 'rgba(139, 124, 246, 0.35)');
+          grad.addColorStop(0, tInk('active', 'rgba(139, 124, 246, 0.7)'));
+          grad.addColorStop(1, tInk('activeSoft', 'rgba(139, 124, 246, 0.35)'));
           ctx.fillStyle = grad;
           ctx.beginPath();
           if (ctx.roundRect) { ctx.roundRect(x1, barY, w, barH, 3); }
           else { ctx.rect(x1, barY, w, barH); }
           ctx.fill();
         } else {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+          ctx.fillStyle = tInk('grid', 'rgba(255, 255, 255, 0.02)');
           ctx.fillRect(x1, barY, w, barH);
           ctx.save();
           ctx.setLineDash([3, 4]);
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+          ctx.strokeStyle = tInk('gridStrong', 'rgba(255, 255, 255, 0.1)');
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(x1, barY + barH / 2);
@@ -611,14 +627,14 @@ export const CORE_SHELL_JS = `
             var gapMinutes = Math.round(seg.duration / 60000);
             var gapLabel = gapMinutes >= 60 ? (gapMinutes / 60).toFixed(1) + 'h' : gapMinutes + 'm';
             ctx.font = '9px ' + getComputedStyle(document.body).getPropertyValue('--mono').trim().split(',')[0].replace(/'/g, '');
-            ctx.fillStyle = 'rgba(232, 164, 76, 0.8)';
+            ctx.fillStyle = tInk('idle', 'rgba(232, 164, 76, 0.8)');
             ctx.textAlign = 'center';
             ctx.fillText(gapLabel + ' idle', x1 + w / 2, barY + barH / 2 + 3);
           }
         }
       }
 
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.strokeStyle = tInk('inkSoft', 'rgba(255, 255, 255, 0.15)');
       ctx.lineWidth = 1;
       for (let i = 1; i < chapterRanges.length; i++) {
         const x = timeToX(chapterRanges[i].start);
@@ -629,7 +645,7 @@ export const CORE_SHELL_JS = `
       }
 
       ctx.font = '8px ' + getComputedStyle(document.body).getPropertyValue('--mono').trim().split(',')[0].replace(/'/g, '');
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.fillStyle = tInk('label', 'rgba(255, 255, 255, 0.25)');
       ctx.textAlign = 'center';
       // Only label if chapters won't overlap (min 20px apart)
       var prevLabelX = -30;
@@ -655,9 +671,11 @@ export const CORE_SHELL_JS = `
         const alpha = 0.2 + 0.8 * (buckets[i] / maxBucket);
         const x = (i / bucketCount) * W;
         const w = Math.max(1, W / bucketCount - 0.5);
-        ctx.fillStyle = 'rgba(139, 124, 246, ' + alpha.toFixed(2) + ')';
+        ctx.globalAlpha = Math.min(1, alpha * 1.4);
+        ctx.fillStyle = tInk('active', 'rgba(139, 124, 246, 1)');
         ctx.fillRect(x, dotY, w, 3);
       }
+      ctx.globalAlpha = 1;
     }
 
     drawTimeline();
@@ -706,15 +724,15 @@ export const CORE_SHELL_JS = `
       dot.style.background = color;
       return h('span', { className: 'activity-timeline-legend-item' }, dot, text);
     }
-    legend.appendChild(legendItem('rgba(139, 124, 246, 0.7)', 'active'));
-    legend.appendChild(legendItem('rgba(232, 164, 76, 0.6)', 'idle >5m'));
-    legend.appendChild(legendItem('rgba(255, 255, 255, 0.15)', 'chapter boundary'));
+    legend.appendChild(legendItem('var(--text-3)', 'active'));
+    legend.appendChild(legendItem('var(--warn)', 'idle over 5 min'));
+    legend.appendChild(legendItem('var(--line-3)', 'chapter boundary'));
     var totalIdleMs = gaps.reduce(function(s, g) { return s + g.duration; }, 0);
     var activeMs = totalSpan - totalIdleMs;
     if (totalIdleMs > 0) {
       var activeStr = formatDuration(activeMs);
       var idleStr = formatDuration(totalIdleMs);
-      legend.appendChild(h('span', { className: 'activity-timeline-legend-item', style: 'margin-left: auto; color: var(--fg2);' },
+      legend.appendChild(h('span', { className: 'activity-timeline-legend-item', style: 'margin-left: auto; color: var(--text-2);' },
         'active: ' + activeStr + ' · idle: ' + idleStr + ' (' + Math.round(totalIdleMs / totalSpan * 100) + '%)'));
     }
     wrap.appendChild(legend);

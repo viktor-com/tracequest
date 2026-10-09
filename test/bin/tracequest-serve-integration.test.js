@@ -954,7 +954,7 @@ describe("tests/serve-integration.md harness", () => {
       assert.match(res.body, /HTTP 400/);
       assert.match(res.body, /Missing path/);
       assert.match(res.body, /\(missing\)/);
-      assert.match(res.body, /back to sessions/);
+      assert.match(res.body, /Back to Runs/);
       assert.match(res.body, /EventSource\("\/__livereload"\)/);
     });
   });
@@ -973,7 +973,7 @@ describe("tests/serve-integration.md harness", () => {
       assert.match(res.body, /HTTP 403/);
       assert.match(res.body, /Forbidden: path is not a session file/);
       assert.ok(res.body.includes(secret));
-      assert.match(res.body, /back to sessions/);
+      assert.match(res.body, /Back to Runs/);
       assert.match(res.body, /EventSource\("\/__livereload"\)/);
     });
   });
@@ -1003,13 +1003,13 @@ describe("tests/serve-integration.md harness", () => {
       const res = await get(comparePath);
       assert.equal(res.status, 200);
       assert.match(res.headers["content-type"], /text\/html/);
-      assert.match(res.body, /session comparison/i);
+      assert.match(res.body, /Compare runs/);
       assert.match(res.body, /session-a/);
       assert.match(res.body, /session-b/);
       assert.match(res.body, /cmp-session-prompt/);
       assert.match(res.body, new RegExp(SEARCH_MARKER));
       assert.match(res.body, /other prompt text/);
-      assert.match(res.body, /view full session/);
+      assert.match(res.body, /View full session/);
       assert.match(res.body, /\/view\?id=[0-9a-f]{8}/);
       assert.match(res.body, /Metrics/);
       assert.match(res.body, /Tool usage/);
@@ -1063,7 +1063,7 @@ describe("tests/serve-integration.md harness", () => {
       assert.match(res.body, /HTTP 403/);
       assert.match(res.body, /Forbidden/);
       assert.ok(res.body.includes("/etc/passwd"));
-      assert.match(res.body, /back to sessions/);
+      assert.match(res.body, /Back to Runs/);
       assert.match(res.body, /EventSource\("\/__livereload"\)/);
       assert.doesNotMatch(res.body, /<div class="cmp-sessions">/);
       assert.doesNotMatch(res.body, /<table class="cmp-table">/);
