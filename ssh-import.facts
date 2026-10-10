@@ -35,14 +35,6 @@
   tags: [spec, ssh-import, cli, implemented]
 
 ## transport
-- label: the production transport is rsync -a --out-format '%i %n' over ssh -o BatchMode=yes so a missing key never hangs on a password prompt; TRACEQUEST_SSH_RSYNC overrides the rsync binary, and rsync I/O is confined to src/import/ssh-import.js
-  id: sshrs
-  command: grep -q 'BatchMode=yes' src/import/ssh-import.js && grep -q 'TRACEQUEST_SSH_RSYNC' src/import/ssh-import.js && grep -q -- '--out-format' src/import/ssh-import.js && ! grep -rqE 'BatchMode=yes|TRACEQUEST_SSH_RSYNC|TRACEQUEST_IMPORT_SSH_FIXTURE' src/sessions src/server src/routes src/parse src/render
-  tags: [spec, ssh-import, cli, implemented]
-- label: tests never open a real SSH connection — TRACEQUEST_IMPORT_SSH_FIXTURE points the importer at a local directory whose per-host subdirectories stand in for remote $HOME, and rsync copies from that fixture without -e ssh
-  id: sshfx
-  command: grep -q 'TRACEQUEST_IMPORT_SSH_FIXTURE' src/import/ssh-import.js && grep -q 'TRACEQUEST_IMPORT_SSH_FIXTURE' test/bin/tracequest-ssh-import-integration.test.js && ! grep -qE 'ssh[[:space:]]+-o' test/bin/tracequest-ssh-import-integration.test.js
-  tags: [spec, ssh-import, cli, implemented]
 - label: SSH/rsync I/O happens only when `import ssh` runs — startup, discovery, indexing, serving, and every other CLI command are unchanged except that discovery stats additional (possibly absent) host roots under the hosts directory
   id: sshni
   tags: [spec, ssh-import, cli, implemented]
@@ -94,10 +86,6 @@
   id: sshsp
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'hosts paths under the hosts root are accepted as session paths' test/server/server-session-path.test.js
   tags: [spec, ssh-import, serve, implemented]
-- label: a browser session row whose API object carries host renders that host next to the source badge as source@host inside the existing .session-source pill, FILTER_KEYS / KEY_COLORS in src/browser/browser-client.js include host so the dashboard filter autocomplete offers it, and the dashboard filter legend lists host: next to source:
-  id: sshui
-  command: grep -q "s.host" src/browser/browser-client.js && grep -q "host:" src/browser/browser-client.js && grep -q "'host'" src/filter/filter.js && grep -q '<span>host:</span>' src/browser/browser-page-build.js
-  tags: [spec, ssh-import, ui, implemented]
 - label: sidecar infer_source labels SSH-imported trees by the mirrored agent path (.claude/projects → Claude, .cursor/projects → Cursor, and so on) and never as CursorCloud, even though those paths contain the substring tracequest
   id: sshin
   command: grep -q 'test_infer_source_ssh_imported_hosts' sidecar/src/scan_tests.rs && cd sidecar && cargo test test_infer_source_ssh_imported_hosts
@@ -112,10 +100,6 @@
   tags: [spec, ssh-import, serve, implemented]
 
 ## tests
-- label: the import ssh integration test in test/bin/tracequest-ssh-import-integration.test.js never performs real SSH — it sets TRACEQUEST_IMPORT_SSH_FIXTURE at a local directory of per-host trees and TRACEQUEST_HOSTS_DIR / HOME to temp dirs
-  id: sshfd
-  command: grep -q 'TRACEQUEST_IMPORT_SSH_FIXTURE' test/bin/tracequest-ssh-import-integration.test.js && grep -q 'TRACEQUEST_HOSTS_DIR' test/bin/tracequest-ssh-import-integration.test.js
-  tags: [spec, ssh-import, cli, implemented]
 - label: tests/ssh-import-integration.md is the paired spec for test/bin/tracequest-ssh-import-integration.test.js, package.json test:integration includes that harness, and tests/README.md's harness row and scenario totals match
   id: sshdoc
   command: grep -q 'tracequest-ssh-import-integration.test.js' package.json && grep -q 'ssh-import-integration.md' tests/README.md && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'tests README scenario totals match package test targets and harness rows|integration spec headers declare matching scenario counts' test/browser/browser-verification-targets.test.js

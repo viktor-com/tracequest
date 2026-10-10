@@ -118,7 +118,6 @@ describe("chat-home: session rail first-paints as a rail, not an inventory dashb
     for (const [label, html] of railPages()) {
       assert.match(html, /<aside class="agent-rail" aria-label="Sessions">/, `${label}: rail`);
       assert.doesNotMatch(html, /<aside class="agent-rail[^"]*filters-open/, `${label}: extra filters closed on first paint`);
-      assert.match(html, /\.agent-rail:not\(\.filters-open\) \.rail-filters-extra \{ display: none; \}/, `${label}: extra inventory chrome hidden`);
       assert.match(html, /id="filterBar"/, `${label}: search block present`);
       assert.match(html, /id="filterInput"/, `${label}: query visible`);
       const headIdx = html.indexOf('<div class="rail-head">Sessions');

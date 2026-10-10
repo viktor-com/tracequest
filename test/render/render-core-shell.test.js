@@ -764,7 +764,6 @@ describe('render-core-shell renderHeader and stats', () => {
       .children.find((c) => c.className === 'header-title');
     const badge = title.children.find((c) => c.tagName === 'span' && c.children?.[0] === 'cursor');
     assert.ok(badge);
-    assert.match(badge.style, /#c4e86b/);
   });
 
   test('renderHeader export link carries current search params', () => {

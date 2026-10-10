@@ -83,7 +83,7 @@ describe("sidebar-filters: overview", () => {
       assert.match(html, /dashStat\([\s\S]*?, "running"\)/, `${label}: running`);
       assert.doesNotMatch(
         html,
-        /dashStat\('<span class="dash-live-n" style="color:var\(--ok\)">' \+ liveCount \+ "<\/span>", "live"\)/,
+        /dashStat\('<span class="dash-live-n"[^']*>' \+ liveCount \+ "<\/span>", "live"\)/,
         `${label}: overview count is not live`,
       );
       assert.match(html, /dashStat\([\s\S]*?, "runs"\)/, `${label}: runs`);

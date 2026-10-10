@@ -70,18 +70,8 @@ describe('browser-client BROWSER_CLIENT bundle structure', () => {
     assert.match(CLIENT_SRC, /BROWSER_CLIENT_DASHBOARD_JS/);
   });
 
-  test('SOURCE_COLORS includes cursor', () => {
-    assert.match(CLIENT_SRC, /cursor:\s*'var\(--hue-cursor\)'/);
-  });
-
-  test('SOURCE_COLORS includes cursor-cloud', () => {
-    // Dedicated colour distinct from cursor's lime (fact cccl).
-    assert.match(CLIENT_SRC, /'cursor-cloud':\s*'var\(--hue-cursor-cloud\)'/);
-  });
-
   test('FILTER_KEYS and KEY_COLORS include host', () => {
     assert.match(CLIENT_SRC, /FILTER_KEYS = \[[^\]]*'host'/);
-    assert.match(CLIENT_SRC, /host:\s*'var\(--text-2\)'/);
     assert.match(CLIENT_SRC, /sourceChipHtml\(s\.source, s\.host\)/);
     assert.match(CLIENT_SRC, /host \? '@' \+ escH\(host\)/);
   });

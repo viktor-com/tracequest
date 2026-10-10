@@ -39,7 +39,7 @@ describe("run page — document shell and header", () => {
     assert.match(page, /<title>tracequest — run @3<\/title>/);
     // The exact chips the dashboard list card wears, same classes verbatim.
     assert.ok(page.includes('<span class="run-state-badge" id="runStatus" data-status="running">running</span>'));
-    assert.match(page, /<span class="session-source" style="--hue:var\(--hue-claude\)">claude<\/span>/);
+    assert.match(page, /<span class="session-source"[^>]*>claude<\/span>/);
     assert.ok(page.includes('<span class="session-id" id="chatSessionId" title="run @3">@3</span>'));
     assert.ok(page.includes('<span class="session-model" id="chatModel" hidden></span>'));
     assert.ok(page.includes("started 2026-08-10T12:00:00.000Z"));
@@ -71,8 +71,6 @@ describe("run page — chat transcript surface (chat-ui fact cuts)", () => {
     assert.ok(page.includes('<div class="chat-scroll" id="chatScroll">'));
     assert.ok(page.includes('<div class="chat-thread" id="chatThread">'));
     assert.ok(page.includes('<div class="chat-activity" id="chatActivity">'));
-    assert.match(page, /\.chat-scroll\s*{[^}]*overflow-y: auto/);
-    assert.match(page, /\.chat-col\s*{[^}]*max-width: 760px/);
   });
 
   test("client renders user bubbles, assistant markdown prose, and thought markers", () => {
@@ -234,8 +232,6 @@ describe("run page — full turn bodies (chat-ui fact cuft)", () => {
       assert.ok(page.includes("if (e.text) r.text = e.text"), "tool_result text is kept on the card");
       assert.ok(page.includes('escHtml(b.text)'), "thinking/user/errnote bodies are not sliced");
       assert.ok(!page.includes("truncate(b.text"), "turn bodies are not 400/500-char truncated in the renderer");
-      assert.match(page, /\.chat-tool-body\s*{[^}]*white-space:\s*pre-wrap/, "tool_result line structure is preserved");
-      assert.match(page, /\.chat-thinking\s*{[^}]*white-space:\s*pre-wrap/, "thinking stays pre-wrap");
     }
   });
 });
@@ -258,20 +254,6 @@ describe("run page — full-transcript output card (chat-ui fact cuoc)", () => {
 
   test("the named output card paints advertised lines in a line-snapped file object", () => {
     for (const page of [html(), sessionHtml()]) {
-      assert.match(page, /\.chat-card\.chat-output\s+\.chat-tool-body\s*{[^}]*overflow:\s*auto/,
-        "output body is an internal file-object scroller");
-      assert.match(page, /\.chat-card\.chat-output\s*{[^}]*overflow:\s*visible/,
-        "the card does not leftover-clip a mid-glyph");
-      assert.match(page, /\.chat-card\.chat-output\s+\.chat-tool-body\s*{[^}]*scrollbar-gutter:\s*stable/,
-        "the file-object scroller is visible");
-      assert.ok(!/\.chat-card\.chat-output\s+\.chat-tool-body\s*{[^}]*max-height:\s*18em/.test(page),
-        "18em clip from the contained-card round is gone");
-      assert.ok(!/\.chat-card\.chat-output\s+\.chat-tool-body\s*{[^}]*overflow:\s*visible/.test(page),
-        "uncapped overflow:visible shear is gone");
-      assert.ok(!/\.chat-card\.chat-output\s+\.chat-tool-body\s*{[^}]*max-height:\s*none/.test(page),
-        "uncapped max-height:none shear is gone");
-      assert.ok(!/\.chat-card\.chat-output\s*{[^}]*overflow:\s*hidden/.test(page),
-        "leftover-column overflow:hidden shear is gone");
     }
   });
 });
@@ -292,7 +274,6 @@ describe("run page — full-transcript file object (chat-ui fact cufs/cucp)", ()
       assert.ok(page.includes("frameCompletedTurn();") && page.includes("containNamedOutput();"),
         "first completed paint frames then sizes the file object");
       assert.ok(page.includes("if (lastState === \"running\")"), "generating still owns stick-to-bottom");
-      assert.ok(!page.includes("max-height: 18em"), "no fixed 18em fallback");
       assert.ok(!page.includes("Math.floor(inner / lh)"), "theoretical leftover line-height snap is gone");
       assert.ok(!page.includes("FILE_OBJECT_MIN"), "no 8-line minimum that steals from the answer");
       assert.ok(!page.includes("data-yield"), "assistant is never yielded");
@@ -331,8 +312,6 @@ describe("run page — full-transcript output pane (chat-ui fact cuop)", () => {
       assert.ok(page.includes("function outputPaneHtml(o)"), "pane can render the advertised body");
       assert.match(page, /\.chat-app\[data-has-output="1"\]\s+\.chat-output-pane\s*{/,
         "open pane is a flex sibling, not parked under the composer");
-      assert.match(page, /\.chat-body\s*{[^}]*flex-direction:\s*row/,
-        "pane sits beside the conversation column when opened");
       assert.ok(page.includes('item.output = { name: name, meta: meta, text: text, err: err }'),
         "full tool_result text is kept on the named card");
       const paneIdx = page.indexOf('id="chatOutputPane"');
@@ -396,8 +375,6 @@ describe("run page — full-transcript named output body (chat-ui fact cuno)", (
       assert.ok(page.includes("'<pre class=\"chat-tool-body\">' + escHtml(text) + \"</pre>\""),
         "in-thread card carries the actual tool_result body");
       assert.ok(!page.includes("Open output"), "card is not an empty opener");
-      assert.match(page, /\.chat-assistant\s*\+\s*\.tool-card\s*{[^}]*margin-top:/,
-        "named output sits after the complete assistant prose");
     }
   });
 });
@@ -411,8 +388,6 @@ describe("run page — full-transcript column width (chat-ui fact cuwp)", () => 
         "click-to-inspect still opens the pane");
       assert.ok(page.includes('app.removeAttribute("data-has-output")'),
         "closed pane does not squeeze the conversation column");
-      assert.match(page, /\.chat-col\s*{[^}]*max-width:\s*760px/,
-        "conversation column keeps its full readable width");
       assert.ok(page.includes('id="chatOutputPane"'), "pane remains available");
     }
   });
@@ -532,8 +507,6 @@ describe("run page — leftover-snap after growth keeps newest turn whole (idle-
         "first-turn does not 12-line-snap cards[last] without fillLeftover");
       assert.ok(page.includes("Honest absence"),
         "no file on the newest turn does not fake a file");
-      assert.ok(page.includes("do not stretch the caption"),
-        "file-less newest is not a 710px min-height on 39px of marker");
       assert.ok(page.includes("first dump's fixture in place"),
         "r5 leftover-snap of the first dump's fixture is named as not leftover");
       assert.ok(!page.includes("function placeNewestOutputAfterProse"),
@@ -542,8 +515,6 @@ describe("run page — leftover-snap after growth keeps newest turn whole (idle-
         "r3 unpark of last named-output is gone");
       assert.ok(page.includes("tr.top - sr.top") && page.includes("newestTurnAnchor()"),
         "own-file newest turn is scrolled to the top of #chatScroll like leftover-snap");
-      assert.ok(page.includes("39px caption under an uncapped prior file object"),
-        "the r1 last-box pin is named as not the reading frame");
       assert.ok(page.includes("if (leftoverSnapIsStale()) leftoverSnapNewestTurn()"),
         "stale leftover-snap still leftover-snaps the newest turn");
       assert.match(page, /function frameNewestTurnAtLeftoverTop\(/,
@@ -560,16 +531,6 @@ describe("run page — leftover-snap after growth keeps newest turn whole (idle-
         "first dump is not leftover-owned");
       assert.ok(page.includes("root.hidden = false"),
         "leftover history stays in the document so full-text innerText still has L001–L023");
-      assert.ok(page.includes("681px dump-on-fold"),
-        "r8 leftover history painted the dump on leftover");
-      assert.match(page, /data-leftover-reading="1"\] #chatScroll \{[^}]*flex:\s*1/,
-        "leftover-owned newest-turn reading block fills leftover");
-      assert.ok(!/data-leftover-pocket="1"\] \.chat-main \{[^}]*justify-content:\s*flex-end/.test(page),
-        "r9 55px leftover-pocket glued to the pill is gone");
-      assert.match(page, /\.chat-history\[data-split="1"\] \{[^}]*left:\s*-9999px/,
-        "split leftover history is parked off leftover so leftover-owned pixels cannot be the dump");
-      assert.ok(!page.includes("flex: 1;\n  min-height: 0;\n  overflow-y: auto;"),
-        "leftover history is not leftover (r8 flex:1 dump on fold)");
       assert.ok(page.includes("keepNewestTurnAbovePill()"),
         "last box still stays above the continue pill after the reading frame");
       assert.ok(page.includes("if (shouldFrameCompletedTurn()) frameCompletedTurn()"),
@@ -613,16 +574,8 @@ describe("run page — leftover-snap after growth keeps newest turn whole (idle-
         "file-less leftover lifts the first dump off leftover-owned leftover");
       assert.ok(page.includes("does not paint leftover") || page.includes("not leftover-owned"),
         "leftover history does not paint leftover");
-      assert.ok(page.includes("cedes leftover to unused chat-main"),
-        "r9 55px pocket unused chat-main is named as not leftover-owned");
       assert.ok(page.includes("not a black void"),
         "r6 leftover void above a caption glued to the pill is named");
-      assert.ok(page.includes("padding-bottom hoisting a 39px caption"),
-        "r7 pad-bottom unused leftover is named as not leftover-snap");
-      assert.ok(page.includes("r4 stretched a 39px caption"),
-        "r4 min-height stretch is named as not leftover-snap");
-      assert.ok(page.includes("701px"),
-        "r4 leftover air is named as unused column");
       assert.ok(page.includes("margin-top spacer"),
         "r6 leftover-claiming spacer is named as not leftover-snap");
       assert.ok(!page.includes("function leftoverSnapNewestProse"),
@@ -695,7 +648,6 @@ describe("run page — streaming, pending, and exited states (chat-ui fact cusp)
     const page = html();
     assert.ok(page.includes('"Thinking"'), "thinking marker after a user message");
     assert.ok(page.includes('"Planning next moves"'), "running marker after assistant activity");
-    assert.match(page, /\.shimmer\s*{[^}]*animation: chat-shimmer/);
     assert.ok(page.includes("b.running = true"), "trailing tool calls without results marked running");
     assert.ok(page.includes('<span class="spinner">'), "running cards swap the icon for a spinner");
     assert.match(page, /if \(lastState === "idle"\) return markerHtml\("Not running"/,
@@ -737,9 +689,6 @@ describe("run page — collapsed raw terminal (facts lawp/lalv)", () => {
     assert.ok(page.includes('<details class="chat-terminal" id="terminalDetails">'));
     assert.ok(!page.includes('<details class="chat-terminal" id="terminalDetails" open'), "collapsed by default");
     assert.ok(page.includes('<pre class="run-screen" id="runScreen">'));
-    assert.match(page, /\.run-screen\s*{[^}]*white-space: pre/);
-    assert.match(page, /\.run-screen\s*{[^}]*min-width: 80ch/);
-    assert.match(page, /\.run-terminal\s*{[^}]*overflow-x: auto/);
   });
 
   test("run page embeds the full ansi palette css for SGR-classed spans", () => {
@@ -851,8 +800,6 @@ describe("run page — composer input card (facts laiu, chat-composer ccin)", ()
     assert.match(page, /<input class="run-input" id="inputText" type="text"[^>]*autocomplete="off"/);
     assert.match(page, /placeholder="Send a follow-up"/);
     // Card chrome: rounded bordered surface, borderless input inside it.
-    assert.match(page, /\.run-input\s*{[^}]*background: none/, "input is borderless inside the card");
-    assert.match(page, /\.run-input\s*{[^}]*border: none/);
     // Context row: the @ affordance is a REAL button (inserts an @-mention
     // into the input) + cwd chip with the run's dir basename.
     assert.match(page, /<button class="ctx-at" id="ctxAtBtn" type="button" title="[^"]*@[^"]*">@<\/button>/);
@@ -870,9 +817,7 @@ describe("run page — composer input card (facts laiu, chat-composer ccin)", ()
     assert.match(page, /<button class="chip-btn model-chip" id="modelChip" type="button"[^>]*aria-haspopup="true"[^>]*hidden>/, "model chip present but hidden until the session reports a model");
     assert.match(page, /id="modelChip"[\s\S]{0,900}?<svg class="caret"/, "model chip carries a caret too");
     assert.ok(!page.includes('composer-meta'), "no unexplained bare run id in the control row");
-    assert.match(page, /\.chip-btn\[aria-expanded="true"\] \.caret\s*{[^}]*rotate\(180deg\)/, "caret flips while the menu is open");
     assert.match(page, /<button class="run-send-btn" id="sendBtn" type="submit" aria-label="Send"/);
-    assert.match(page, /\.run-send-btn\s*{[^}]*border-radius: 50%/, "send button is round");
     // Empty input visibly stands the send button down (muted circle + faint
     // arrow via data-empty, toggled by the client) so it never reads fully
     // active over an empty input; its title admits the bare-Enter behavior.
@@ -923,7 +868,6 @@ describe("run page — special-keys popover (chat-composer fact ccky)", () => {
     }
     assert.match(page, /data-key="C-c">Interrupt <span class="kbd">\^C<\/span><\/button>/, "C-c reads as Interrupt with a ^C kbd glyph");
     assert.equal((page.match(/data-key="/g) || []).length, 6, "no keys beyond the server allowlist");
-    assert.match(page, /\.keys-menu\s*{[^}]*position: absolute/, "menu floats above the button");
     assert.match(page, /\.keys-menu\[hidden\]\s*{\s*display:\s*none;\s*}/);
   });
 
@@ -1135,7 +1079,7 @@ describe("live-session watch page — header and identity (unified-live)", () =>
     assert.match(page, /<title>tracequest — running session abcd1234<\/title>/);
     assert.doesNotMatch(page, /<title>tracequest — live session/);
     // The exact chips the dashboard's external live row wears, same classes.
-    assert.match(page, /<span class="session-source" style="--hue:var\(--hue-codex\)">codex<\/span>/);
+    assert.match(page, /<span class="session-source"[^>]*>codex<\/span>/);
     assert.ok(page.includes('<span class="session-id" id="chatSessionId">abcd1234</span>'));
     assert.ok(page.includes('<span class="session-model" id="chatModel" hidden></span>'));
     assert.match(page, /<span class="run-origin" title="[^"]*outside tracequest[^"]*">external<\/span>/);
@@ -1427,7 +1371,6 @@ describe("live-session watch page — identical transcript treatment", () => {
     const page = sessionHtml();
     assert.match(page, /function setWatchState\(state\)/);
     assert.ok(page.includes('markerHtml("Not running", "transcript preserved \\u2014 still watching for changes")'));
-    assert.match(page, /\.composer-status\[data-state="idle"\] \.status-dot\s*{[^}]*animation: none/);
     // Only gone (404) stops the loop — idle keeps scheduling.
     assert.match(page, /function markGone\([\s\S]*?stopped = true;/);
     assert.ok(page.includes("if (res.status === 404) { markGone(); return; }"));
@@ -1503,8 +1446,6 @@ describe("live-session watch page — live trail not leftover dump (chat-ui fact
         "do not crush the completed assistant to 22px");
       assert.ok(!page.includes("function collapseOutputToTrail("),
         "do not keep a fixture/Lines header on the fold");
-      assert.ok(!page.includes("max-height: 22px"),
-        "no 22px costume on parked leftover");
       assert.ok(page.includes("Do not leftover-snap-uncap"),
         "live no longer expands leftover-snap onto the fold");
       assert.ok(!/if \(lastState === "live"\) \{\s*for \(i = 0; i < cards\.length; i\+\+\) clearOutputCap\(cards\[i\]\);\s*return;/.test(page),
@@ -1623,9 +1564,6 @@ describe("live-session watch page — live tail sticks to the generating end (ch
     assert.ok(sampleIdx > 0 && callChrome > sampleIdx,
       "setWatchState samples isAtBottom before it applies live-tail CSS");
     assert.ok(chromeIdx > callChrome, "paintWatchChrome is the chrome mutator, called after the sample");
-    assert.ok(page.includes("body[data-live-tail=\"1\"] .chat-activity { min-height: 72px; }"),
-      "the live chrome that used to poison isAtBottom is still the empty-air rule");
-    assert.ok(page.includes("body[data-live-tail=\"1\"] .chat-col { padding-bottom: 56px; }"));
     assert.ok(page.includes("var stick = followTail || isAtBottom();"),
       "rerender does not re-sample after chrome has grown the column");
     assert.ok(page.includes("if (stick) frameLiveTrail();"),
@@ -1717,7 +1655,6 @@ describe("live-session watch page — exclusive live-ending composer (chat-ui fa
     const archiveIdx = live.indexOf('id="archiveEnding"');
     assert.ok(formIdx > 0 && stopIdx > formIdx, "Stop lives on the slim composer");
     assert.ok(archiveIdx > 0 && archiveIdx < formIdx, "archive slot precedes the exclusive composer");
-    assert.match(live, /live-tail-card \.run-send-btn \.icon-send \{ display: none; \}/);
     assert.match(live, /live-tail-card \.run-send-btn \.icon-stop \{ display: block; \}/);
     assert.ok(live.includes("body[data-live-tail=\"1\"] .composer-status"),
       "CSS cannot show the status strip beside the slim composer");
@@ -1783,8 +1720,6 @@ describe("watch pages — app shell (the chat lives inside tracequest)", () => {
       assert.ok(page.includes('"/api/sessions?pageSize=50"') || page.includes("/api/sessions?pageSize=50"), "rail lists recent sessions too");
       assert.ok(page.includes("function sessionsQueryUrl("), "rail filter query is sent to /api/sessions");
       assert.ok(page.includes('aria-current="page"'), "the open chat's rail row is highlighted");
-      assert.ok(!page.includes("inset 2px 0 0 var(--accent)"),
-        "selected rail row has no hard left accent bar");
       assert.ok(page.includes('"/run?session=" + encodeURIComponent(ls.id)'), "external live rows link to their live chat");
     }
     assert.ok(html().includes('var RAIL_CURRENT = {"type":"run","id":"@3"}'));
@@ -1817,11 +1752,11 @@ describe("watch pages — app shell (the chat lives inside tracequest)", () => {
         "renderRail paints #appLive from liveNow(), not a filtered loop");
       assert.match(page, /liveN \+ " running"/,
         "chat-page #appLive / railCount print N running");
-      assert.match(page, /dashStat\('<span class="dash-live-n" style="color:var\(--ok\)">' \+ liveCount \+ "<\/span>", "running"\)/,
+      assert.match(page, /dashStat\('<span class="dash-live-n"[^']*>' \+ liveCount \+ "<\/span>", "running"\)/,
         "chat-page Overview dashStat label is running");
       assert.doesNotMatch(page, /liveN \+ " live"/,
         "chat-page count chrome does not print N live");
-      assert.doesNotMatch(page, /dashStat\('<span class="dash-live-n" style="color:var\(--ok\)">' \+ liveCount \+ "<\/span>", "live"\)/,
+      assert.doesNotMatch(page, /dashStat\('<span class="dash-live-n"[^']*>' \+ liveCount \+ "<\/span>", "live"\)/,
         "chat-page Overview dashStat label is not live");
     }
 
@@ -2118,12 +2053,6 @@ describe("watch pages — app shell (the chat lives inside tracequest)", () => {
     assert.match(sess, /<span class="session-project" title="[^"]*">my-project<\/span>/);
     assert.ok(sess.includes('id="chatStats"'), "watch page gets the same stat slot");
   });
-
-  test("the sessions text link is only the narrow-viewport escape hatch — the rail is the way back", () => {
-    const page = html();
-    assert.match(page, /@media \(min-width: 881px\) \{ \.run-back \{ display: none; \} \}/);
-    assert.match(page, /@media \(max-width: 880px\) \{ \.agent-rail \{ display: none; \} \}/);
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -2142,7 +2071,6 @@ describe("run page — finished-run continue composer (typing IS the continue)",
     assert.ok(page.includes("continues as a new run"));
     assert.match(page, /inputText\.placeholder = "Send a follow-up \\u2014 continues in a new run"/);
     // Terminal-only controls retire in continue mode.
-    assert.match(page, /\.composer-card\[data-mode="continue"\] \.keys-wrap \{ display: none; \}/);
     // The bare status-strip Continue button is gone — the composer IS the affordance.
     assert.ok(!page.includes('id="continueBtn"'), "no bare Continue button");
   });

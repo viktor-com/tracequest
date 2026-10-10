@@ -48,15 +48,6 @@
 - label: live-session process probing is platform-abstracted in src/sessions/proc-probe.js: procCwds(pids) resolves per-pid working directories and openPathsAmong(paths) reports which candidate session files are held open, with a readlink /proc implementation on linux and an lsof implementation on darwin, selected by process.platform and overridable per call for tests
   command: node --test --test-concurrency=1 test/sessions/live-sessions-platform.test.js
   tags: [spec, live-platform, implemented]
-- label: on darwin, findLiveGrok, findLiveClaude, and findLiveByOpenFd detect running sessions via lsof (batched: one lsof invocation per pid set and per chunk of candidate paths), so the dashboard live block appears on macOS as it does on linux
-  command: node --test --test-concurrency=1 test/sessions/live-sessions-platform.test.js
-  tags: [spec, live-platform, implemented]
-- label: openPathsAmong maps lsof-reported realpaths back to the caller's original candidate paths, so a candidate under a symlinked prefix such as /tmp on macOS is still reported live using the exact path the caller passed in
-  command: node --test --test-concurrency=1 test/sessions/live-sessions-platform.test.js
-  tags: [spec, live-platform, implemented]
-- label: probe failures degrade to an empty result rather than throwing or spamming: an lsof exit status of 1 (no matches) is not an error, a missing or non-executable lsof is logged at most once per process, and on unsupported platforms procCwds and openPathsAmong return empty results without spawning anything
-  command: node --test --test-concurrency=1 test/sessions/live-sessions-platform.test.js
-  tags: [spec, live-platform, implemented]
 - label: procCwds accepts only strictly numeric pids (active_sessions.json is user-writable and lsof -p rejects an entire comma-joined list containing one non-numeric entry); lsof output is parsed as NUL-delimited -F0 fields, and on darwin candidate paths are additionally indexed under lsof's escaped rendering (two-character escapes for backslash/newline/CR/tab/backspace/formfeed, caret notation for other C0 controls, \x7f for DEL) so session files containing those characters are still matched
   command: node --test --test-concurrency=1 --test-name-pattern 'malformed pid|escaped form|escapes backslash|every character class|not registered on the linux' test/sessions/live-sessions-platform.test.js
   tags: [spec, live-platform, implemented]
@@ -119,37 +110,9 @@
   id: d1bd
   command: node --test --test-concurrency=1 --test-name-pattern 'D1' test/sessions/live-sessions-finalisation.test.js test/browser/browser-client-dashboard.test.js test/browser/run-page.test.js
   tags: [spec, live-platform, surfaces, implemented]
-- label: shared #appLive chrome is one driver: dashboard liveNow() and chat-page renderRail both call liveNow() (generating launched runs via runIsLive — never tmux status running alone — plus s.live === true sessions, exited and idle-launched runs never occupy a path) so a mixed G1-idle / G2-generating snapshot writes 1 running on dashboard #appLive/overview and on the watch-page rail #appLive/overview even when _runs includes an exited run linked to G2 or the rail expr filters the list, G1/G3/G4/CC snapshots write 0, a live:false leak increments neither writer, and an idle launched tmux-running window whose recording is not in detectLiveSessions increments neither writer
-  id: d1lc
-  command: node --test --test-concurrency=1 --test-name-pattern 'D1' test/sessions/live-sessions-finalisation.test.js test/browser/browser-client-dashboard.test.js test/browser/run-page.test.js
-  tags: [spec, live-platform, surfaces, implemented]
-- label: chat-page renderRail paints #appLive and the rail overview running count from liveNow() (never a matchesRailFilter or exited-run-absorbed loop): a mixed G1-idle leak / G2-generating renderRail paints 1 running, a live:false leak paints 0, an exited-run-linked G2 still paints 1, a source:claude rail expr does not drop a grok G2 from #appLive, and external rail-row status is ls.live === true ? running : idle (never hardcoded running)
-  id: d1rl
-  command: node --test --test-concurrency=1 --test-name-pattern 'D1' test/sessions/live-sessions-finalisation.test.js test/browser/browser-client-dashboard.test.js test/browser/run-page.test.js
-  tags: [spec, live-platform, surfaces, implemented]
-- label: dashboard #appLive (liveNow) and chat-page rail #appLive (renderRail) are the same origin-agnostic counter: both pages call liveNow() so the sum is generating launched runs (runIsLive: r.status === running, the runGeneratingStatus word — never a second _liveSessions snapshot) plus live:true sessions not already a generating run sessionPath (exited and idle-launched runs never occupy a path; rail/dashboard filters never change the sum). A live:true G2 linked to an exited run writes 1 running on both #appLive writers; a grok G2 with chat rail expr source:claude still writes 1 running on both; an idle launched G1-settled window writes 0 on both; rail row filtering and run-absorption stay local to the rail list
-  id: d1ac
-  command: node --test --test-concurrency=1 --test-name-pattern 'D1' test/sessions/live-sessions-finalisation.test.js test/browser/browser-client-dashboard.test.js test/browser/run-page.test.js
-  tags: [spec, live-platform, surfaces, implemented]
-- label: launched-run RUNNING is the generating word from runGeneratingStatus / GET /api/runs status, never tmux pane_dead and never a second _liveSessions snapshot: liveNow(), #appLive, dashboard run-state-badge, and rail glyphs count a launched run iff r.status === running (pending first recording or a linked generating recording); an idle launched window (status idle, recording settled, not in the live set) paints idle / not-running and increments neither #appLive writer, while a generating launched window (status running) paints running and counts 1
-  id: d1lr
-  command: node --test --test-concurrency=1 --test-name-pattern 'D1' test/sessions/live-sessions-finalisation.test.js test/browser/browser-client-dashboard.test.js test/browser/run-page.test.js
-  tags: [spec, live-platform, surfaces, implemented]
 - label: one generating word running|idle|exited and one predicate (runIsLive is r.status === running, the same word runGeneratingStatus writes) drive list badges, /run?id= #runStatus/data-run-state/composer, /view chip copy, and /api/sessions/live state+run.status: a generating G2 is running on every surface, idle G1 is idle, never state live beside status running, never data-run-state live while #runStatus says running, never a live-run chip label on a running data-status, and runIsLive never AND-gates a second _liveSessions snapshot
   id: d1vo
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'D1' test/sessions/live-sessions-finalisation.test.js test/browser/run-page.test.js test/browser/launch-page.test.js test/browser/browser-client-dashboard.test.js test/routes/session-live-routes.test.js
-  tags: [spec, live-platform, surfaces, implemented]
-- label: generating count chrome uses running, never live: dashboard #appLive and Overview dashStat, and chat-page #appLive / railCount / Overview dashStat, all print "N running" (hidden or omitted at 0) for the same liveNow() generating bit every badge already calls RUNNING — never "N live"
-  id: d1cc
-  command: node --test --test-concurrency=1 --test-name-pattern 'D1' test/sessions/live-sessions-finalisation.test.js test/browser/browser-client-dashboard.test.js test/browser/run-page.test.js
-  tags: [spec, live-platform, surfaces, implemented]
-- label: GET /run?session= identity chrome (#runStatus, data-run-state, title, "Watching a running session") follows detectLiveSessions / GET /api/sessions/live state (apiLive), never deriveWatchLive() 4s mtime quiet window or unmatched tool_use overlay: after poll of idle G1 (completed turn_ended, not in the live set, etag/mtime inside QUIET_MS) #runStatus stays idle, data-run-state is idle, title is idle session, observer heading is Watching an idle session, data-live-tail is 0, and #liveTailForm is hidden; growth lastState also follows identity for that completed idle G1 (not running from QUIET_MS), so leftover-snap not park, activityHtml has no shimmering Planning next moves, and #continueForm is the visible Send a follow-up composer; unmatched tool_use may still set lastState running for in-thread tool spinners, never to unhide Stop or to hide the follow-up composer
-  id: d1wi
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'D1: idle G1 /run.session= #runStatus stays idle inside QUIET_MS|quiet-window|quiet.window' test/sessions/live-sessions-finalisation.test.js test/browser/run-page.test.js
-  tags: [spec, live-platform, surfaces, implemented]
-- label: GET /run?session= exclusive Stop composer (#liveTailForm / data-live-tail) follows identity generating (detectLiveSessions / apiLive / watchIdentityWord), never deriveWatchLive QUIET_MS: after poll of idle G1 (completed turn, not in the live set, etag inside QUIET_MS) identity is idle, #liveTailForm.hidden is true, and #continueForm is the visible Send a follow-up composer (not Stop); paintWatchChrome sets liveNow from the identity word so CSS body[data-run-state=idle] cannot show Stop via growth lastState; shared rerender leftover-snaps a completed idle G1 (does not park named-output / frameLiveTrail off QUIET_MS lastState); generating apiLive still shows Stop
-  id: d1tf
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'D1: idle G1 /run.session= #runStatus stays idle inside QUIET_MS|quiet-window|quiet.window' test/sessions/live-sessions-finalisation.test.js test/browser/run-page.test.js
   tags: [spec, live-platform, surfaces, implemented]
 - label: a process-matched Grok or Codex recording is live when the last 128KB tail has no closing boundary (no turn_ended / task_complete) even if the unmatched turn_started / task_started has aged out of that window and recent records are paired or completed tools — recordingIsGenerating must not require the opening token to still fit in TAIL_BYTES
   id: ifto

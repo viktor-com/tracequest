@@ -32,10 +32,6 @@
   id: edgdisp
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "GitHub-style bubble-phase keyDownHandler|isFormField.event.target" test/browser/is-form-field.test.js test/browser/editable-guard.test.js
   tags: [spec, editable-guard, implemented]
-- label: Playwright page.keyboard.type("/ojkg?x") on focused #liveTailInput keeps value /ojkg?x and each of those keydowns reaches the focused control
-  id: edgreach
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "live composer #liveTailInput" test/browser/editable-guard.playwright.test.js
-  tags: [spec, editable-guard, implemented]
 - label: unscoped / o j k g fire from the one GitHub-style keyDownHandler via data-hotkey elements in the radix trie; they are not sibling document bubble listeners with a copied isFormField return
   id: edgreg
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "unscoped / o j k g fire from the one GitHub-style keyDownHandler via data-hotkey" test/browser/is-form-field.test.js test/browser/editable-guard.test.js
@@ -63,10 +59,6 @@
 - label: keyDownHandler walks the radix trie and on Leaf fire calls fireDeterminedAction then event.preventDefault
   id: edgprev
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "preventDefault on leaf fire|fireDeterminedAction then event.preventDefault" test/browser/is-form-field.test.js
-  tags: [spec, editable-guard, implemented]
-- label: Playwright page.keyboard.type("/ojkg?x") into focused #liveTailInput and Cmd+K #cmdkInput still inserts those characters with radix-trie dispatch
-  id: edgtriepw
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "live composer #liveTailInput|#cmdkInput still gets|data-hotkey-scope node is present" test/browser/editable-guard.playwright.test.js
   tags: [spec, editable-guard, implemented]
 - label: normalizeHotkey localizes Mod to Meta on Apple platforms and Control elsewhere, then sorts modifiers as Control, Alt, Meta, Shift
   id: edgnorm

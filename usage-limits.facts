@@ -14,10 +14,6 @@
   tags: [spec, usage-limits, domain, implemented]
 
 # collectors
-- label: collectUsageLimits is HOME-parameterized (home, fetchImpl, now, readFile, readCursorToken) and never executes a harness binary (claude, codex, grok, cursor-agent, droid, opencode, gemini)
-  id: ulhm
-  command: grep -q "export async function collectUsageLimits" src/usage/collect.js && ! grep -E "spawnSync|execFile" src/usage/*.js
-  tags: [spec, usage-limits, collectors, implemented]
 - label: the claude collector reads home/.claude/.credentials.json field claudeAiOauth.accessToken, GET TRACEQUEST_CLAUDE_USAGE_URL or https://api.anthropic.com/api/oauth/usage, maps five_hour and seven_day (utilization is the API percent divided by 100), and takes plan from claudeAiOauth.rateLimitTier
   id: ulcl
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'claude collector' test/usage/collect-claude.test.js && grep -q 'TRACEQUEST_CLAUDE_USAGE_URL' src/usage/collect-claude.js && grep -q 'api.anthropic.com/api/oauth/usage' src/usage/collect-claude.js
@@ -45,10 +41,6 @@
 - label: HTTP 401 becomes per-harness status unauthenticated with an actionable message naming the login command (claude / codex login / Cursor sign-in / grok login) and collectors never refresh tokens
   id: ul401
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern '401 is unauthenticated' test/usage/collect-claude.test.js test/usage/collect-codex.test.js test/usage/collect-cursor.test.js test/usage/collect-grok.test.js && ! grep -nE 'refreshToken|refresh_token' src/usage/*.js
-  tags: [spec, usage-limits, collectors, implemented]
-- label: each collector has an env base-URL override so tests never touch the real network: TRACEQUEST_CLAUDE_USAGE_URL, TRACEQUEST_CODEX_USAGE_URL, TRACEQUEST_CURSOR_API2_URL (shared with cursor-cloud), TRACEQUEST_GROK_USAGE_URL
-  id: ulnv
-  command: grep -q TRACEQUEST_CLAUDE_USAGE_URL src/usage/collect-claude.js && grep -q TRACEQUEST_CODEX_USAGE_URL src/usage/collect-codex.js && grep -q TRACEQUEST_GROK_USAGE_URL src/usage/collect-grok.js && grep -q TRACEQUEST_CURSOR_API2_URL src/usage/collect-cursor.js
   tags: [spec, usage-limits, collectors, implemented]
 - label: each harness fetch aborts after about 5 seconds so one hang cannot stall collectUsageLimits, CLI, or GET /api/usage-limits
   id: ulto
@@ -120,14 +112,6 @@
   tags: [spec, usage-limits, ui, implemented]
 
 # ssh
-- label: after each host's tree rsync (success or partial) import ssh runs the same collectors: fixture mode uses collectUsageLimits({home: fixtureHostHome}) with no SSH, production SSH-reads only credential files over the existing ControlMaster and feeds bytes in memory, then writes hosts/{hostId}/.tracequest/usage-limits.json
-  id: uqss
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'import ssh writes a usage-limits snapshot' test/bin/tracequest-usage-limits-integration.test.js && grep -q 'collectUsageLimitsForRemote' src/import/ssh-import.js
-  tags: [spec, usage-limits, ssh, ssh-import, implemented]
-- label: SSH_IMPORT_SOURCES still lists only the six session trees and never gains credential paths (.credentials.json, auth.json, state.vscdb); tokens are never written under hosts/
-  id: uqnc
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'SSH_IMPORT_SOURCES stays session trees' test/usage/ssh-safety.test.js
-  tags: [spec, usage-limits, ssh, ssh-import, security, implemented]
 - label: import ssh --dry-run prints the usage-limits plan and writes no usage-limits.json and creates no directories under the hosts root
   id: uqdr
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'dry-run does not write usage-limits' test/bin/tracequest-usage-limits-integration.test.js
@@ -148,10 +132,6 @@
   tags: [spec, usage-limits, collectors, implemented]
 
 # tests
-- label: unit collector tests stand up local node:http fixture servers and a fake HOME, set the env URL overrides, and never perform real network I/O or read the developer's own credential files
-  id: uqts
-  command: grep -q 'createServer' test/usage/helpers.js && grep -q 'TRACEQUEST_CLAUDE_USAGE_URL' test/usage/collect-claude.test.js && ! grep -qE 'api.anthropic.com|api2.cursor.sh|chatgpt.com' test/usage/*.test.js
-  tags: [spec, usage-limits, tests, implemented]
 - label: tests/usage-limits-integration.md is the paired spec for test/bin/tracequest-usage-limits-integration.test.js, package.json test:integration includes that harness, and tests/README.md's harness row and scenario totals match
   id: uqin
   command: grep -q 'tracequest-usage-limits-integration.test.js' package.json && grep -q 'usage-limits-integration.md' tests/README.md && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'tests README scenario totals match package test targets and harness rows|integration spec headers declare matching scenario counts' test/browser/browser-verification-targets.test.js

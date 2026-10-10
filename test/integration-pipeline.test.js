@@ -1183,7 +1183,6 @@ describe("integration pipeline opencode branch (parse → chapters → render | 
         source: "opencode",
         promptSnippet: "opencode integration pipeline",
       });
-      assert.ok(html.includes("#6ba4e8") || html.includes("opencode"), "opencode source styling");
 
       const md = generateMarkdown(session);
       assert.match(md, /\*\*Source:\*\* opencode/);

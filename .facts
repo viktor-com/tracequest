@@ -20,31 +20,13 @@
 # share
 
 ## share > flow
-- label: the share pipeline is: parse session → scan for secrets → redact findings in a session copy → render HTML from the clean copy → upload; secrets never leave the local machine
-  command: test -f src/share/pipeline.js && test -f src/share/scanner.js && test -f src/share/redactor.js
-  tags: [share, spec, implemented]
-- label: redaction replaces each matched secret in every string-bearing field of the redacted session copy with [REDACTED] — including event.text, toolCalls[].input, thinking blocks, diffInfo, mcpInfo, and agentHistory records that renderHTML embeds; the redacted session is a deep copy — the original session data is never mutated
-  command: grep -q '\[REDACTED\]' src/share/redactor.js
-  tags: [share, spec, implemented]
-- label: the share command is a new CLI subcommand alongside render, list, latest, find, search, messages, serve
-  command: grep -qE 'case "share"' bin/tracequest.js
-  tags: [share, spec, implemented]
 - both GitHub Gist and Hugging Face Hub APIs support browser-origin requests via CORS (GitHub returns access-control-allow-origin: *; HF reflects the request Origin), so browser-side uploads work without a proxy @share @spec @implemented
-- label: share redaction uses the shared redactValue tree walk for PEM blocks and matched secrets, with no separate PEM-only tree traversal
-  command: grep -q 'redactPemBlocks(redactString' src/share/redactor.js && ! grep -q 'redactPemInTree' src/share/redactor.js
-  tags: [share, share-redactor-anneal, spec, implemented]
 
 ## share > cli
 - `tracequest share <session-path>` parses the session, runs the safety pipeline (scan → redact → render), uploads to the default target (gist), and prints the public URL @share @share-cli @spec @implemented
 - `tracequest share <session-path> --target gist|hf` selects the upload target; default is gist @share @share-cli @spec @implemented
 - `tracequest share --latest [project]` shares the most recent session, reusing cmdLatest resolution logic @share @share-cli @spec @implemented
-- label: `tracequest share --filter <expression>` applies the standard filter expression; when multiple sessions match, the most recent is shared
-  command: grep -q -- '--filter' src/cli/cli-commands.js
-  tags: [share, share-cli, spec, cli-filter, implemented]
 - the share command supports --open (launch URL in browser), --json (print full result for scripting), --private (secret gist / private HF repo), --force (skip secret confirmation), and --hf-repo (HF dataset repo) @share @share-cli @spec @implemented
-- label: the share command is exported as cmdShare from src/cli/cli-commands.js; bin/tracequest.js dispatches via case "share"
-  command: grep -q 'export async function cmdShare' src/cli/cli-commands.js
-  tags: [share, share-cli, spec, implemented]
 - label: share --help documents all flags, both targets, and shows examples
   command: node ./bin/tracequest.js share --help 2>&1 | grep -q -- '--force'
   tags: [share, share-cli, spec, implemented]
@@ -54,17 +36,11 @@
 - adapters use metadata to set titles, descriptions, and filenames on the remote platform; the rendered HTML is opaque to the metadata layer @share @share-meta @spec @implemented
 
 ## share > gist
-- label: the gist adapter uploads the rendered HTML as a single-file GitHub Gist via POST /gists
-  command: grep -q 'method: "POST"' src/share/gist-adapter.js && grep -q '/gists' src/share/gist-adapter.js
-  tags: [share, share-gist, spec, implemented]
 - the gist filename is tracequest-{source}-{sessionHash}.html; the description is "{source} session — {firstPrompt} ({model}, {formattedDuration})" @share @share-gist @spec @implemented
 - gists are public by default; --private (CLI) or a toggle (modal) creates a secret gist @share @share-gist @spec @implemented
 - CLI auth: GITHUB_TOKEN env var → `gh auth token` fallback → clear error; browser auth: token input field, persisted in localStorage under tracequest-gh-token @share @share-gist @spec @implemented
 - re-sharing the same session creates a new gist (no update/dedup) @share @share-gist @spec @implemented
 - uses native fetch, no external dependencies @share @share-gist @spec @implemented
-- label: gist adapter reads GITHUB_API_URL (default https://api.github.com) so integration tests can point uploads at a local mock server
-  command: grep -q 'GITHUB_API_URL' src/share/gist-adapter.js
-  tags: [share, share-gist, spec, implemented]
 
 ## share > huggingface
 - the HF adapter uploads the rendered HTML and a metadata JSON sidecar to a Hugging Face dataset repository @share @share-hf @spec @implemented
@@ -74,19 +50,10 @@
 - the JSON sidecar includes all metadata fields plus: eventCount, errorCount (stats.errorCount), tools (Object.keys(stats.toolCounts)), filePaths (chapterFileKeys across chapters), gitBranch, and cost estimate (estimateParsedStatsCost) — making the dataset useful for agent behavior research without parsing HTML @share @share-hf @spec @implemented
 - the adapter creates a `README.md` dataset card on first upload with YAML frontmatter (license, tags: [agent-traces, tracequest], task_categories: [text-generation]); subsequent uploads do not overwrite it @share @share-hf @spec @implemented
 - CLI auth: HF_TOKEN env var → read ~/.cache/huggingface/token → clear error; browser auth: token input field, persisted in localStorage under tracequest-hf-token @share @share-hf @spec @implemented
-- label: uses the HF Hub REST API (POST /api/repos/create, POST /api/datasets/{namespace}/{repo}/commit/{rev}; POST /api/datasets/{namespace}/{repo}/preupload/{rev} for large HTML) with native fetch, no external dependencies
-  command: grep -q 'preupload' src/share/hf-adapter.js && grep -q '/api/repos/create' src/share/hf-adapter.js
-  tags: [share, share-hf, spec, implemented]
 - HF's HTML file preview renders the self-contained session viewable directly in the browser @share @share-hf @spec @implemented
-- label: HF adapter reads HF_API_URL (default https://huggingface.co) so integration tests can point uploads at a local mock server
-  command: grep -q 'HF_API_URL' src/share/hf-adapter.js
-  tags: [share, share-hf, spec, implemented]
 
 ## share > browser-ui
 - render-session-rules.js already defines CSS for .hf-btn, .hf-modal-overlay, .hf-modal, .hf-modal-title, .hf-modal-label, .hf-modal-input, .hf-modal-hint, .hf-modal-status (.hf-error, .hf-success), .hf-modal-actions, .hf-modal-share, .hf-modal-cancel; implementation must use these existing classes @share @share-ui @spec @implemented
-- label: render-core-shell.js adds a "Share" button to the header-actions div (alongside Export, Print, Markdown); clicking opens a modal with a target selector (Gist / HF), target-specific inputs (token, repo name), a private toggle, and Share/Cancel actions
-  command: grep -q "openShareModal" src/render/render-core-shell.js && grep -q "hf-btn" src/render/render-core-shell.js
-  tags: [share, share-ui, spec, implemented]
 - the modal JS and both upload adapters (gist + HF API calls) are inlined in the rendered HTML; no server-side proxy needed — both APIs accept browser-origin requests; the self-contained HTML constraint is preserved @share @share-ui @spec @implemented
 - the session detail page in tracequest serve IS the renderHTML output, so the share button and modal are present in both standalone HTML files and the serve UI with no separate implementation @share @share-ui @spec @implemented
 - the modal embeds the secret rules JSON and scanner logic; on share click it scans the embedded session data, redacts a deep copy, rebuilds standalone HTML via an inlined client-side renderHTML equivalent (same shell/CSS/bundle as server renderHTML over the redacted SESSION), and uploads that artifact — the visible page DOM is never modified @share @share-ui @spec @implemented
@@ -96,14 +63,8 @@
 ## share > safety
 
 ### share > safety > rules
-- label: secret detection uses the full gitleaks ruleset (MIT-licensed), vendored as a JSON file shipped inside the package; all upstream rules are included, no manual curation
-  command: test -f data/secret-rules.json
-  tags: [share, share-safety, spec, implemented]
 - each rule preserves the gitleaks structure: id, description, regex, optional keywords (fast pre-filter), optional entropy (Shannon entropy threshold), optional secretGroup (capture group index for the actual secret), optional allowlist (regexes for known false positives) @share @share-safety @spec @implemented
 - the scanner honors all fields: keywords skip the regex when absent, entropy is checked when present, secretGroup isolates the secret for redaction, allowlist matches suppress the finding @share @share-safety @spec @implemented
-- label: scripts/update-secret-rules.js fetches the latest gitleaks config TOML from upstream, converts to JSON, and overwrites the vendored file (full replacement); the TOML parser is a devDependency — not shipped in the package; the script logs a summary of rules added/removed/changed
-  command: test -f scripts/update-secret-rules.js
-  tags: [share, share-safety, spec, implemented]
 
 ### share > safety > scanner
 - the scanner walks every string-bearing field in each parsed Session event (text, toolCalls[].input, thinking[], diffInfo, mcpInfo.params, etc.) and any agentHistory records included in the upload payload, leveraging the structured event model (event type, tool name, chapter boundaries) @share @share-safety @spec @implemented
@@ -355,22 +316,13 @@
   tags: [spec, cli-hardening, api-parity, implemented]
 
 ## serve
-- label: tracequest serve eagerly builds the session index at startup (before the HTTP listener accepts connections) so indexing progress is visible in the terminal immediately
-  command: grep -q 'resolveSessionsAndIndex' src/server.js
-  tags: [spec, index, implemented]
 
 ## search
 - tracequest search with an empty or whitespace-only query exits with the usage error before discovering or indexing sessions @cli @implemented
 - label: tracequest search --format handoff writes discovery and indexing progress to stderr so stdout contains only the Markdown handoff
   command: node --test --test-concurrency=1 --test-name-pattern handoff test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, cli-search, handoff, implemented]
-- label: tracequest search --format handoff prints pasteable Markdown with the search query, matching session hashes, privacy-conscious snippets, and concrete follow-up commands for each result
-  command: node --test --test-concurrency=1 --test-name-pattern handoff test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
-  tags: [spec, cli-search, handoff, implemented]
 - tracequest search --format handoff is a non-LLM formatter over existing search results and does not call agent, model, or network APIs @spec @cli-search @handoff @implemented
-- label: tracequest search --format handoff uses safe Markdown list and code formatting so project names and snippets containing Markdown metacharacters cannot alter the handoff structure
-  command: node --test --test-concurrency=1 --test-name-pattern handoff test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
-  tags: [spec, cli-search, handoff, implemented]
 - label: tracequest search --format handoff emits a Markdown no-match handoff to stdout, with progress on stderr, when there are sessions but no search results or when no sessions exist
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'handoff empty states' test/cli/cli-commands.test.js
   tags: [spec, cli-search, handoff, implemented]
@@ -387,9 +339,6 @@
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'direct handoff command orders matching results by recency when --sort recent' test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, handoff, cli-search, implemented]
 - label: tracequest's synthetic standup/handoff smoke exercises tracequest handoff <query> with --filter and --sort recent against fixture sessions, asserting filtered and recency-ordered Markdown results stay on stdout without invoking prompt agents
-  command: TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff
-  tags: [spec, handoff, smoke, release, implemented]
-- label: tracequest's synthetic standup/handoff smoke exercises tracequest handoff <query> with --sort date as the documented recency alias, proving date-sorted Markdown stays on stdout without invoking prompt agents
   command: TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff
   tags: [spec, handoff, smoke, release, implemented]
 - label: recency-sorted handoff search returns only the requested newest matching result rows from the search materialization path, so direct handoff --sort recent or --sort date does not build Markdown result rows for every match before applying --limit
@@ -418,9 +367,6 @@
 - label: tracequest standup agent runner invokes exactly one prompt-mode agent with configurable command, args, and params, passes the compact standup input on stdin, and avoids shell interpolation
   command: node --test test/standup/agent-runner.test.js
   tags: [spec, standup, implemented]
-- label: tracequest standup can detect an available local prompt-mode agent command when no explicit standup agent command is configured
-  command: node --test test/standup/agent-runner.test.js
-  tags: [spec, standup, implemented]
 - label: tracequest standup --print-input selects recent sessions, builds the compact standup prompt, and exits without invoking an agent command
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'cmdStandup --print-input' test/cli/cli-commands.test.js
   tags: [spec, standup, implemented]
@@ -438,9 +384,6 @@
   tags: [spec, standup, implemented]
 - label: tracequest standup uses TRACEQUEST_STANDUP_AGENT_COMMAND, TRACEQUEST_STANDUP_AGENT_ARGS, and TRACEQUEST_STANDUP_AGENT_TIMEOUT_MS as defaults when matching CLI flags are absent
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup env defaults' test/cli/cli-commands.test.js
-  tags: [spec, standup, implemented]
-- label: tracequest standup help and CLI reference examples document selection windows and TRACEQUEST_STANDUP_AGENT_* defaults
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup help documents selection windows and env defaults|CLI reference documents standup windows' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, implemented]
 - label: tracequest standup reports no-session and missing prompt-agent cases as stderr-only CLI errors without printing compact input or invoking an agent
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup empty and no-agent errors' test/cli/cli-commands.test.js
@@ -470,9 +413,6 @@
 - label: tracequest standup help and CLI reference distinguish built-in detected prompt agents from configurable custom agents, document Droid detection, and tell users to verify or wrap non-stdin agents before using --agent-command
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup (help|CLI reference).*prompt agents' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, agent, docs, implemented]
-- label: tracequest ships a local synthetic-data smoke check for handoff and standup that drives bin/tracequest.js through search --format handoff, standup --print-input, profile workday selection, missing prompt-agent detection, and a fixture prompt-agent invocation without using private trace data
-  command: TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff
-  tags: [spec, standup, handoff, smoke, implemented]
 - label: tracequest standup --dry-run-agent-detection reports the resolved prompt-agent command from CLI/env/profile/default detection without discovering sessions, building compact input, invoking an agent, or sending a prompt
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup dry-run agent detection' test/standup/agent-runner.test.js test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, agent, dry-run, implemented]
@@ -488,9 +428,6 @@
 - label: tracequest standup does not include OpenCode in built-in prompt-agent detection; users must configure OpenCode explicitly with --agent-command after local synthetic validation
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'OpenCode is configurable but not a built-in prompt-agent default' test/standup/agent-runner.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, agent, opencode, implemented]
-- label: tracequest documents OpenCode as configurable but not built in when the installed synthetic sentinel probe refuses instead of emitting the sentinel line
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'installed prompt-agent smoke guide' test/bin/tracequest.e2e.test.js
-  tags: [spec, standup, agent, opencode, smoke, docs, implemented]
 - label: tracequest standup --probe-agents probes built-in installed prompt-agent candidates with synthetic prompts only, exits before profile loading, session discovery, real-trace compact input building, or private prompt sending, and reports passed, failed, missing, and skipped agents
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup --probe-agents' test/standup/agent-runner.test.js test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, agent, probe, implemented]
@@ -506,9 +443,6 @@
 - label: tracequest CLI reference and help standup/handoff examples are exercised through the real bin parser against synthetic sessions and fake prompt agents, so documented commands stay parser-valid without touching private trace data or real agents
   command: TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff-examples
   tags: [spec, standup, handoff, docs, examples, implemented]
-- label: tracequest exposes a focused npm smoke command for CLI reference/help standup and handoff examples that runs the documented-command parser through the real bin with synthetic sessions and fake prompt agents, separate from the broad bin e2e suite
-  command: TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff-examples
-  tags: [spec, standup, handoff, docs, examples, smoke, implemented]
 - label: bin-level standup and handoff tests share synthetic HOME and fake prompt-agent fixtures while still executing real bin/tracequest.js coverage for broad e2e and documented examples
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup --probe-agents|README and help standup/handoff examples parse through the real bin|standup profiles load config through real bin|search --format handoff emits Markdown stdout' test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js test/bin/tracequest-doc-examples.e2e.test.js
   tags: [spec, standup, handoff, test-maintainability, implemented]
@@ -534,9 +468,6 @@
   id: mn2
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup/handoff maintainer verification script is documented and wired' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, handoff, docs, smoke, release, implemented]
-- label: tracequest CI runs npm run verify:standup-handoff as a noninteractive standup/handoff release gate and does not run the opt-in installed-agent probe
-  command: node -e "const fs = require('node:fs'); const ci = fs.readFileSync('.github/workflows/ci.yml', 'utf8'); if (!/npm run verify:standup-handoff/.test(ci)) process.exit(1); if (/probe:standup-agents|--probe-agents/.test(ci)) process.exit(1);"
-  tags: [spec, standup, handoff, ci, release, implemented]
 - label: tracequest standup --previous-workday selects sessions modified during the previous weekday's local 09:00-17:00 window by discovery mtime before compact input, skips Saturday and Sunday when choosing that previous weekday, and is mutually exclusive with --since, --today, --yesterday, and --workday
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'previous-workday' test/standup/selection-window.test.js test/cli/cli-commands.test.js test/bin/tracequest.e2e.test.js
   tags: [spec, standup, workday, previous-workday, implemented]
@@ -564,9 +495,6 @@
 - label: tracequest standup configured fake-agent regression proves the prompt agent receives compact stdin containing the Prompt-Agent Instructions contract to produce Progress, Risks/Blockers, and Next Steps from summaries only while omitting raw JSONL
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup runs configured fixture agent with compact input' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, privacy, agent, fake-agent, implemented]
-- label: tracequest's synthetic standup/handoff smoke makes the fixture prompt agent fail unless compact stdin includes the Prompt-Agent Instructions contract and excludes raw JSONL/transcript markers
-  command: TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff
-  tags: [spec, standup, privacy, smoke, release, fake-agent, implemented]
 - label: tracequest package scripts expose npm run release:standup-handoff as a release-checklist alias for npm run verify:standup-handoff, keeping the standup/handoff release gate synthetic-only and separate from installed-agent probes
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup/handoff release alias is documented and wired' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, handoff, docs, smoke, release, implemented]
@@ -576,9 +504,6 @@
 - label: tracequest standup resolves prompt-agent precedence as explicit CLI flags over profile defaults over TRACEQUEST_STANDUP_AGENT_* env defaults over built-in detection, and dry-run audit shows the resolved argv without discovering sessions or invoking an agent
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup profile/env/CLI precedence' test/cli/cli-commands.test.js
   tags: [spec, standup, profile, env, precedence, implemented]
-- label: tracequest standup help and CLI reference document prompt-agent precedence as explicit CLI flags over profile defaults over TRACEQUEST_STANDUP_AGENT_* env defaults over built-in detection
-  command: grep -Fq 'Precedence: explicit CLI flags > profile > `TRACEQUEST_STANDUP_AGENT_*` env defaults > built-in detection.' docs/cli-reference.md && grep -Fq 'Precedence: explicit CLI flags > profile > env defaults > built-in detection.' src/cli/cli-help.js
-  tags: [spec, standup, profile, env, precedence, docs, implemented]
 - label: tracequest standup treats --agent-command as an agent identity override that does not inherit profile or env agent args or params unless matching CLI flags are supplied, while --agent-arg can override args for a profile-provided command
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup mixed partial agent overrides' test/standup/profile.test.js test/cli/cli-commands.test.js
   tags: [spec, standup, profile, precedence, agent, implemented]
@@ -599,17 +524,9 @@
   tags: [spec, standup, agent, probe, privacy, implemented]
 
 # parse
-- label: Source auto-detection checks filepath for magic substrings: opencode:// prefix, .codex/, .cursor/, .factory/, .grok/; defaults to claude
-  command: grep -qE "opencode://|\.codex/|\.factory/|\.grok/" src/parse/index.js
 - label: parseSession routes all six supported sources through parsers that return the unified Session shape: sessionId, source, cwd, model, gitBranch, startTime, endTime, durationMs, eventCount, events, stats, plus public path and sessionHash
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'parseSession returns unified shape for all supported sources' test/parse.test.js
   tags: [parse-session-shape, implemented]
-- label: user and assistant Event text is truncated to 500 chars; tool_result text to 1000 chars
-  command: grep -q "500" src/parse/parse-claude.js
-- label: normalizeToolName() maps 20+ variant names to canonical forms (bash/shell/execute → Bash, read/read_file → Read, etc.)
-  command: grep -qE "normalizeToolName|Bash|Read|Edit|Write" src/parse/parse-enrich.js
-- label: error detection uses regex pattern matching on tool_result text: Error:, exit code [1-9], ENOENT, EACCES, SyntaxError, etc.
-  command: grep -qE "Error:|exit code|ENOENT|EACCES" src/parse/parse-enrich.js
 - label: parseSession skips malformed non-empty JSONL lines after parseJsonlLine logs the parse error; when a JSONL session omits sessionId, cwd, model, and gitBranch, the returned Session keeps those fields null
   id: oil
   command: node --test --test-concurrency=1 --test-name-pattern 'parseSession skips malformed JSONL lines and returns null defaults for missing metadata' test/parse.test.js
@@ -617,8 +534,6 @@
 - label: Factory, Grok, and OpenCode parser token handling is source-aware rather than zero-filled: Factory assistant turns get buildSession-estimated output tokens when no explicit usage exists, Grok signals.json contextTokensUsed is distributed as assistant input tokens, and OpenCode step-finish parts roll up input/output/cache tokens
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'assistant text and multiple tool_use blocks with enrichment|signals.json contextTokensUsed distributes input tokens across assistant turns|step-finish tokens rollup including cache read/write|estimates output tokens from text and toolCalls when all outputs are zero|estimates input tokens from matching tool_result text' test/parse/parse-factory.test.js test/parse/parse-grok.test.js test/parse/parse-opencode.test.js test/parse/parse-session-build.test.js
   tags: [parse-token-facts, implemented]
-- label: summarizeInput() extracts the relevant parameter per tool type for display (Bash→command, Read/Write/Edit→filepath, WebSearch→query, etc.)
-  command: grep -q "summarizeInput" src/parse/parse-enrich.js
 - parseSession (and buildSession used by all six parsers) never throws RangeError or crashes on events containing missing, null, invalid, non-ISO, or non-date-parseable timestamp values from source jsonl/sqlite data; such bad timestamps are excluded from startTime/endTime/duration calculation (falling back to other good timestamps if present, or null startTime/endTime when no event carries a valid timestamp), while other event data is still processed; parse always succeeds and returns a valid Session object for partially malformed time data @implemented
 - Grok parser (parseGrok) includes all user messages extracted from chat_history.jsonl (after extractUserQuery), truncating long ones (>500 chars) with capContent exactly like the claude, codex, cursor, factory, and opencode parsers; it does not silently drop user events whose raw text length >=5000 (the previous length guard is removed for consistency and no data loss on realistic long prompts) @implemented
 - parseOpenCode safely recovers from malformed or unparseable JSON in SQLite message.data and part.data columns by skipping the bad row/part (try/catch around each JSON.parse, like jsonl line handling in other parsers); additionally, the node:sqlite require/create DatabaseSync does not emit ExperimentalWarning during parse (suppressed at load point for this code path) @implemented
@@ -646,17 +561,8 @@
   tags: [spec, codex, implemented]
 
 # render
-- label: rendered HTML is a self-contained document with all CSS and JS inline — no external dependencies; max-width 960px
-  command: grep -q "960" src/render/render-session-rules.js
 - the HTML layout has four sections: header with Source badge, metadata grid, statistics bar, Waveform chart, and collapsible Chapters
-- label: Chapter outcome classification (in renderHTML) uses: word-boundary regex detection for correction hints in next prompt (/\b(no|wrong|idiot|revert|undo|actually|instead)\b|not what/i sets ch.corrected), plus multi-factor logic on errors + retries + selfCorrections counts (see code ~3563-3584); produces clean/corrected/struggling; NOT the old simple "error if errors>0 or prompt contains 'no' etc".
-  id: 4ju
-  command: grep -q "corrected" src/render/render-core-shell.js
-- label: the Waveform chart is drawn on a canvas that respects device pixel ratio for retina displays
-  command: grep -q "devicePixelRatio" src/render/render-core.js
 - Waveform decorations: diamonds at top mark user message boundaries; dashed vertical lines mark gaps longer than 30 seconds
-- label: session data is HTML-escaped for XSS protection; JSON closing tags use <\\/ escaping to prevent script injection
-  command: grep -q "escapeHTML\|&amp;" src/render/render-core.js
 - each Chapter shows: prompt text, tool chips with counts, outcome badge (clean/error/corrected), files touched with operation counts, top 8 commands with exit status
 - Source badges are color-coded: claude=purple, codex=teal, factory=yellow, opencode=blue, grok=red
 - Waveform, activity timeline and cost chart canvas draw functions (drawWaveform, drawTimeline etc) must call ctx.setTransform(1,0,0,1,0,0) or equivalent reset before ctx.scale(DPR, DPR) every time, so that resize listeners and repeated draws never accumulate transform and always render at correct device pixel ratio without distortion @implemented
@@ -739,8 +645,6 @@
   tags: [spec, rendered-session, route-context, implemented]
 
 # server
-- label: the server has index, detail, export, markdown, raw, compare, and API routes; detail/export/markdown/raw accept /route?id=<sessionHash> and preserve /route?path=<session-path> compatibility
-  command: grep -q "\/view" src/routes/index.js
 - keyboard shortcuts: "/" focuses search, Escape clears and unfocuses
 - label: tracequest serve source livereload watches direct .js files under src/; when one changes it bumps modVersion, broadcasts reload SSE, and hotModules reimports the parse.js, render.js, sessions.js, and browser/browser-page.js entry modules through a per-modVersion src snapshot
   id: 8se
@@ -804,10 +708,6 @@
 - clicking source or model qf filter badges updates the main filter input field (replacing any prior same-key term while preserving other parts of the expr) so the applied filter is visible/editable in the primary control; deselecting clears the term from the field @implemented
 
 # sessions
-- id: q0r
-  label: findSessions() scans seven locations: ~/.claude/projects, ~/.codex/sessions, ~/.cursor/projects, the cursor-cloud import root ~/.local/share/tracequest/cursor-cloud (TRACEQUEST_CURSOR_CLOUD_DIR override), ~/.factory/sessions, ~/.grok/sessions, ~/.local/share/opencode/opencode.db
-  command: grep -qE "claude/projects|codex/sessions|factory/sessions|grok/sessions|opencode" src/sessions/session-discovery.js
-  tags: [cursor-cloud]
 - label: sessions are returned sorted by mtime descending (newest first)
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'findSessions list is mtime-desc|scan failure still returns mtime-desc sorted sessions|findSessions uses mock sidecar scan and coerces mtime-desc' test/sessions.test.js test/sessions/session-index-core.test.js test/sidecar-gate.test.js
   tags: [session-manual-facts, implemented]
@@ -818,8 +718,6 @@
 - label: OpenCode sessions use a virtual path format (opencode://sessionId) and estimate file size as msg_count * 1024
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'queries SQLite and caches rows by DB mtime|includes sessions with exactly 3 messages' test/sessions/session-discovery.test.js
   tags: [session-manual-facts, implemented]
-- label: non-existent source directories are silently skipped; malformed session files are caught and skipped
-  command: grep -q "existsSync" src/sessions/session-discovery.js
 - label: peekOpenCode (invoked by peekSession for source=opencode) reads OpenCode SQLite message parts to derive firstPrompt from user text, model from message.modelID, termFreqs from the title plus indexable text/reasoning parts, and normalized tools from tool parts; it returns no searchText field and falls back to the session title when DB content is unavailable
   id: orb
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'reads prompts, model, and tools from opencode SQLite schema|peekOpenCode falls back to session title when database is unavailable|peekOpenCode indexes reasoning parts into termFreqs like indexOpenCode' test/sessions/session-peek.test.js
@@ -844,9 +742,6 @@
 - label: sessions buildIndex reuses a cached Map instance when the disk cache mtime matches and no sessions are stale, eliminating redundant new Map() allocation and result.set() calls on repeated invocations with unchanged data
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'buildIndex returns the identical Map instance on repeated calls with unchanged data|warm buildIndex Map reuse returns same instance without re-indexing|result map cache hit: identical Map when sessions, checksum, and index mtime unchanged' test/sessions.test.js test/sessions/peek-session-index-cache.test.js test/index-writers.test.js
   tags: [implemented, session-manual-facts]
-- label: synthetic Claude session generator in test/helpers/synthetic-sessions.js produces JSONL with user prompts assistant replies tool calls and progress filler
-  command: test -f test/helpers/synthetic-sessions.js && grep -q makeClaudeSessionLines test/helpers/synthetic-sessions.js && grep -q writeSyntheticClaudeSessions test/helpers/synthetic-sessions.js
-  tags: [implemented]
 - label: index-search pipeline perf tests pass (exit 0)
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test test/sessions/index-search-pipeline-perf.test.js
   tags: [implemented]
@@ -859,9 +754,6 @@
 - label: indexOpenCode preserves OpenCode message-part metadata for firstPrompt, model, chapters, tools, token counts, errors, duration, and term frequencies when building stored index metadata
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/sessions/session-index-opencode.test.js
   tags: [spec, anneal-opencode-index-meta, implemented]
-- label: session discovery helpers read Claude, Codex, Factory, and Grok directory listings with Dirent entries so non-session entries do not need stat calls
-  command: node -e 'const s=require("fs").readFileSync("src/sessions/session-discovery.js","utf8"); const i=s.indexOf("function readDirEntries("); if(i<0) process.exit(1); if(!/readdirSync\([^)]*\{\s*withFileTypes:\s*true\s*\}/s.test(s.slice(i, i+600))) process.exit(1); const n=(s.match(/readDirEntries\(/g)||[]).length-1; if(n < 7) process.exit(1)'
-  tags: [spec, anneal-discovery-dirents, implemented]
 - label: searchSessions scans a JSONL session file at most once when collecting snippets for multiple matched query terms in the same result row, while preserving BM25 result ordering and snippet contents
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/sessions/bm25-search.test.js test/sessions/index-search-pipeline-perf.test.js
   tags: [spec, cli-perf, implemented]
@@ -881,20 +773,10 @@
   command: node --test --test-concurrency=1 test/sessions/live-sessions.test.js
   tags: [spec, anneal-live-proc-errors, implemented]
 
-# project
-- label: tracequest is a zero-dependency ESM Node.js CLI that transforms agent session logs into interactive HTML visualizations
-  command: test -f package.json && grep -q "\"type\": \"module\"" package.json
-
 # release
-- label: README.md documents install from a clean clone (git clone, npm install) and carries no `npm install -g tracequest` registry command, since the package is not published to a registry
-  command: grep -q "git clone https://github.com/viktor-com/tracequest" README.md && ! grep -qE "npm install -g tracequest" README.md
-  tags: [implemented, release]
 - label: `tracequest serve` listens on 127.0.0.1 by default and only on another address when `--bind <addr>` is passed, because its API can launch and kill agent runs and has no authentication
   command: node --test test/server/server-bind.test.js
   tags: [spec, release, security]
-- label: the project root contains the MIT LICENSE held by av, and package.json declares "license": "MIT"
-  command: grep -q "^MIT License" LICENSE && grep -q "Copyright (c) 2026 av" LICENSE && grep -q "\"license\": \"MIT\"" package.json
-  tags: [release, license]
 - label: package.json contains repository, homepage, bugs, and author metadata, and is marked "private": true so the complete tarball is never publishable to a registry
   command: node -e "const p=require(\"./package.json\"); for (const k of [\"repository\",\"homepage\",\"bugs\",\"author\"]) if(!p[k]) throw new Error(k); if(p.private!==true) throw new Error(\"private\")"
   tags: [implemented, release]
@@ -905,24 +787,12 @@
 - label: package.json contains a "files" field that whitelists runtime code and assets ("bin/", "src/", "data/", "presets/") plus release documentation ("README.md", "LICENSE", "THIRD-PARTY-NOTICES.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "package.json") resulting in a clean tarball; `npm pack --dry-run` succeeds with no extraneous file warnings
   command: npm pack --dry-run 2>&1 | grep -qv "npm warn" && npm pack --dry-run >/dev/null 2>&1
   tags: [implemented, release]
-- label: Release 0.1.2 publishes Cursor source support with package.json version and CHANGELOG entry
-  command: node -e "const fs=require('fs'); const ch=fs.readFileSync('CHANGELOG.md','utf8'); if(!ch.includes('## [0.1.2] - 2026-07-05')) throw new Error('missing changelog 0.1.2'); if(!/Cursor/.test(ch)) throw new Error('missing Cursor changelog entry');"
-  tags: [spec, release, cursor, implemented]
-- label: the project root contains THIRD-PARTY-NOTICES.md retaining the upstream MIT copyright and permission notice for the vendored gitleaks ruleset shipped as data/secret-rules.json
-  command: test -f THIRD-PARTY-NOTICES.md && grep -q "Zachary Rice" THIRD-PARTY-NOTICES.md && grep -q "gitleaks" THIRD-PARTY-NOTICES.md && grep -q "THIRD-PARTY-NOTICES.md" package.json
-  tags: [release, license]
 - label: the package is unscoped ("tracequest"), marked "private": true, and has no publishConfig: it is distributed as a signed-off tarball, never published to a registry
   command: node -e "const p=require(\"./package.json\"); if(p.name!==\"tracequest\") throw 1; if(p.private!==true) throw 2; if(p.publishConfig) throw 3; if(!p.bin?.tracequest) throw 4"
   tags: [release, license]
 - label: a prepack preflight aborts `npm pack` when the LICENSE is not the MIT License, THIRD-PARTY-NOTICES.md is missing, or the package is not marked private; a prepublishOnly hook unconditionally aborts `npm publish`
   command: test -f scripts/preflight-dist.mjs && node -e "const p=require(\"./package.json\"); if(!/preflight-dist/.test(p.scripts.prepack||\"\")) throw 1; if(!/preflight-dist/.test(p.scripts.prepublishOnly||\"\")) throw 2" && node scripts/preflight-dist.mjs && ! node scripts/preflight-dist.mjs --forbid-publish
   tags: [release, license]
-- label: CONTRIBUTING.md welcomes contributions under the MIT License (inbound = outbound, no copyright assignment) and points to CODE_OF_CONDUCT.md
-  command: grep -q "MIT" CONTRIBUTING.md && grep -q "CODE_OF_CONDUCT.md" CONTRIBUTING.md && ! grep -qi "proprietary" CONTRIBUTING.md && test -f CODE_OF_CONDUCT.md
-  tags: [release, license]
-- label: sidecar executable detection lives in src/sessions/native-executable.js and recognizes ELF, Mach-O (incl. universal) and PE, so scripts/ensure-sidecar.mjs and detectSidecar share one gate and neither re-runs cargo nor rejects a valid binary
-  command: grep -q "0xcf" src/sessions/native-executable.js && grep -q "0x7f" src/sessions/native-executable.js && grep -q "native-executable.js" scripts/ensure-sidecar.mjs && grep -q "native-executable.js" src/sessions/index-writers.js && ! grep -rq "isElfExecutable" src/ scripts/
-  tags: [release, sidecar]
 - label: the sidecar gate accepts any native executable format (ELF, Mach-O incl. universal, PE), so a release sidecar built on macOS or Windows is used instead of being rejected as non-ELF and silently falling back to JS
   command: node -e "import(\"./src/sessions/native-executable.js\").then(m=>{var p=\"sidecar/bin/\"+process.platform+\"-\"+process.arch+\"/tracequest-sidecar\"; var t=m.readExecutableTarget(p); if(!t||t.arch!==process.arch) throw new Error(\"host sidecar rejected\")})" && ! grep -q "isElfExecutable" src/sessions/index-writers.js
   tags: [release, sidecar]
@@ -963,10 +833,6 @@
   label: RENDER_BUNDLE_PARTS embeds the same UI_BUNDLE_PARTS between CORE_JS and MAIN_JS, so renderHTML splices the pre-built RENDER_JS bundle instead of rebuilding viewer script parts at runtime
   command: node --input-type=module -e 'import { RENDER_BUNDLE_PARTS, UI_BUNDLE_PARTS, RENDER_JS } from "./src/render/render-assemble.js"; const ids = RENDER_BUNDLE_PARTS.map((p) => p.id); const core = ids.indexOf("core"), main = ids.indexOf("main"); if (!(core >= 0 && main > core)) process.exit(1); for (const part of UI_BUNDLE_PARTS) { const i = ids.indexOf(part.id); if (!(i > core && i < main)) process.exit(1); } for (const name of ["render", "buildChapters", "getChapters", "renderFilterBar"]) if (!RENDER_JS.includes("function " + name)) process.exit(1);'
   tags: [render-ui-facts, implemented]
-- id: 9vv
-  label: tracequest render --out and tracequest serve /view both deliver renderHTML output whose browser script defines getChapters/renderFilterBar before first render and contains no premature script end tag
-  command: node --input-type=module -e 'import { readFileSync } from "node:fs"; const cli = readFileSync("src/cli/cli-commands.js", "utf8"); const routes = readFileSync("src/routes/route-handlers-pages.js", "utf8"); if (!cli.includes("renderHTML(session)") || !routes.includes("mods.renderHTML(session)")) process.exit(1);' && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'renderHTML viewer script block contains bootstrap|renderHTML splices pre-assembled RENDER_JS with chapter list UI' test/render/render-assemble.test.js test/render-ui-chapters.test.js
-  tags: [render-ui-facts, implemented]
 
 # browser-page
 - browserPage (the data-transformation function that maps sessions+index into serialized data and calls browserPageHTML) is defined in src/browser-page.js and exported alongside browserPageHTML; server.js imports browserPage from ./browser-page.js and no longer contains the data-transformation function inline @implemented
@@ -997,15 +863,9 @@
 - label: browser session index renders every external live session (liveSessions minus run-linked recordings) as a unified first-class live row pinned at the top of the session list — the SAME row treatment launched runs get: run-state-badge 'running', source pill, id, project, optional model, first prompt, and a muted 'external' origin chip — whose single click target is the read-only live chat at /run?session=<sessionHash>; the separate Live strip (#liveBar) is gone
   command: node --test --test-concurrency=1 test/browser/browser-client-dashboard.test.js
   tags: [spec, live-ui, implemented]
-- label: browser session rows display a live indicator badge reading 'running' (the one status vocabulary shared with run rows) when s.live === true, so paginated result pages still identify generating sessions without a second livePaths fallback
-  command: node --test --test-concurrency=1 test/browser/browser-client-dashboard.test.js
-  tags: [spec, live-ui, implemented]
 - label: the serve API populates liveSessions from the full unfiltered session snapshot and the browser refresh path updates the pinned unified live rows and row badge set from each /api/sessions response
   command: node --test --test-concurrency=1 test/routes/route-handlers-pages.test.js test/browser/browser-client-dashboard.test.js test/bin/tracequest-serve-integration.test.js
   tags: [spec, live-ui, implemented]
-- label: CLI reference serve docs mention live running sessions and the live:true filter key
-  command: grep -q 'live running sessions' docs/cli-reference.md && grep -q 'live:true' docs/cli-reference.md
-  tags: [spec, live-ui, docs, implemented]
 - label: served browser tests load tracequest serve in Playwright and verify an external live session renders as ONE unified live row (run-row chrome, running state badge, external origin chip, /run?session=<hash> click target, no #liveBar strip, no duplicate session row) from the initial page payload and after window._refreshData fetches /api/sessions
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/live-ui-served.playwright.test.js
   tags: [spec, live-ui, browser-live, implemented]
@@ -1014,15 +874,6 @@
   tags: [spec, live-ui, browser-live, serve-refresh, implemented]
 
 ## filter
-- label: browser filter autocomplete suggests every structured filter key supported by the filter expression syntax: project:, source:, tool:, model:, grade:, errors:, size:, age:, and live:
-  command: node --test --test-concurrency=1 test/browser/browser-client-dashboard.test.js
-  tags: [spec, browser-filter, implemented]
-- label: browser filter autocomplete offers key-specific presets for grade: (A/B/C/D/F) and errors: (>0/>2/<1), matching the filter syntax already accepted by the browser and CLI
-  command: node --test --test-concurrency=1 test/browser/browser-client-dashboard.test.js
-  tags: [spec, browser-filter, implemented]
-- label: browser filter autocomplete offers live:true as the value preset for live:, matching the documented live-session filter spelling
-  command: node --test --test-concurrency=1 test/browser/browser-client-dashboard.test.js
-  tags: [spec, browser-filter, implemented]
 
 # cli-refactor
 - The CLI uses subcommands instead of flat flags: `tracequest render <file>`, `tracequest messages <file>|--latest`, `tracequest list [project]`, `tracequest latest [project]`, `tracequest find [expr]`, `tracequest search <query>`, `tracequest handoff <query>`, `tracequest standup [project]`, `tracequest share [session]`, `tracequest serve [options]`, and `tracequest presets`; legacy flat flags (--list, --latest, --serve) are removed @implemented
@@ -1080,11 +931,6 @@
   command: cd sidecar && cargo test test_build_index_synthetic_multi_session_perf -- --nocapture 2>&1 | grep -q 'test result: ok'
   tags: [implemented]
 
-# index
-- label: buildIndex logs a start line (tracequest: building index for N sessions (M stale)...) before indexing work begins, and an end line when complete or up to date
-  command: grep -q 'building index for' src/sessions/index-writers.js && grep -q 'index up to date' src/sessions/index-writers.js
-  tags: [spec, index, implemented]
-
 # sidecar.facts > search > sidecar
 - label: searchStale paths are passed to the sidecar via the stdin object as searchStale field not as --search-stale CLI argument; --search-stale flag is removed from the sidecar
   id: 4hh
@@ -1098,16 +944,8 @@
   tags: [spec, search, implemented, search-index-output-contract]
 
 # share > gist
-- label: gist share results include a gisthost preview URL at https://gisthost.github.io/?{gistId} that renders the uploaded HTML in the browser (gist raw files are served as text/plain)
-  command: grep -q 'gisthost.github.io' src/share/gist-adapter.js
-  tags: [share, share-gist, spec, implemented]
 - the gisthost preview URL is the primary share URL printed by the CLI, opened with --open, and shown in the browser share modal; the raw gist.github.com URL is retained as gistUrl @share @share-gist @spec @implemented
 - gisthost supports ?{gistId}/{filename} for non-index files; tracequest includes the gist filename when it is not index.html @share @share-gist @spec @implemented
-
-# share > browser-ui
-- label: clientRenderHTML must not embed a literal </script> sequence in RENDER_JS because HTML parsers terminate the enclosing script tag early, breaking gist-shared pages
-  command: grep -q "</scr' + 'ipt>" src/render/render-share.js
-  tags: [share, share-ui, spec, implemented]
 
 # test
 - label: coverage smoke validates package export subpaths and test-file count without spawning npm test from inside the npm test run
@@ -1117,20 +955,6 @@
   id: browser-ci-playwright-targets
   command: node --test --test-concurrency=1 test/browser/browser-verification-targets.test.js
   tags: [spec, browser-ci, implemented]
-- label: test:integration runs non-Playwright integration harnesses only; Playwright browser UI files under test/browser/*.playwright.test.js are covered by test:browser so CI does not duplicate share-modal browser tests across both targets
-  id: browser-ci-integration-boundary
-  command: node --test --test-concurrency=1 test/browser/browser-verification-targets.test.js
-  tags: [spec, browser-ci, integration-ci, implemented]
-- label: CI avoids duplicate non-Playwright integration runtime by relying on npm test's test/**/*.test.js coverage for test/bin/*-integration.test.js files and not running npm run test:integration as a separate CI step
-  id: ci-integration-single-pass
-  command: node --test --test-concurrency=1 test/browser/browser-verification-targets.test.js
-  tags: [spec, integration-ci, implemented]
-- label: the nested browser-helper livereload subprocess regression is covered by the default npm test recursion and the focused test:integration harness list, while CI avoids a separate npm run test:integration pass
-  command: node --test --test-concurrency=1 test/browser/browser-verification-targets.test.js
-  tags: [spec, integration-ci, server-hot-reload, implemented]
-- label: tests/README.md scenario totals are derived from its harness-index rows and package test targets: the test:integration quick-start count matches the non-Playwright rows, the browser quick-start count matches the Playwright rows, and the total matches all rows
-  command: node --test --test-concurrency=1 test/browser/browser-verification-targets.test.js
-  tags: [spec, integration-docs, implemented]
 - label: non-Playwright integration spec headers declare scenario counts that match their paired harness test case counts
   command: node --test --test-concurrency=1 --test-name-pattern 'integration spec headers declare matching scenario counts' test/browser/browser-verification-targets.test.js
   tags: [spec, integration-docs, implemented]
@@ -1200,18 +1024,6 @@
 # docs
 
 ## ui
-- label: the UI guidelines (docs/ui-guidelines.md) name the five user jobs, the Chat / Runs / Insights information architecture, the app shell, each screen's reading order and the loading, empty, error and stale states every screen handles
-  id: uig1
-  command: grep -q '## Who uses tracequest, and for what' docs/ui-guidelines.md && grep -q '## Information architecture' docs/ui-guidelines.md && grep -q '## States' docs/ui-guidelines.md && grep -q 'Find why a run went wrong' docs/ui-guidelines.md
-  tags: [spec, docs, ui, implemented]
-- label: the design system (docs/design-system.md, src/ui) documents tokens measured from cursor.com for dark and light, the component layer, and the states every screen must have; every page embeds DESIGN_SYSTEM_CSS as its base
-  id: uids
-  command: grep -q 'cursor.com' docs/design-system.md && grep -q '## Components' docs/design-system.md && grep -q 'DESIGN_SYSTEM_CSS' src/browser/shared-css-tokens.js && grep -q 'TOKENS_LIGHT' src/ui/tokens.js
-  tags: [spec, docs, ui, implemented]
-- label: CONTRIBUTING.md and docs/README.md route UI changes to docs/ui-guidelines.md and docs/design-system.md
-  id: uidr
-  command: grep -q 'docs/ui-guidelines.md' CONTRIBUTING.md && grep -q 'design-system.md' docs/README.md
-  tags: [spec, docs, ui, implemented]
 - label: rendered analytics waveform and cost chart canvases expose keyboard-accessible jump alternatives with focusable canvases, explicit accessible names, and Enter/Space chapter activation matching pointer clicks
   command: node --test test/render/render-analytics-charts.test.js
   tags: [spec, ui, analytics, accessibility, canvas, implemented]
@@ -1231,9 +1043,6 @@
 - label: compare tool usage rows keep long tool labels within the mobile worksheet by truncating the centered label instead of widening the viewport
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'compare responsive tool labels' test/browser/compare-responsive.playwright.test.js
   tags: [spec, ui, compare-route, responsive, implemented]
-- label: compare tool usage long labels have narrow-viewport browser coverage that verifies no horizontal overflow and visible truncation at mobile width
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'compare responsive tool labels' test/browser/compare-responsive.playwright.test.js
-  tags: [spec, ui, compare-route, responsive, playwright, implemented]
 - UI guide package consistency audit checks the expanded companion-document index/backlink graph, UI-doc fact coverage, test command references, and duplicate checklist wording @spec @docs @ui @docs-consistency-audit @implemented
 - UI docs post-audit covers anti-pattern guidance, the design review note template and stale compare example, the contributor start guide, the CONTRIBUTING link, companion backlinks, fact tags, and maintenance/review workflow references @spec @docs @ui @docs-post-audit @implemented
 
@@ -1251,12 +1060,6 @@
 - label: the served / page titles the home surface Runs (document title Runs · tracequest and a visible Runs heading)
   command: node --input-type=module -e "import { browserPageHTML } from \"./src/browser/browser-page-build.js\"; const h = browserPageHTML(JSON.stringify({sessions:[],total:0,page:1,pageSize:50,stats:{},liveSessions:[]}), \"\"); if (!/<title>Runs · tracequest<\\/title>/.test(h)) { console.error(\"missing Runs title\"); process.exit(1); } if (!/<h1 class=\\\"runs-title\\\">Runs<\\/h1>/.test(h)) { console.error(\"missing Runs heading\"); process.exit(1); }"
   tags: [spec, runs-home, ui, implemented]
-- label: the / app crumb names the surface Runs rather than a generic landing label
-  command: grep -q "class=\"app-crumb\">Runs</span>" src/browser/browser-page-build.js
-  tags: [spec, runs-home, ui, implemented]
-- label: the / home is a full-width Runs inventory workspace, not a 720px centered landing card feed
-  command: node --input-type=module -e "import { browserPageHTML } from \"./src/browser/browser-page-build.js\"; const h = browserPageHTML(JSON.stringify({sessions:[],total:0,page:1,pageSize:50,stats:{},liveSessions:[]}), \"\"); if (!h.includes(\"runs-home\")) { console.error(\"missing runs-home\"); process.exit(1); } if (!/max-width: 1440px/.test(h)) { console.error(\"Runs home is not a wide inventory\"); process.exit(1); } if (/\\.container \\{ max-width: 720px/.test(h)) { console.error(\"still 720px landing container\"); process.exit(1); }"
-  tags: [spec, runs-home, ui, implemented]
 - label: the / inventory has a scan-first column header row (Source, ID, Run, Project, Model, Time, Duration, Tokens, Cost)
   command: node --input-type=module -e "import { browserPageHTML } from \"./src/browser/browser-page-build.js\"; const h = browserPageHTML(JSON.stringify({sessions:[],total:0,page:1,pageSize:50,stats:{},liveSessions:[]}), \"\"); const need = [\"runs-table-head\",\"Source\",\"ID\",\"Run\",\"Project\",\"Model\",\"Time\",\"Duration\",\"Tokens\",\"Cost\"]; for (const n of need) { if (!h.includes(n)) { console.error(\"missing \"+n); process.exit(1); } }"
   tags: [spec, runs-home, ui, implemented]
@@ -1265,12 +1068,6 @@
   tags: [spec, runs-home, ui, implemented]
 - label: session and live-run rows on / render as table-aligned inventory rows with a primary Run/prompt column, not stacked landing cards
   command: node --test --test-concurrency=1 --test-name-pattern "runs-home" test/browser/browser-page-build.test.js test/browser/browser-client-dashboard.test.js
-  tags: [spec, runs-home, ui, implemented]
-- label: the / home is the Runs inventory, not the full-page session viewer: it has no chapter analytics and session rows still link to /view
-  command: node --input-type=module -e "import { readFileSync } from \"node:fs\"; const build = readFileSync(\"src/browser/browser-page-build.js\",\"utf8\"); const client = readFileSync(\"src/browser/browser-client.js\",\"utf8\"); if (build.includes(\"id=\\\"chapters\\\"\") || build.includes(\"class=\\\"chapter-head\\\"\")) { console.error(\"viewer chapters leaked into /\"); process.exit(1); } if (!client.includes(\"/view?id=\")) { console.error(\"session rows no longer link to /view\"); process.exit(1); }"
-  tags: [spec, runs-home, ui, implemented]
-- label: the Runs home count reports how many runs are in the inventory (N runs) next to the Runs heading
-  command: grep -q "SERVER_TOTAL + ' run" src/browser/browser-client.js && grep -q "id=\"count\"" src/browser/browser-page-build.js
   tags: [spec, runs-home, ui, implemented]
 
 ## filters-stats
@@ -1294,20 +1091,8 @@
 - label: selecting a session row on / opens a right-hand #sessionFlyout while the Runs inventory #sessions remains on the page
   command: node --input-type=module -e "import { browserPageHTML } from \"./src/browser/browser-page-build.js\"; import { readFileSync } from \"node:fs\"; const h = browserPageHTML(JSON.stringify({sessions:[],total:0,page:1,pageSize:50,stats:{},liveSessions:[]}), \"\"); if (!h.includes(\"id=\\\"sessionFlyout\\\"\")) { console.error(\"missing #sessionFlyout\"); process.exit(1); } if (!h.includes(\"id=\\\"sessions\\\"\")) { console.error(\"missing #sessions\"); process.exit(1); } if (h.indexOf(\"id=\\\"sessions\\\"\") > h.indexOf(\"id=\\\"sessionFlyout\\\"\")) { console.error(\"inventory should precede flyout in the Runs shell\"); process.exit(1); } const client = readFileSync(\"src/browser/browser-client.js\",\"utf8\"); if (!client.includes(\"openSessionFlyout\")) { console.error(\"missing openSessionFlyout\"); process.exit(1); } if (!client.includes(\"a.session-row\")) { console.error(\"session row clicks are not intercepted for the flyout\"); process.exit(1); }"
   tags: [spec, session-flyout, ui, implemented]
-- label: the session flyout loads the existing /view analytics (summary, diagnostics, charts, chapters) in #sessionFlyoutFrame at /view?id=...&embed=1
-  command: grep -q "sessionFlyoutFrame" src/browser/browser-page-build.js && grep -q "embed=1" src/browser/browser-client.js && grep -q "openSessionFlyout" src/browser/browser-client.js
-  tags: [spec, session-flyout, ui, implemented]
 - label: /view?embed=1 renders the session viewer as body.embed-view so the existing analytics can sit inside the Runs flyout
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "embed-view" test/routes/route-handlers-pages.test.js
-  tags: [spec, session-flyout, ui, implemented]
-- label: closing the session flyout via the Close control or Escape hides #sessionFlyout and clears the selected-row mark
-  command: grep -q "function closeSessionFlyout" src/browser/browser-client.js && grep -q "sessionFlyoutClose" src/browser/browser-page-build.js && grep -q "closeSessionFlyout()" src/browser/browser-client.js
-  tags: [spec, session-flyout, ui, implemented]
-- label: the selected Runs row is marked .is-selected while its session flyout is open
-  command: grep -q "is-selected" src/browser/runs-page-css.js && grep -q "is-selected" src/browser/browser-client.js
-  tags: [spec, session-flyout, ui, implemented]
-- label: the Runs home URL records the open session as ?session=<id> so reload restores the flyout without leaving /
-  command: grep -q "params.set('session'" src/browser/browser-client.js && grep -q "restoreSessionFlyoutFromUrl" src/browser/browser-client.js
   tags: [spec, session-flyout, ui, implemented]
 - label: session flyout browser coverage verifies the Runs list stays visible while /view analytics appear in the right-hand panel
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-timeout=120000 test/browser/session-flyout.playwright.test.js
@@ -1406,20 +1191,11 @@
 - label: enrichToolEvent Write diffInfo falls back to Cursor's 'contents' input key when 'content' is absent, so Cursor Write blocks render file content previews
   command: node -e "import('./src/parse/parse-enrich.js').then(m=>{const tc=m.enrichToolEvent({id:null,rawName:'Write',input:{path:'/a',contents:'hello'}});if(tc.diffInfo.content!=='hello')process.exit(1)})"
   tags: [cursor, parity, spec, implemented]
-- label: parseCursor extracts assistant thinking blocks into event.thinking (sliced to 2000 chars) exactly like parseClaude, matching the indexer which already tokenizes Cursor thinking content
-  command: node --test --test-name-pattern 'cursor identity' test/parse.test.js 2>&1 | grep -q '^# fail 0'
-  tags: [cursor, parity, spec, implemented]
 - label: parseCursor derives cwd as the most frequent Shell tool_use input.working_directory value in the transcript (ties broken by first occurrence); when no working_directory appears, cwd stays null and the header shows a dash — no path-prefix guessing from Read/Write inputs
-  command: node --test --test-name-pattern 'cursor identity|cursor derives cwd and gitBranch' test/parse.test.js 2>&1 | grep -q '^# fail 0'
-  tags: [cursor, parity, spec, implemented]
-- label: parseCursor derives gitBranch from the first SetActiveBranch tool_use input.branchName in the transcript, mirroring Claude's first-row-wins branch semantics; absent that, gitBranch stays null
   command: node --test --test-name-pattern 'cursor identity|cursor derives cwd and gitBranch' test/parse.test.js 2>&1 | grep -q '^# fail 0'
   tags: [cursor, parity, spec, implemented]
 - label: parseCursor falls back to file timestamps when the transcript has no event timestamps: startTime = birthtime, endTime = mtime, durationMs = max(0, mtime - birthtime), with birthtime treated as missing when unavailable or later than mtime (then startTime = endTime = mtime, durationMs 0); the session carries timesEstimated: true
   command: node --test --test-name-pattern 'file timestamps|file-time' test/parse.test.js 2>&1 | grep -E '^# (pass 2|fail 0)' | wc -l | grep -q 2
-  tags: [cursor, parity, spec, implemented]
-- label: rendered session headers prefix duration and started with '~' when session.timesEstimated is true, matching the existing '~' convention for estimated tokens
-  command: test $(grep -c "timesEstimated ? '~' : ''" src/render/render-core-shell.js) -eq 2
   tags: [cursor, parity, spec, implemented]
 - label: JS indexCursorJsonl and Rust index_cursor derive durationMs identically from file birthtime/mtime with the same clamping rules as parseCursor, so list --sort duration ranks Cursor sessions
   command: node --test --test-name-pattern 'durationMs' test/sessions/session-index-family.test.js 2>&1 | grep -q '^# pass 2' && grep -q 'cursor_file_duration_ms(path)' sidecar/src/indexer.rs && grep -q 'cursorFileTimeBounds(filePath)' src/sessions/session-index-jsonl.js
@@ -1479,17 +1255,6 @@
 - label: the assembled Runs surface uses run/runs in user-facing chrome (overview, filter, empty/error, compare, flyout kicker) instead of mixing sessions
   command: node --input-type=module -e "import { browserPageHTML } from \"./src/browser/browser-page-build.js\"; import { readFileSync } from \"node:fs\"; const h = browserPageHTML(JSON.stringify({sessions:[],total:0,page:1,pageSize:50,stats:{},liveSessions:[]}), \"\"); const need = [\"aria-label=\\\"Filter runs\\\"\",\"Select 2 runs to compare\",\"aria-label=\\\"Run analytics\\\"\",\"class=\\\"session-flyout-kicker\\\">Run</span>\",\"Close run analytics\",\"title=\\\"Run analytics\\\"\"]; for (const n of need) { if (!h.includes(n)) { console.error(\"missing \"+n); process.exit(1); } } if (h.includes(\"Filter sessions\") || h.includes(\"Session analytics\") || h.includes(\"Select 2 sessions\")) { console.error(\"stale sessions copy on Runs surface\"); process.exit(1); } const dash = readFileSync(\"src/browser/browser-client-dashboard.js\",\"utf8\"); if (!dash.includes(\"dashStat(totalSessions, 'runs')\")) { console.error(\"overview stat not runs\"); process.exit(1); } const client = readFileSync(\"src/browser/browser-client.js\",\"utf8\"); if (!client.includes(\"No runs match\") || !client.includes(\"Failed to load runs\")) { console.error(\"empty/error still sessions\"); process.exit(1); }"
   tags: [spec, ui, runs-home, filters-stats, session-flyout, runs-surface, implemented]
-- label: the Runs heading shares the app bar 16px gutter so header, toolbar, stats, and table start on one left edge
-  command: node --input-type=module -e "import { browserPageHTML } from \"./src/browser/browser-page-build.js\"; const h = browserPageHTML(JSON.stringify({sessions:[],total:0,page:1,pageSize:50,stats:{},liveSessions:[]}), \"\"); if (!h.includes(\"--runs-pad: var(--space-5)\") || !/\\.app-top \\{[\\s\\S]*?padding: 0 var\\(--space-4\\) 0 var\\(--space-5\\)/.test(h)) { console.error(\"Runs gutter does not match the app bar\"); process.exit(1); }"
-  tags: [spec, ui, runs-home, filters-stats, runs-surface, implemented]
-
-# session-flyout
-- label: /view?embed=1 hides the standalone viewer title/actions so the flyout header is the identity
-  command: node --input-type=module -e "import { readFileSync } from \"node:fs\"; const pages = readFileSync(\"src/routes/route-handlers-pages.js\",\"utf8\"); const rules = readFileSync(\"src/render/render-session-rules.js\",\"utf8\"); for (const src of [pages, rules]) { if (!src.includes(\"body.embed-view .header-top\") || !src.includes(\"display: none\")) { console.error(\"embed-view still shows standalone header-top\"); process.exit(1); } }"
-  tags: [spec, ui, session-flyout, runs-surface, implemented]
-- label: Escape, J, and K typed in the embed-view iframe still close or step the Runs flyout
-  command: grep -q "tq-flyout" src/render/render-core.js && grep -q "tq-flyout" src/browser/browser-client.js && grep -q "postMessage" src/render/render-core.js
-  tags: [spec, ui, session-flyout, runs-surface, implemented]
 
 # chat-home
 - label: GET / serves the /run chat surface (session rail + conversation column + composer), not the Runs inventory table

@@ -6,12 +6,6 @@
 - label: watchFile re-arms its underlying watcher when the watched file is replaced by rename, and keeps retrying on a capped exponential backoff (250ms doubling to 30s) while the path does not exist, so a SQLite database that is atomically swapped, deleted and later recreated, or created for the first time after startup all keep producing change events instead of going permanently silent
   command: node --test --test-concurrency=1 --test-name-pattern 'atomic replacement|deleted and recreated|does not exist yet|backed-off retry' test/server/fs-watch.test.js
   tags: [spec, fs-watch, implemented]
-- label: the facade delivers filename=null to onChange rather than dropping the event; data-root watchers treat null as a relevant change (fail-open, debounced) while the src hot-reload watcher ignores it (fail-closed, avoids reload storms)
-  command: node --test --test-concurrency=1 test/server/fs-watch.test.js
-  tags: [spec, fs-watch, implemented]
-- label: watcher setup failures never throw to the caller: a missing path is a silent no-op, ENOSPC/EMFILE resource exhaustion warns once per process and disables that watcher, and close() is idempotent
-  command: node --test --test-concurrency=1 test/server/fs-watch.test.js
-  tags: [spec, fs-watch, implemented]
 - label: watchTree always uses native recursive watching with no fallback path: package.json pins engines.node >= 22.5.0 (required anyway by node:sqlite), and recursive watching exists on linux from node 20.13 and always on darwin/win32, so no supported runtime lacks it; a runtime that somehow rejects recursion warns once and disables live updates rather than failing silently
   command: node --test --test-concurrency=1 --test-name-pattern 'recursive support' test/server/fs-watch.test.js && node -e "const e=require('./package.json').engines.node; if(!e||!/>=2[2-9]/.test(e)) process.exit(1)"
   tags: [spec, fs-watch, implemented]

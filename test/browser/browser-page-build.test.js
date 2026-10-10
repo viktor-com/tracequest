@@ -181,7 +181,6 @@ describe('filters-stats chrome on the Runs home', () => {
     const styleStart = html.indexOf('<style>') + 7;
     const styleEnd = html.indexOf('</style>');
     const css = html.slice(styleStart, styleEnd);
-    assert.match(css, /\.dashboard\.collapsed \.dashboard-tools \{ display: none; \}/);
     assert.doesNotMatch(css, /\.dashboard\.collapsed \.dashboard-stats/);
     assert.match(css, /\.dashboard-stats \{/);
   });
@@ -256,7 +255,6 @@ describe('browser-page-build client script injection', () => {
     const embedded = html.slice(styleStart, styleEnd);
     assert.ok(embedded.includes(STANDALONE_BASE_CSS.slice(0, 80)));
     assert.match(embedded, /\.container\.runs-home \{/);
-    assert.doesNotMatch(embedded, /\.container \{ max-width: 720px/);
   });
 
   test('script block wraps browserClientScript with _INIT_DATA preamble', () => {

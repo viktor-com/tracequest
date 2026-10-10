@@ -937,7 +937,7 @@ describe('browser-client-dashboard stats refresh contract', () => {
       runs: [{ id: '@1', status: 'running', sessionPath: '/tmp/a.jsonl' }],
       liveSessions: [{ path: '/tmp/a.jsonl', live: true }, { path: '/tmp/ext.jsonl', live: true }],
     });
-    assert.match(el.innerHTML, /color:var\(--ok\)">2<\/span><\/span><span class="dashboard-stat-label">running/);
+    assert.match(el.innerHTML, />2<\/span><\/span><span class="dashboard-stat-label">running/);
     assert.doesNotMatch(el.innerHTML, /dashboard-stat-label">live/);
 
     // A pending run (tmux running, no recording yet) still counts — first-token
@@ -948,7 +948,7 @@ describe('browser-client-dashboard stats refresh contract', () => {
       runs: [{ id: '@1', status: 'running', sessionPath: null }],
       liveSessions: [],
     });
-    assert.match(runOnly.innerHTML, /color:var\(--ok\)">1<\/span><\/span><span class="dashboard-stat-label">running/);
+    assert.match(runOnly.innerHTML, />1<\/span><\/span><span class="dashboard-stat-label">running/);
     assert.doesNotMatch(runOnly.innerHTML, /dashboard-stat-label">live/);
 
     const idleLaunched = runRenderDashboardVm(script, {
@@ -1107,15 +1107,15 @@ describe('browser-client-dashboard stats refresh contract', () => {
     });
     assert.equal(liveN, 1, 'same G1/G2 snapshot: liveNow() is 1');
     assert.match(script, /liveN \+ ' running'/, 'dashboard #appLive prints N running');
-    assert.match(script, /dashStat\('<span class="dash-live-n" style="color:var\(--ok\)">' \+ liveN \+ '<\/span>', 'running'\)/, 'dashboard Overview dashStat label is running');
+    assert.match(script, /dashStat\('<span class="dash-live-n"[^']*>' \+ liveN \+ '<\/span>', 'running'\)/, 'dashboard Overview dashStat label is running');
     assert.doesNotMatch(script, /liveN \+ ' live'/, 'dashboard #appLive does not print N live');
-    assert.doesNotMatch(script, /dashStat\('<span class="dash-live-n" style="color:var\(--ok\)">' \+ liveN \+ '<\/span>', 'live'\)/, 'dashboard Overview dashStat label is not live');
+    assert.doesNotMatch(script, /dashStat\('<span class="dash-live-n"[^']*>' \+ liveN \+ '<\/span>', 'live'\)/, 'dashboard Overview dashStat label is not live');
     assert.equal(appLive.hidden, false);
     assert.match(appLive.textContent, /1 running/, 'same snapshot: #appLive is 1 running');
     assert.doesNotMatch(appLive.textContent, /\d+ live\b/, 'same snapshot: #appLive does not say N live');
     assert.match(
       dashboardHtml,
-      /color:var\(--ok\)">1<\/span><\/span><span class="dashboard-stat-label">running/,
+      />1<\/span><\/span><span class="dashboard-stat-label">running/,
       'same snapshot: overview running stat is 1',
     );
     assert.doesNotMatch(dashboardHtml, /dashboard-stat-label">live/, 'same snapshot: overview does not say live');

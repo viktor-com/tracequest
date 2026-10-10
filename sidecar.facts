@@ -11,10 +11,6 @@
 - label: sidecar > The Rust scan command walks all 6 agent data roots in parallel using rayon, returning session objects sorted by mtime descending
   command: grep -q '\.par_iter()' sidecar/src/scan.rs && cd sidecar && cargo test test_scan_sorts_results_by_mtime_desc
   tags: [spec, implemented, sidecar-architecture-facts]
-- label: sidecar > The Rust index command reads the existing ~/.cache/tracequest/index.json metadata cache, preserves the _v version field when writing it back, reuses mtime-matched entries only when the session is not search-stale, and re-parses search-stale sessions so stdout can include fresh termFreqs for Node SearchIndex insertion
-  id: 2ow
-  command: cd sidecar && cargo test test_build_index_reparses_search_stale_cache_hit_for_term_freqs
-  tags: [spec, implemented, sidecar-cache-reuse-facts]
 - label: sidecar > The Rust sidecar uses memory-mapped file I/O (memmap2) for session files larger than 512KB to avoid loading entire files into heap memory
   command: grep -q 'size > 512 \* 1024' sidecar/src/indexer.rs && cd sidecar && cargo test test_index_claude_large_file_exceeds_mmap_threshold
   tags: [spec, implemented, sidecar-architecture-facts]

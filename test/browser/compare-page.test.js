@@ -268,12 +268,11 @@ describe("comparePage navigation", () => {
     assert.doesNotMatch(html, /href="[^"]*source=claude/);
   });
 
-  test("source badge uses palette color for cursor", () => {
+  test("source badge names cursor", () => {
     const html = comparePage(
       emptyCompareSession({ source: "cursor", events: [{ type: "user", text: "hi" }] }),
       emptyCompareSession({ sessionId: "bbbbbbbb-cccc-dddd-eeee-ffffffffffff", _path: "/tmp/b.jsonl" }),
     );
-    assert.match(html, /--hue:var\(--hue-cursor\)/);
     assert.match(html, />cursor</);
   });
 });

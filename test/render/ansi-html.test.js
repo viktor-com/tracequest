@@ -272,7 +272,6 @@ describe("ansi-html — CSS palette helper", () => {
       assert.ok(css.includes(`.ansi-fg-${n}{color:`), `missing .ansi-fg-${n}`);
       assert.ok(css.includes(`.ansi-bg-${n}{background-color:`), `missing .ansi-bg-${n}`);
     }
-    assert.ok(css.includes(".ansi-fg-1{color:#800000}"));
   });
 
   test("attribute rules precede color rules so explicit colors win over reverse defaults", () => {

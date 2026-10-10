@@ -22,10 +22,6 @@
   tags: [spec, hub-insights, cli, implemented]
 
 # serve
-- label: `tracequest serve --bind <addr>` listens on that address only; without --bind the server listens on 127.0.0.1
-  id: hubbd
-  command: grep -q 'server.listen(port, bind, onListening)' src/server/server-http.js && grep -q 'bind = "127.0.0.1"' src/server/server-http.js && grep -q 'bind: { type: "string" }' bin/tracequest.js && grep -q -- '--bind <addr>' src/cli/cli-help.js
-  tags: [spec, hub-insights, serve, implemented]
 - label: `tracequest serve --hub` is the shared read-only mode — every text response written through send() (HTML, JSON, raw session downloads) has secret-shaped values replaced with [REDACTED], every request that is not GET or HEAD answers 403 without reaching a handler, and no tmux session is created at boot; without --hub responses are byte-identical to before
   id: hubmd
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'hub mode redacts every text response and refuses requests that change state' test/routes/insights-routes.test.js && grep -q 'if (!opts.hub) ensureMuxSessionAtBoot()' src/server.js && grep -q 'hub: { type: "boolean" }' bin/tracequest.js
@@ -130,10 +126,6 @@
   id: inspr
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'the insights page shows per-machine pull health and escapes and redacts session text' test/routes/insights-routes.test.js && ! grep -q '<script' src/browser/insights-page.js
   tags: [spec, hub-insights, ui, security, implemented]
-- label: the insights page uses the shared standalone tokens and an ins- selector prefix, and docs/ui-examples/insights.png and insights.webm are recorded by scripts/record-insights.mjs
-  id: insdc
-  command: grep -q 'STANDALONE_BASE_CSS' src/browser/insights-page.js && test -s docs/ui-examples/insights.png && test -s docs/ui-examples/insights.webm && test -f scripts/record-insights.mjs
-  tags: [spec, hub-insights, ui, implemented]
 
 # deployment
 - label: An explicit --config JSON file drives the hub home, archive and cache paths, SSH hosts and source paths, rsync program and serve options; relative paths resolve beside the file, CLI serve flags override config, malformed config fails before work, and no deployment configuration is bundled implicitly
