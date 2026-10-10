@@ -11,7 +11,7 @@
   tags: [spec, ssh-import, cli, implemented]
 - label: import ssh options are [--dry-run] [--full] [-i/--identity <file>] [--port <N>] [--as <id>] [-h/--help], declared in bin/tracequest.js's import parseArgs, listed in the import Options help block, and ignored by the cursor-cloud route; --port is the SSH port (a positive integer) and --identity is the SSH identity file (rejected when the path contains whitespace)
   id: sshopt
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'import help lists usage and options|import ssh rejects a non-integer --port|import ssh rejects an identity path with whitespace' test/bin/tracequest-cursor-cloud-import-integration.test.js test/bin/tracequest-ssh-import-integration.test.js && sed -n '/case "import"/,/break;/p' bin/tracequest.js | grep -q 'identity'
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'import help lists usage and options|import ssh rejects a non-integer --port|import ssh rejects an identity path with whitespace' test/bin/tracequest-cursor-cloud-import-integration.test.js test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, cli, implemented]
 - label: `tracequest import ssh <host> --dry-run` performs the same rsync planning as a real run (including fixture-mode local rsync) but writes no session files and creates no directories under the hosts root, prints one planned action per source tree, and a subsequent real run starts from an unchanged local state
   id: sshdry

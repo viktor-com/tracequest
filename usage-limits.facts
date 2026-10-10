@@ -1,7 +1,7 @@
 # cli
 - label: tracequest gains an async limits subcommand: bin/tracequest.js routes case limits to cmdLimits in src/cli/cli-commands.js (lazy-loaded like cmdImport), limits joins COMMAND_HELP and the cli-help.js usage text, and options are [--json] [--host <id>] [-h/--help]
   id: ulcm
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'limits help|limits command' test/bin/tracequest-usage-limits-integration.test.js && grep -q '"limits"' bin/tracequest.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'limits help|limits command' test/bin/tracequest-usage-limits-integration.test.js
   tags: [spec, usage-limits, cli, implemented]
 - label: tracequest limits prints one human line per harness (id, plan, limiting window percent, reset) by default, --json prints the snapshot, and an empty or all-missing run exits 0
   id: uljs

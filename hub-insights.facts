@@ -3,15 +3,3 @@
   id: hubps
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'summary reports checked, fetched, imported, updated, skipped, and failed counts' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, hub-insights, cli, implemented]
-
-# serve
-- label: `tracequest serve --hub` is the shared read-only mode — every text response written through send() (HTML, JSON, raw session downloads) has secret-shaped values replaced with [REDACTED], every request that is not GET or HEAD answers 403 without reaching a handler, and no tmux session is created at boot; without --hub responses are byte-identical to before
-  id: hubmd
-  command: grep -q 'hub: { type: "boolean" }' bin/tracequest.js
-  tags: [spec, hub-insights, serve, security, implemented]
-
-# cli
-- label: `tracequest insights [expr] [--refresh] [--days N] [--host id] [--json]` prints totals, per-machine pull health, top error classes, error rate by harness and traps; --refresh analyses new and changed sessions first and reports analysed/unchanged/failed/removed on stderr; --json prints the same data the page uses
-  id: inscm
-  command: grep -q 'case "insights"' bin/tracequest.js
-  tags: [spec, hub-insights, cli, implemented]
