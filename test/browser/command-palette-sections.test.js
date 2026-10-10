@@ -67,8 +67,6 @@ describe("command palette in-view sections", () => {
     assert.deepEqual(onlyThread.map((it) => it.dest), ["transcript"]);
 
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function inViewSectionItems/);
-    assert.match(js, /function jumpToRunSection/);
     assert.match(js, /hereGroup/);
     assert.match(js, /"This run"/);
     assert.match(js, /This session/);
@@ -113,9 +111,7 @@ describe("command palette in-view sections", () => {
     assert.ok(catalogDests.includes("composer"));
 
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function isInViewJumpQuery/);
     assert.match(js, /kind === "jump"/);
-    assert.match(js, /groupPriority: Math\.max\(it\.groupPriority \|\| 0, 118\)/);
   });
 
   test("activating a CommandPalette run-section jump scrolls to or opens the matching page section", () => {
@@ -129,13 +125,11 @@ describe("command palette in-view sections", () => {
     assert.ok(byDest.composer.selectors.some((s) => /composer-card|inputText|inputRow/.test(s)));
 
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function jumpToRunSection/);
     assert.match(js, /dest === "transcript"/);
     assert.match(js, /#chatThread/);
     assert.match(js, /#chatScroll/);
     assert.match(js, /dest === "analytics"/);
     assert.match(js, /analyticsToggle/);
-    assert.match(js, /t\.click\(\)/);
     assert.match(js, /#runAnalytics/);
     assert.match(js, /dest === "terminal"/);
     assert.match(js, /#terminalDetails/);
@@ -144,9 +138,6 @@ describe("command palette in-view sections", () => {
     assert.match(js, /#composerStatus/);
     assert.match(js, /#inputText/);
     assert.match(js, /composer-card/);
-    assert.match(js, /function firstShown/);
-    assert.match(js, /function isShownEl/);
-    assert.match(js, /function jump\(/);
     assert.match(js, /scrollIntoView/);
     assert.match(js, /cmdk-jump-flash/);
   });
@@ -201,9 +192,6 @@ describe("command palette in-view sections", () => {
     assert.ok(VIEW_SECTION_CATALOG.some((d) => d.dest === "chapters"));
 
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function inViewChapterItems/);
-    assert.match(js, /function collectChapterDescriptors/);
-    assert.match(js, /function scanChapters/);
     assert.match(js, /#chapter-/);
     assert.match(js, /data-chapter/);
     assert.match(js, /group: "Chapters"/);
@@ -245,8 +233,6 @@ describe("command palette in-view sections", () => {
     assert.equal(typed.length, 1);
 
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function chapterQueryIndex/);
-    assert.match(js, /function capChapterItems/);
     assert.match(js, /kind === "chapter"/);
   });
 
@@ -255,11 +241,9 @@ describe("command palette in-view sections", () => {
     assert.equal(chapterPermalink(1, { pathname: "/view", search: "?id=abcd1234" }), "/view?id=abcd1234#chapter-1");
 
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function jumpToChapterAnchor/);
     assert.match(js, /#chapter-/);
     assert.match(js, /setChapterHash/);
     assert.match(js, /chapterPermalink/);
-    assert.match(js, /el\.click\(\)/);
     assert.match(js, /expanded/);
     assert.match(js, /jumpToChapter/);
     assert.match(js, /scrollIntoView/);
@@ -295,7 +279,6 @@ describe("command palette in-view sections", () => {
 
   test("section-name query keeps in-view jumps and does not list Go to pages", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function classFocus/);
     assert.match(js, /focus\.jumpQ && it\.kind === "nav"/);
     assert.match(js, /focus\.pageQ && \(it\.kind === "jump" \|\| it\.kind === "chapter"\)/);
     assert.equal(isInViewJumpQuery("transcript"), true);

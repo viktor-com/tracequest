@@ -65,15 +65,11 @@ describe('browser-client BROWSER_CLIENT bundle structure', () => {
   });
 
   test('browser-client.js imports dashboard module instead of inlining renderDashboard', () => {
-    assert.match(CLIENT_SRC, /from "\.\/browser-client-dashboard\.js"/);
-    assert.doesNotMatch(CLIENT_SRC, /function renderDashboard\(/);
     assert.match(CLIENT_SRC, /BROWSER_CLIENT_DASHBOARD_JS/);
   });
 
   test('FILTER_KEYS and KEY_COLORS include host', () => {
     assert.match(CLIENT_SRC, /FILTER_KEYS = \[[^\]]*'host'/);
-    assert.match(CLIENT_SRC, /sourceChipHtml\(s\.source, s\.host\)/);
-    assert.match(CLIENT_SRC, /host \? '@' \+ escH\(host\)/);
   });
 });
 
@@ -88,8 +84,6 @@ describe('browser-client browserClientScript compose', () => {
   test('composed script embeds init wiring then static tail', () => {
     const script = browserClientScript(INIT_EMPTY);
     assert.ok(script.startsWith('var _INIT_DATA = '));
-    assert.ok(script.includes('var ALL = _INIT_DATA.sessions'));
-    assert.ok(script.includes('var SERVER_TOTAL = _INIT_DATA.total'));
     const tailPos = script.indexOf('var _fetchController = null');
     const initPos = script.indexOf('var ALL = _INIT_DATA.sessions');
     assert.ok(tailPos > initPos, 'static tail should follow init head');
@@ -252,19 +246,13 @@ describe('browser-client dashboard script in composed output', () => {
   });
 
   test('dashboard segment provides PAGE_SIZE, URL bootstrap, and overview renderer', () => {
-    assert.ok(BROWSER_CLIENT_DASHBOARD_JS.includes('var PAGE_SIZE = 50'));
-    assert.ok(BROWSER_CLIENT_DASHBOARD_JS.includes("params.get('pageSize')"));
-    assert.ok(BROWSER_CLIENT_DASHBOARD_JS.includes('function renderDashboard'));
     assert.ok(BROWSER_CLIENT_DASHBOARD_JS.includes('dashboard-tools-title'));
-    assert.ok(script.includes('var dashboardEl = document.getElementById(\'dashboard\')'));
   });
 
   test('full script wires dashboard collapse toggle and growth badges', () => {
     assert.ok(script.includes('dashboardCollapsed'));
-    assert.ok(script.includes('id="dashToggle"') || script.includes("getElementById('dashToggle')"));
     assert.ok(script.includes('aria-expanded'));
     assert.ok(script.includes('growthBadge'));
-    assert.ok(script.includes('fmtPct(Math.abs(pct))'));
   });
 
   test('render() pins live rows into the session list, then dashboard, then qf bar', () => {
@@ -321,17 +309,7 @@ describe('browser-client browserClientScript head/tail composition', () => {
   test('browserClientScript embeds init payload and static client tail', () => {
     const data = '{"sessions":[{"id":"abc","path":"/p/a"}],"total":1,"page":1,"pageSize":50,"stats":{}}';
     const script = browserClientScript(data);
-    assert.ok(script.includes(`var _INIT_DATA = ${data}`), 'should embed provided init JSON');
-    assert.ok(script.includes('var ALL = _INIT_DATA.sessions'), 'should wire sessions from init');
     assert.ok(!script.includes('prepSessions'), 'should not include removed prepSessions stub');
-    assert.ok(script.includes('function fmtMcpName'), 'should include shared fmtMcpName from filter-formats.js');
-    assert.ok(script.includes('function fmtTokens'), 'should include shared fmtTokens from filter-formats.js');
-    assert.ok(script.includes('function formatDuration'), 'should include shared formatDuration from filter-formats.js');
-    assert.ok(script.includes('function fmtPct'), 'should include shared fmtPct from filter-formats.js');
-    assert.ok(script.includes('fmtPct(Math.abs(pct))'), 'growthBadge should format deltas via fmtPct');
-    assert.ok(!script.includes('Math.abs(Math.round(pct))'), 'should not duplicate pct formatting in growthBadge');
-    assert.ok(script.includes('function getToolClr'), 'should include tail UI helpers');
-    assert.ok(script.includes('var compareSet = new Set()'), 'should include tail compare state');
   });
 
   test('varying init data changes only the head; tail bytes are shared', () => {

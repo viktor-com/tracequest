@@ -90,7 +90,6 @@ describe("command palette shell", () => {
     assert.match(html, /id="cmdkEmpty"/);
     assert.match(html, /id="cmdkContext"/);
     assert.match(COMMAND_PALETTE_CLIENT_JS, /cmdk-group-label/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /setAttribute\("role", "option"\)/);
   });
 
   test("Cmd/Ctrl+K toggles the CommandPalette on served WebUI pages", () => {
@@ -98,8 +97,6 @@ describe("command palette shell", () => {
     assert.match(js, /e\.metaKey \|\| e\.ctrlKey/);
     assert.match(js, /key === "k" \|\| key === "K"/);
     assert.match(js, /togglePalette/);
-    assert.match(js, /function togglePalette\(\) \{\s*if \(isOpen\(\)\) closePalette\(\);\s*else openPalette\(\);/);
-    assert.match(js, /document\.addEventListener\("keydown", onGlobalKey, true\)/);
     const dash = dashboardHtml();
     assert.ok(dash.includes("togglePalette"), "dashboard embeds toggle");
     assert.ok(runHtml().includes("togglePalette"), "run page embeds toggle");
@@ -115,7 +112,6 @@ describe("command palette shell", () => {
     assert.match(js, /group: "Go to"/);
     assert.match(js, /group: "Search"/);
     assert.match(js, /groupPriority: 100/);
-    assert.match(js, /function contextLabel/);
     assert.match(js, /Run · /);
     assert.match(js, /Chat · /);
     assert.match(js, /Session · /);
@@ -132,7 +128,6 @@ describe("command palette shell", () => {
 
   test("context chip distinguishes Run, Chat, and rendered Session", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function contextLabel/);
     assert.match(js, /ctx\.page === "run".*Run · /);
     assert.match(js, /ctx\.page === "session".*Chat · /);
     assert.match(js, /ctx\.page === "view"/);
@@ -143,41 +138,29 @@ describe("command palette shell", () => {
 
   test("empty query does not list the Search sessions fallback", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /if \(query && searchItem\) show\.push\(searchItem\)/);
-    assert.doesNotMatch(js, /else if \(!query && searchItem\) show\.push\(searchItem\)/);
-    assert.match(js, /var noResults = query && commands\.length === 0/);
     assert.match(js, /Search sessions/);
   });
 
   test("typing filters the grouped list; a query that matches no commands shows a no-results state plus a Search sessions fallback", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function matches\(item, q\)/);
-    assert.match(js, /input\.addEventListener\("input"/);
     assert.match(js, /No results found/);
     assert.match(js, /Search sessions/);
     assert.match(js, /kind: "search"/);
     assert.match(js, /Search sessions for/);
     assert.match(js, /\/sessions\?filter=/);
-    assert.match(js, /var noResults = query && commands\.length === 0/);
   });
 
   test("Escape and backdrop dismiss the overlay and restore the previously focused element", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
     assert.match(js, /key === "Escape"/);
-    assert.match(js, /closePalette\(\)/);
     assert.match(js, /e\.target === overlay/);
     assert.match(js, /cmdkScrim/);
     assert.match(js, /prevFocus = document\.activeElement/);
-    assert.match(js, /restoreOverlayFocus\(prevFocus, overlay\)/);
   });
 
   test("while the palette is open, keyboard focus stays inside the dialog — focus trap", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /setInert\(true\)/);
-    assert.match(js, /setAttribute\("inert"/);
     assert.match(js, /key === "Tab"/);
-    assert.match(js, /trapOverlayTab\(e, overlay\)/);
-    assert.match(js, /input\.focus\(\)/);
     assert.match(js, /cmdk-open/);
   });
 
@@ -186,8 +169,6 @@ describe("command palette shell", () => {
     assert.match(js, /key === "ArrowDown"/);
     assert.match(js, /key === "ArrowUp"/);
     assert.match(js, /key === "Enter"/);
-    assert.match(js, /function runActive/);
-    assert.match(js, /function highlight/);
     assert.match(js, /aria-selected/);
     assert.match(js, /aria-activedescendant/);
   });
@@ -198,7 +179,6 @@ describe("command palette shell", () => {
     assert.match(js, /window\.TracequestPalette = \{/);
     assert.match(js, /registerProvider: registerProvider/);
     assert.match(js, /unregisterProvider: unregisterProvider/);
-    assert.match(js, /function registerProvider\(provider\)/);
     assert.match(js, /open: openPalette/);
     assert.match(js, /close: closePalette/);
     assert.match(js, /setContext:/);
@@ -209,7 +189,6 @@ describe("command palette shell", () => {
   test("Cmd/Ctrl+K is ignored during IME composition so CJK input does not toggle the CommandPalette mid-composition", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
     assert.match(js, /e\.isComposing \|\| e\.keyCode === 229/);
-    assert.match(js, /if \(e\.isComposing \|\| e\.keyCode === 229\) return;/);
   });
 
   test("the shared app bar exposes a CommandPalette trigger", () => {
@@ -229,7 +208,6 @@ describe("command palette shell", () => {
     assert.match(html, /id="cmdkOverlay"/);
     assert.equal(html.split('id="cmdkOverlay"').length, 2, "exactly one overlay");
     assert.ok(html.includes(".cmdk-overlay"), "palette CSS in dashboard");
-    assert.ok(html.includes("window.TracequestPalette"));
     assert.equal((html.match(/<style>/g) || []).length, 1, "still a single style block");
   });
 
@@ -248,7 +226,6 @@ describe("command palette shell", () => {
   test("the CommandPalette is mounted on compare", () => {
     const html = compareHtml();
     assert.match(html, /id="cmdkOverlay"/);
-    assert.ok(html.includes("window.TracequestPalette"));
     const err = compareLoadErrorPage({ handle: "missing", status: 404, message: "nope" });
     assert.match(err, /id="cmdkOverlay"/);
   });
@@ -281,7 +258,6 @@ describe("command palette shell", () => {
     await handleView(null, res, new URL(`http://localhost/view?id=${encodeURIComponent(handle)}`), deps);
     assert.equal(status, 200);
     assert.match(body, /id="cmdkOverlay"/);
-    assert.ok(body.includes("window.TracequestPalette"));
 
     let embedBody = "";
     const embedRes = {

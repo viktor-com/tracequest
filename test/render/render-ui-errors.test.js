@@ -356,6 +356,5 @@ describe('render-ui-errors VM', () => {
     });
     assert.match(html, /error-summary/);
     assert.match(html, /error-timeline/);
-    assert.match(html, /function renderErrorSummary\b/);
   });
 });

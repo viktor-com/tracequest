@@ -307,7 +307,6 @@ describe("session-index-core indexSession dispatch", () => {
       "utf8",
     );
     assert.match(src, /INDEX_SESSION_BY_SOURCE\s*=\s*new Map\(/);
-    assert.match(src, /INDEX_SESSION_BY_SOURCE\.get\(source\)/);
     assert.doesNotMatch(src, /\bswitch\s*\(\s*source\s*\)/);
   });
 

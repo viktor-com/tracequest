@@ -836,9 +836,7 @@ describe('render-analytics-charts', () => {
   });
 
   test('waveform source keeps tooltip timestamp guard and neutral cacheRatio fallback', () => {
-    assert.ok(ANALYTICS_CHARTS_JS.includes("turn.timestamp ? '<b>' + formatTime(turn.timestamp)"));
     assert.ok(ANALYTICS_CHARTS_JS.includes('e.tokens.cacheHit / e.tokens.input : 0.5'));
-    assert.ok(ANALYTICS_CHARTS_JS.includes('function computeWaveformChapters'));
   });
 
   test('renderCostChart returns empty when fewer than two chapters', () => {

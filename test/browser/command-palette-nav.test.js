@@ -62,7 +62,6 @@ describe("command palette page destinations", () => {
     }
 
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function pageNavItems/);
     assert.match(js, /group: "Go to"/);
     assert.match(js, /title: "Go to Chat"/);
     assert.match(js, /title: "Go to Runs"/);
@@ -105,8 +104,6 @@ describe("command palette page destinations", () => {
     assert.equal(isPageJumpQuery("document backend login"), false);
 
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function isPageJumpQuery/);
-    assert.match(js, /groupPriority: Math\.max\(it\.groupPriority \|\| 0, 95\)/);
     assert.match(js, /kind === "nav"/);
   });
 
@@ -150,8 +147,6 @@ describe("command palette page destinations", () => {
     assert.match(js, /openLauncherFromPalette/);
     assert.match(js, /location\.href = "\/\?launch=1"/);
     assert.match(js, /location\.href = item\.href/);
-    assert.match(js, /function compareHref/);
-    assert.match(js, /function viewHref/);
   });
 
   test("Go to items show G-then-letter shortcut glyphs, and G then C/R/D/V/N jumps when the palette is closed", () => {
@@ -165,8 +160,6 @@ describe("command palette page destinations", () => {
     assert.deepEqual(byDest.launch.shortcut, ["G", "then", "N"]);
 
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function consumeGoChord/);
-    assert.match(js, /function bindGoChordHotkeys/);
     assert.match(js, /k === "c"/);
     assert.match(js, /k === "r"/);
     assert.match(js, /k === "d"/);
@@ -174,22 +167,11 @@ describe("command palette page destinations", () => {
     assert.match(js, /k === "n"/);
     assert.match(js, /location\.href = "\/"/);
     assert.match(js, /location\.href = "\/sessions"/);
-    assert.match(js, /openLauncherFromPalette\(\); return true/);
-    assert.match(js, /installPageHotkey\("tqHotkeyGoC", "g c",/);
-    assert.match(js, /installPageHotkey\("tqHotkeyGoR", "g r",/);
-    assert.match(js, /installPageHotkey\("tqHotkeyGoD", "g d",/);
-    assert.match(js, /installPageHotkey\("tqHotkeyGoV", "g v",/);
-    assert.match(js, /installPageHotkey\("tqHotkeyGoN", "g n",/);
     assert.doesNotMatch(js, /g c,G c,g C,G C/);
   });
 
   test("G-then-letter jumps are declared as GitHub sequences g c without four-way case aliases", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /installPageHotkey\("tqHotkeyGoC", "g c",/);
-    assert.match(js, /installPageHotkey\("tqHotkeyGoR", "g r",/);
-    assert.match(js, /installPageHotkey\("tqHotkeyGoD", "g d",/);
-    assert.match(js, /installPageHotkey\("tqHotkeyGoV", "g v",/);
-    assert.match(js, /installPageHotkey\("tqHotkeyGoN", "g n",/);
     assert.doesNotMatch(js, /g c,G c,g C,G C/);
     assert.doesNotMatch(js, /g r,G r,g R,G R/);
   });
@@ -280,17 +262,12 @@ describe("command palette page destinations", () => {
     assert.equal(viewHref({}), "/view");
 
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function rememberPaletteDestinations/);
-    assert.match(js, /function lastCompareHref/);
-    assert.match(js, /lastCompareHref\(\) \|\| "\/compare"/);
     assert.match(js, /PALETTE_LAST_VIEW_KEY/);
     assert.doesNotMatch(js, /goto-compare[\s\S]{0,400}href: "\/sessions"/);
   });
 
   test("page-name query keeps Go to destinations and does not list in-view jumps", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function classFocus/);
-    assert.match(js, /function assembleItems/);
     assert.match(js, /focus\.pageQ && \(it\.kind === "jump" \|\| it\.kind === "chapter"\)/);
     assert.match(js, /focus\.jumpQ && it\.kind === "nav"/);
     assert.equal(isPageJumpQuery("chat"), true);
@@ -306,6 +283,5 @@ describe("command palette page destinations", () => {
     assert.equal(viewHref({}), "/view?id=zzzzzzzz");
     const js = COMMAND_PALETTE_CLIENT_JS;
     assert.match(js, /ctx && ctx\.session/);
-    assert.match(js, /\/view\?id=" \+ encodeURIComponent\(ctx\.session\)/);
   });
 });

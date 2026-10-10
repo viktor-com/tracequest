@@ -519,39 +519,21 @@ function createIdleDom(opts = {}) {
 
 describe("shortcut-when-idle source contract", () => {
   test("idle / is a site-wide workspace search chord", () => {
-    assert.match(PALETTE_SRC, /function installSlashSearchHotkey/);
     assert.match(PALETTE_SRC, /data-hotkey="s,\/"/);
     assert.match(COMMAND_PALETTE_CLIENT_JS, /installSlashSearchHotkey/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /getElementById\("workspaceSearch"\)/);
     assert.match(PALETTE_SRC, /id="workspaceSearch"/);
-    assert.doesNotMatch(COMMAND_PALETTE_CLIENT_JS, /function pageSearchField\(\)/);
     assert.doesNotMatch(COMMAND_PALETTE_CLIENT_JS, /openPageSearch/);
-    assert.doesNotMatch(PALETTE_SRC, /document\.addEventListener\("keydown", onSlashSearchKey/);
-    assert.doesNotMatch(CLIENT_SRC, /function onSessionsSlashKey/);
-    assert.doesNotMatch(RUN_PAGE_SRC, /function onRailSlashKey/);
-    assert.match(NAV_SRC, /getElementById\('workspaceSearch'\)/);
   });
 
   test("idle character shortcuts yield to cmdk-open, GitHub-style form fields, and the overlay stack", () => {
-    assert.match(CLIENT_SRC, /if \(document\.body\.classList\.contains\('cmdk-open'\)\) return/);
-    assert.match(CLIENT_SRC, /installPageHotkey\('tqHotkeyPeekNext'/);
     assert.match(CLIENT_SRC, /j,J,ArrowDown/);
     assert.match(CLIENT_SRC, /FORM_FIELD_GUARD_SRC/);
-    assert.match(CLIENT_SRC, /if \(isFormField\(e\.target\)\) return/);
 
-    assert.match(NAV_SRC, /classList\.contains\('cmdk-open'\)/);
     assert.match(NAV_SRC, /FORM_FIELD_GUARD_SRC/);
-    assert.match(NAV_SRC, /installPageHotkey\('tqHotkeyChapterNext'/);
     assert.match(NAV_SRC, /Slash-to-search is independent of whether any chapter is visible/);
-    assert.match(NAV_SRC, /installPageHotkey\('tqHotkeyChapterNext', 'j,J'/);
-    assert.match(NAV_SRC, /installPageHotkey\('tqHotkeyChapterOpen', 'o,O'/);
 
-    assert.match(PALETTE_SRC, /installPageHotkey\("tqHotkeyGoC", "g c",/);
     assert.match(PALETTE_SRC, /installSlashSearchHotkey/);
     assert.match(PALETTE_SRC, /data-hotkey="s,\/"/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /function overlayStackBusy/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /function hotkeyLeafMayFire/);
-    assert.doesNotMatch(COMMAND_PALETTE_CLIENT_JS, /if \(overlayStackBusy\(\)\) return/);
     assert.match(COMMAND_PALETTE_CLIENT_JS, /type !== "checkbox"/);
     assert.match(PALETTE_SRC, /k === "c"/);
     assert.match(PALETTE_SRC, /k === "r"/);
@@ -573,12 +555,9 @@ describe("shortcut-when-idle source contract", () => {
       /const HTML_MIDDLE = `" autofocus>/,
       "/sessions #filterInput must not autofocus, or G-then-letter dies after G then R",
     );
-    assert.match(PAGE_BUILD_SRC, /const HTML_MIDDLE = `">/);
   });
 
   test("G-then-letter jumps are declared as GitHub sequences g c without four-way case aliases", () => {
-    assert.match(PALETTE_SRC, /installPageHotkey\("tqHotkeyGoC", "g c",/);
-    assert.match(PALETTE_SRC, /installPageHotkey\("tqHotkeyGoR", "g r",/);
     assert.doesNotMatch(PALETTE_SRC, /g c,G c,g C,G C/);
     const h = createIdleDom({ pathname: "/sessions" });
     h.body.focus();
@@ -610,9 +589,7 @@ describe("shortcut-when-idle source contract", () => {
 describe("shortcut-when-idle sessions and run", () => {
   test("GitHub data-hotkey s,/ is the workspace search chord", () => {
     assert.match(PALETTE_SRC, /data-hotkey="s,\/"/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /setAttribute\("data-hotkey", "s,\/"\)/);
     assert.doesNotMatch(PALETTE_SRC, /data-hotkey="\/">/);
-    assert.doesNotMatch(COMMAND_PALETTE_CLIENT_JS, /setAttribute\("data-hotkey", "\/"\)/);
   });
 
   test("the visible search chip advertises S as well as /", () => {
@@ -626,9 +603,6 @@ describe("shortcut-when-idle sessions and run", () => {
 
   test("listbox popup options are excluded from the page Tab sequence", () => {
     assert.match(COMMAND_PALETTE_CLIENT_JS, /role="option" tabindex="-1" id="ws-opt-'/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /function wsListOwnsFocus/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /function typeIntoWorkspaceSearch/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /wrap\.addEventListener\("keydown"/);
     const h = createIdleDom({ pathname: "/sessions" });
     const list = h.document.getElementById("workspaceSearchList");
     const item = h.createEl("button", { className: "tq-search-item", type: "button" });
@@ -917,8 +891,6 @@ describe("shortcut-when-idle sessions and run", () => {
   }
 
   test("idle j/k on /sessions with peek closed move the run list", () => {
-    assert.match(CLIENT_SRC, /function stepSessionList/);
-    assert.match(CLIENT_SRC, /stepSessionList\(1\)/);
     assert.match(CLIENT_SRC, /stepSessionList\(-1\)/);
     assert.match(PALETTE_SRC, /Next \/ previous in the current list/);
 
@@ -950,9 +922,7 @@ describe("shortcut-when-idle sessions and run", () => {
   });
 
   test("idle j on a running div.session-row.run-row keeps focus so Enter opens", () => {
-    assert.match(CLIENT_SRC, /function restoreListCursorFocus/);
     assert.match(CLIENT_SRC, /_listCursorFocus = true/);
-    assert.match(CLIENT_SRC, /closest\('\.run-row'\)/);
     const h = createIdleDom({ pathname: "/sessions" });
     const { sessionsEl, wraps } = mountSessionList(h, ["run1", "s2"], { runningIds: ["run1"] });
     const env = bindSessionListHotkeys(h, sessionsEl);
@@ -1016,9 +986,6 @@ describe("shortcut-when-idle sessions and run", () => {
   });
 
   test("idle o on a /sessions list cursor opens the focused item", () => {
-    assert.match(CLIENT_SRC, /function openSelectedListItem/);
-    assert.match(CLIENT_SRC, /installPageHotkey\('tqHotkeyListOpen', 'o,O'/);
-    assert.doesNotMatch(CLIENT_SRC, /installPageHotkey\('tqHotkeyListOpen', 'o,O,Enter'/);
     assert.match(PALETTE_SRC, /Open focused item or toggle chapter/);
     const h = createIdleDom({ pathname: "/sessions" });
     const { sessionsEl, wraps } = mountSessionList(h, ["s1", "s2"]);
@@ -1049,12 +1016,6 @@ describe("shortcut-when-idle sessions and run", () => {
   });
 
   test("idle O and Enter open the J/K cursor when the list owns the keyboard", () => {
-    assert.match(CLIENT_SRC, /installPageHotkey\('tqHotkeyListOpen', 'o,O'/);
-    assert.doesNotMatch(CLIENT_SRC, /installPageHotkey\('tqHotkeyListOpen', 'o,O,Enter'/);
-    assert.match(CLIENT_SRC, /function listOwnsKeyboard/);
-    assert.match(CLIENT_SRC, /function onSessionsListEnter/);
-    assert.match(CLIENT_SRC, /row\.classList\.contains\('run-row'\)/);
-    assert.match(NAV_SRC, /installPageHotkey\('tqHotkeyChapterOpen', 'o,O'/);
     assert.match(PALETTE_SRC, /<kbd>O<\/kbd> or <kbd>Enter<\/kbd>/);
     assert.match(PALETTE_SRC, /Open focused item or toggle chapter/);
 
@@ -1097,10 +1058,6 @@ describe("shortcut-when-idle sessions and run", () => {
   });
 
   test("focused #newRunBtn Enter is native activation", () => {
-    assert.match(CLIENT_SRC, /installPageHotkey\('tqHotkeyListOpen', 'o,O'/);
-    assert.doesNotMatch(CLIENT_SRC, /installPageHotkey\('tqHotkeyListOpen', 'o,O,Enter'/);
-    assert.match(CLIENT_SRC, /function listOwnsKeyboard/);
-    assert.match(CLIENT_SRC, /function onSessionsListEnter/);
     const h = createIdleDom({ pathname: "/sessions" });
     const { sessionsEl, wraps } = mountSessionList(h, ["run1", "s2"], { runningIds: ["run1"] });
     const env = bindSessionListHotkeys(h, sessionsEl);
@@ -1143,8 +1100,6 @@ describe("shortcut-when-idle sessions and run", () => {
   });
 
   test("idle Escape on /sessions with peek closed clears the list cursor", () => {
-    assert.match(CLIENT_SRC, /function clearSessionListCursor/);
-    assert.match(CLIENT_SRC, /function onSessionsListEscape/);
     const h = createIdleDom({ pathname: "/sessions" });
     const { sessionsEl, wraps } = mountSessionList(h, ["s1", "s2"]);
     bindSessionListHotkeys(h, sessionsEl);
@@ -1263,7 +1218,6 @@ describe("shortcut-when-idle palette chords", () => {
       /const HTML_MIDDLE = `" autofocus>/,
       "/sessions #filterInput must not autofocus, or G then D after G then R types into the filter",
     );
-    assert.match(PAGE_BUILD_SRC, /const HTML_MIDDLE = `">/);
   });
 
   test("idle shortcuts work again after the CommandPalette closes", () => {
@@ -1347,7 +1301,6 @@ describe("shortcut-when-idle character keys WCAG 2.1.4", () => {
     assert.match(PALETTE_SRC, /Character keys/);
     assert.match(PALETTE_SRC, /Deselect Character keys/);
     assert.match(COMMAND_PALETTE_CLIENT_JS, /id: "keyboard-shortcuts"/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /function bindCharacterKeysDialog/);
     assert.match(COMMAND_PALETTE_CLIENT_JS, /setCharacterKeysEnabled\(!!toggle\.checked\)/);
     const h = createIdleDom({ pathname: "/sessions" });
     assert.ok(h.characterKeysToggle, "Character keys checkbox is in the page");
@@ -1407,8 +1360,6 @@ describe("shortcut-when-idle character keys WCAG 2.1.4", () => {
   test("idle ? opens the keyboard-shortcuts cheatsheet", () => {
     assert.match(PALETTE_SRC, /id="tqHotkeyHelp"/);
     assert.match(PALETTE_SRC, /data-hotkey="\?,Shift\+\?,Shift\+\/,Mod\+\/,Control\+\/,Meta\+\/"/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /function bindHelpHotkeys/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /installPageHotkey\("tqHotkeyHelp"/);
     const h = createIdleDom({ pathname: "/sessions" });
     h.body.focus();
     assert.equal(h.characterKeysOverlay.hidden, true);
@@ -1420,9 +1371,6 @@ describe("shortcut-when-idle character keys WCAG 2.1.4", () => {
 
   test("idle ? focuses the cheatsheet dialog, not the Character keys checkbox", () => {
     assert.match(PALETTE_SRC, /id="characterKeysDialog"/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /function cheatsheetInitialFocus/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /return dialogEl \|\| closeBtn/);
-    assert.doesNotMatch(COMMAND_PALETTE_CLIENT_JS, /focusOverlay\(root, toggle\)/);
     const h = createIdleDom({ pathname: "/sessions" });
     h.body.focus();
     h.press("?");

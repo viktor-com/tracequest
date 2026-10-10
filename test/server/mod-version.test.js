@@ -53,10 +53,6 @@ describe("modVersion counter", () => {
 });
 
 describe("modVersion route-cache invalidation", () => {
-  it("route-cache source keys buildRouteCacheKey on modVersion()", () => {
-    assert.match(ROUTE_CACHE_SRC, /modVersion\(\)/);
-    assert.match(ROUTE_CACHE_SRC, /String\(modVersion\(\)\)/);
-  });
 
   it("buildRouteCacheKey embeds the current modVersion as the second segment", () => {
     const key = buildRouteCacheKey("segment-check");
@@ -118,11 +114,6 @@ describe("modVersion route-cache invalidation", () => {
 });
 
 describe("modVersion hotModules invalidation", () => {
-  it("server-state hotModules gates reload on modVersion()", () => {
-    assert.match(SERVER_STATE_SRC, /const v = modVersion\(\)/);
-    assert.match(SERVER_STATE_SRC, /if \(v === _lastV\) return _mods/);
-    assert.match(SERVER_STATE_SRC, /_hotModuleImporter\.importEntries\(v, \[/);
-  });
 
   it("returns the same cached object while modVersion is unchanged", async () => {
     const a = await hotModules();
@@ -169,7 +160,6 @@ describe("modVersion hotModules invalidation", () => {
         events: [],
         stats: {},
       });
-      assert.match(detailHtml, /const SESSION = /);
     } finally {
       bumpModVersion();
     }

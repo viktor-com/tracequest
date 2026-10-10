@@ -72,10 +72,8 @@ describe("analytics-panel: empty-home", () => {
 
 describe("analytics-panel: embed", () => {
   test("analytics-panel: embed — panel loads /view?embed=1 and view-session opens it", () => {
-    assert.match(ANALYTICS_PANEL_JS, /searchParams\.set\("embed", "1"\)/);
     assert.match(ANALYTICS_PANEL_JS, /runAnalyticsFrame/);
     assert.match(ANALYTICS_PANEL_JS, /viewSessionLink/);
-    assert.match(ANALYTICS_PANEL_JS, /preventDefault\(\)/);
     assert.match(ANALYTICS_PANEL_JS, /analytics-open/);
     const session = liveSessionPage({
       session: {

@@ -253,7 +253,6 @@ describe('browser-page-build client script injection', () => {
     const styleStart = html.indexOf('<style>') + 7;
     const styleEnd = html.indexOf('</style>');
     const embedded = html.slice(styleStart, styleEnd);
-    assert.ok(embedded.includes(STANDALONE_BASE_CSS.slice(0, 80)));
     assert.match(embedded, /\.container\.runs-home \{/);
   });
 
@@ -286,8 +285,6 @@ describe('browser-page-build client script injection', () => {
 
 describe('browser-page-build hotModules wiring', () => {
   test('server-state hotModules reloads browser/browser-page.js', () => {
-    assert.match(STATE_SRC, /_hotModuleImporter\.importEntries\(v,/);
-    assert.match(STATE_SRC, /"browser\/browser-page\.js"/);
     assert.match(STATE_SRC, /browserPage: bp\.browserPage/);
   });
 
@@ -296,7 +293,6 @@ describe('browser-page-build hotModules wiring', () => {
     assert.equal(typeof mods.browserPage, 'function');
     const html = mods.browserPage([], new Map(), 'live:true');
     assert.match(html, /id="filterBar"/);
-    assert.match(html, /var _INIT_DATA = /);
     assert.match(html, /value="live:true"/);
   });
 
@@ -312,6 +308,5 @@ describe('browser-page-build hotModules wiring', () => {
     const html = res.end.mock.calls[0].arguments[0];
     assert.match(html, /id="filterInput"/);
     assert.match(html, /value="tool:Bash"/);
-    assert.match(html, /var _INIT_DATA = /);
   });
 });

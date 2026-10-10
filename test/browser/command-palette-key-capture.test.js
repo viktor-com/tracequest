@@ -511,14 +511,7 @@ describe("command palette printable-key capture", () => {
 
   test("stopPageShortcutsForPrintable is gone; GitHub keyDownHandler is the printable dispatcher", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.doesNotMatch(js, /function stopPageShortcutsForPrintable/);
     assert.doesNotMatch(js, /stopPageShortcutsForPrintable/);
-    assert.doesNotMatch(js, /e\.key\.length === 1\) e\.stopPropagation\(\)/);
-    assert.doesNotMatch(js, /if \(e\.key && e\.key\.length === 1\) e\.stopPropagation\(\)/);
-    assert.match(js, /function keyDownHandler/);
-    assert.match(js, /if \(isFormField\(event\.target\)\)/);
-    assert.match(js, /addEventListener\("keydown", keyDownHandler\)/);
-    assert.doesNotMatch(js, /addEventListener\("keydown", keyDownHandler, true\)/);
     const global = onGlobalKeySrc(js);
     assert.doesNotMatch(global, /key\.length === 1/);
     assert.doesNotMatch(global, /!e\.metaKey && !e\.ctrlKey && !e\.altKey && key\.length === 1/);

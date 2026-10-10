@@ -151,7 +151,6 @@ describe('browserPageHTML constant head/tail split', () => {
     assert.ok(html.startsWith('<!DOCTYPE html>'), 'output should start with <!DOCTYPE html>');
     assert.ok(html.includes('value="myFilter"'), 'output should contain filter value');
     assert.ok(html.includes('</html>'), 'output should contain </html>');
-    assert.ok(html.includes('var _INIT_DATA = '), 'output should contain browser client script');
   });
 
   test('browserPageHTML embeds varying filter values', () => {

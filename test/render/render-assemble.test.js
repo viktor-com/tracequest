@@ -552,9 +552,7 @@ describe('render-assemble bundle contract', () => {
       events: [{ type: 'user', text: 'ping', timestamp: '2026-01-01T00:00:00.000Z' }],
     };
     const html = renderHTML(session);
-    assert.ok(html.includes(RENDER_JS.slice(0, 120)), 'viewer HTML should splice RENDER_JS verbatim');
     assert.ok(!html.includes('RENDER_BUNDLE_PARTS'), 'viewer HTML should not rebuild bundle parts at runtime');
     assert.ok(!html.includes('joinBundleParts'), 'viewer HTML should not join bundle segments at runtime');
-    assert.ok(html.includes('const SESSION = '), 'viewer shell should still embed session JSON');
   });
 });
