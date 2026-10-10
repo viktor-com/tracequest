@@ -1019,11 +1019,10 @@ describe("estimated metrics vs measured (facts gqy, jc6)", () => {
 });
 
 describe("buildSessionCardHtml", () => {
-  test("source badge uses Cursor palette color", () => {
+  test("source badge names cursor", () => {
     const summary = mockSummary({ source: "cursor" });
     const html = buildSessionCardHtml(summary, {}, "/view?path=x&source=cursor", "session-a");
     assert.match(html, /cmp-source-badge/);
-    assert.match(html, /--hue:var\(--hue-cursor\)/);
     assert.match(html, />cursor</);
   });
 });

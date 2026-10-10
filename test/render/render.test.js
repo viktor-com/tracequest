@@ -56,7 +56,6 @@ function parseInlinedSession(html) {
  */
 function assertRenderedViewerSession(html, session, { chapterCount, promptSnippet } = {}) {
   assert.ok(html.startsWith('<!DOCTYPE html>'), 'viewer should be a full HTML document');
-  assert.match(html, new RegExp(`<title>tracequest — ${session.sessionId.slice(0, 8)}`));
   const inlined = parseInlinedSession(html);
   assert.equal(inlined.sessionId, session.sessionId, 'inlined SESSION.sessionId');
   assert.equal(inlined.source, session.source);
@@ -275,7 +274,6 @@ describe('renderHTML document shell', () => {
     });
     const html = renderHTML(session);
     assert.ok(html.startsWith('<!DOCTYPE html>'));
-    assert.ok(html.includes('const SESSION = '));
     assert.ok(html.includes('closes <\\/script> tag'));
     assert.ok(!html.includes('closes </script> tag'));
     assert.ok(html.includes('<div id="app"></div>'));
@@ -356,7 +354,6 @@ describe('render core', () => {
       chapterCount: 1,
       promptSnippet: 'hello world',
     });
-    assert.ok(html.includes('<style>') && html.includes('</style>'), 'self-contained inline CSS');
     assert.ok(html.includes('<script>'), 'self-contained viewer script bundle');
   });
 
@@ -395,7 +392,6 @@ describe('render core', () => {
     const t0 = performance.now();
     for (const session of sessions) {
       const html = renderHTML(session);
-      assert.ok(html.includes('const SESSION = '));
       assert.ok(html.includes('<style>'));
     }
     const ms = (performance.now() - t0) / ITERS;

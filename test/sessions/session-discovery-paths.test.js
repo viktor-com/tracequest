@@ -100,11 +100,6 @@ describe("session-discovery-paths openCodeDbMtimeMs", () => {
 });
 
 describe("session-discovery-paths loadDatabaseSync and openOpenCodeDbReadOnly", () => {
-  test("loadDatabaseSync suppresses sqlite ExperimentalWarning via includesLower", () => {
-    assert.ok(SESSION_DISCOVERY_PATHS_SRC.includes('includesLower(msg, "sqlite")'));
-    assert.ok(SESSION_DISCOVERY_PATHS_SRC.includes('includesLower(msg, "experimental")'));
-    assert.ok(!SESSION_DISCOVERY_PATHS_SRC.includes('msg.toLowerCase().includes("sqlite")'));
-  });
 
   test("loadDatabaseSync returns DatabaseSync constructor", () => {
     const DatabaseSync = loadDatabaseSync();

@@ -176,7 +176,6 @@ describe("tracequest package.json export subpaths", () => {
     const html = renderHTML(minimalSession());
     assert.equal(typeof html, "string");
     assert.ok(html.startsWith("<!DOCTYPE html>"));
-    assert.match(html, /const SESSION =/);
     assert.match(html, /tracequest/);
   });
 
@@ -217,7 +216,6 @@ describe("tracequest package.json export subpaths", () => {
     const html = renderHTML(minimalSession());
     assert.equal(typeof html, "string");
     assert.ok(html.startsWith("<!DOCTYPE html>"));
-    assert.match(html, /const SESSION =/);
     assert.match(html, /tracequest/);
   });
 

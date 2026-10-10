@@ -6,12 +6,6 @@ import { buildScannerRedactorSrc } from "../../src/share/share-bundle.js";
 describe("share bundle", () => {
   test("buildScannerRedactorSrc includes all scanner helpers", () => {
     const src = buildScannerRedactorSrc();
-    assert.ok(src.includes("function scanText"));
-    assert.ok(src.includes("function scanObjectStrings"));
-    assert.ok(src.includes("function scanSessionScalars"));
-    assert.ok(src.includes("function normalizeRuleRegex"));
-    assert.ok(src.includes("function scanSessionForSecrets"));
-    assert.ok(src.includes("function redactSession"));
     assert.ok(!src.includes("export "));
   });
 

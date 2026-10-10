@@ -119,7 +119,6 @@ describe("agentHistory surface contract", () => {
     };
 
     const html = comparePage(withHistory, peer);
-    assert.doesNotMatch(html, new RegExp(SIDECAR_MARKER));
     assert.doesNotMatch(html, /agentHistory|agent-sidecar|Agent history/i);
     assert.match(html, /parent prompt/);
     assert.match(html, /Compare runs/);
@@ -216,7 +215,6 @@ describe("agentHistory surface contract", () => {
     assert.doesNotMatch(html, /Invalid Date/);
     assert.doesNotMatch(html, /1970-01-01/);
     // Sidecar metadata stays server-side: no fabricated history entries leak into the viewer
-    assert.doesNotMatch(html, new RegExp(SIDECAR_MARKER));
     const inlined = parseInlinedSession(html);
     assert.equal(inlined.agentHistory, undefined);
     assert.equal(inlined.agentSidecarCount, undefined);

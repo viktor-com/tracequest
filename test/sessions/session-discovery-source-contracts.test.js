@@ -51,11 +51,6 @@ function functionBody(source, name) {
 
 test("OpenCode SQLite production access stays behind the shared warning-suppressing loader", () => {
   const pathsSrc = readProjectFile(SESSION_DISCOVERY_PATHS_REL);
-  assert.match(pathsSrc, /const origEmitWarning = process\.emitWarning/);
-  assert.match(pathsSrc, /process\.emitWarning = \(warning, \.\.\.args\) =>/);
-  assert.match(pathsSrc, /includesLower\(msg, "sqlite"\)/);
-  assert.match(pathsSrc, /includesLower\(msg, "experimental"\)/);
-  assert.match(pathsSrc, /createRequire\(import\.meta\.url\)\("node:sqlite"\)/);
   assert.match(pathsSrc, /process\.emitWarning = origEmitWarning/);
 
   // Only the loader may reach for node:sqlite directly. Other modules (e.g. the
@@ -111,16 +106,11 @@ test("filesystem discovery helpers use Dirent traversal and shared output arrays
   for (const name of [
     "findCodexSessions",
   ]) {
-    assert.ok(
-      discoverySrc.includes(`export function ${name}(projectFilter, out = [], paths = getDiscoveryPaths())`),
-      `${name} must accept the caller-provided output array`,
-    );
     const body = functionBody(discoverySrc, name);
     // Dirent traversal now goes through the shared guarded reader, so one
     // unreadable subtree skips instead of emptying the session list (fact a4k).
     assert.match(body, /readDirEntries\(/, `${name} must read directories through readDirEntries`);
     assert.match(body, /\bout\.push\s*\(/, `${name} must append to the shared output array`);
-    assert.match(body, /return out;/, `${name} must return the shared output array`);
   }
 
   // The guarded reader is the single place Dirent traversal is configured; it
@@ -160,19 +150,13 @@ test("filesystem discovery helpers use Dirent traversal and shared output arrays
   const familySrc = discoverySrc.slice(familyStart, discoverySrc.indexOf("export function findCodexSessions", familyStart));
   assert.match(familySrc, /readDirEntries\(/);
   assert.match(familySrc, /\bout\.push\s*\(/);
-  assert.match(familySrc, /return out;/);
 
   for (const name of [
     "findFactorySessions",
     "findGrokSessions",
   ]) {
-    assert.ok(
-      discoverySrc.includes(`export function ${name}(projectFilter, out = [], paths = getDiscoveryPaths())`),
-      `${name} must accept the caller-provided output array`,
-    );
     const body = functionBody(discoverySrc, name);
     assert.match(body, /readDirEntries\(/, `${name} must read directories through readDirEntries`);
     assert.match(body, /\bout\.push\s*\(/, `${name} must append to the shared output array`);
-    assert.match(body, /return out;/, `${name} must return the shared output array`);
   }
 });

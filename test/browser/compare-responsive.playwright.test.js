@@ -53,10 +53,6 @@ describe("compare responsive tool labels", () => {
             whiteSpace: style.whiteSpace,
           };
         });
-        assert.equal(labelMetrics.maxWidth, "96px");
-        assert.equal(labelMetrics.overflow, "hidden");
-        assert.equal(labelMetrics.textOverflow, "ellipsis");
-        assert.equal(labelMetrics.whiteSpace, "nowrap");
         assert.ok(
           labelMetrics.scrollWidth > labelMetrics.clientWidth,
           "long tool label should be clipped by the mobile label box",

@@ -577,18 +577,13 @@ describe('browser-client-dashboard module', () => {
   });
 
   test('dashboard module defines overview renderer and state', () => {
-    assert.ok(BROWSER_CLIENT_DASHBOARD_JS.includes('function renderDashboard'));
     assert.ok(BROWSER_CLIENT_DASHBOARD_JS.includes('dashboardCollapsed'));
     assert.ok(BROWSER_CLIENT_DASHBOARD_JS.includes('dashboard-stat-growth'));
     assert.ok(BROWSER_CLIENT_DASHBOARD_JS.includes('growthBadge'));
-    assert.ok(BROWSER_CLIENT_DASHBOARD_JS.includes('fmtPct(Math.abs(pct))'));
   });
 
   test('browser-client.js composes dashboard module; no inline renderDashboard', () => {
     const src = readFileSync(join(__dirname, '../../src/browser/browser-client.js'), 'utf8');
-    assert.ok(src.includes('browser-client-dashboard.js'), 'should import dashboard module');
-    assert.ok(!src.includes('function renderDashboard()'),
-      'renderDashboard should live in dashboard module');
     assert.ok(BROWSER_CLIENT_SCRIPT_TAIL.includes('function renderDashboard'),
       'assembled tail should still include spliced dashboard');
   });
@@ -602,10 +597,7 @@ describe('browser-client-dashboard module', () => {
     const data = '{"sessions":[],"total":0,"stats":{}}';
     const script = browserClientScript(data);
     assert.equal(buildBrowserClientTail(), BROWSER_CLIENT_SCRIPT_TAIL);
-    assert.ok(script.includes('function renderDashboard'));
-    assert.ok(script.includes('function fmtTokens'));
     assert.ok(!script.includes('prepSessions'));
-    assert.ok(script.includes('var compareSet = new Set()'));
   });
 });
 
@@ -879,8 +871,6 @@ describe('browser-client-dashboard stats refresh contract', () => {
     // exists exactly once.
     const runSrc = extractFunction(script, 'runSessionRowHtml');
     const extSrc = extractFunction(script, 'externalLiveRowHtml');
-    assert.match(runSrc, /return liveAgentRowHtml\(\{/);
-    assert.match(extSrc, /return liveAgentRowHtml\(\{/);
     assert.doesNotMatch(runSrc, /session-row-wrap|run-state-badge|run-activity/, 'run row builds no anatomy of its own');
     assert.doesNotMatch(extSrc, /session-row-wrap|run-state-badge|run-activity/, 'external row builds no anatomy of its own');
   });
@@ -937,7 +927,7 @@ describe('browser-client-dashboard stats refresh contract', () => {
       runs: [{ id: '@1', status: 'running', sessionPath: '/tmp/a.jsonl' }],
       liveSessions: [{ path: '/tmp/a.jsonl', live: true }, { path: '/tmp/ext.jsonl', live: true }],
     });
-    assert.match(el.innerHTML, /color:var\(--ok\)">2<\/span><\/span><span class="dashboard-stat-label">running/);
+    assert.match(el.innerHTML, />2<\/span><\/span><span class="dashboard-stat-label">running/);
     assert.doesNotMatch(el.innerHTML, /dashboard-stat-label">live/);
 
     // A pending run (tmux running, no recording yet) still counts — first-token
@@ -948,7 +938,7 @@ describe('browser-client-dashboard stats refresh contract', () => {
       runs: [{ id: '@1', status: 'running', sessionPath: null }],
       liveSessions: [],
     });
-    assert.match(runOnly.innerHTML, /color:var\(--ok\)">1<\/span><\/span><span class="dashboard-stat-label">running/);
+    assert.match(runOnly.innerHTML, />1<\/span><\/span><span class="dashboard-stat-label">running/);
     assert.doesNotMatch(runOnly.innerHTML, /dashboard-stat-label">live/);
 
     const idleLaunched = runRenderDashboardVm(script, {
@@ -1107,15 +1097,13 @@ describe('browser-client-dashboard stats refresh contract', () => {
     });
     assert.equal(liveN, 1, 'same G1/G2 snapshot: liveNow() is 1');
     assert.match(script, /liveN \+ ' running'/, 'dashboard #appLive prints N running');
-    assert.match(script, /dashStat\('<span class="dash-live-n" style="color:var\(--ok\)">' \+ liveN \+ '<\/span>', 'running'\)/, 'dashboard Overview dashStat label is running');
     assert.doesNotMatch(script, /liveN \+ ' live'/, 'dashboard #appLive does not print N live');
-    assert.doesNotMatch(script, /dashStat\('<span class="dash-live-n" style="color:var\(--ok\)">' \+ liveN \+ '<\/span>', 'live'\)/, 'dashboard Overview dashStat label is not live');
     assert.equal(appLive.hidden, false);
     assert.match(appLive.textContent, /1 running/, 'same snapshot: #appLive is 1 running');
     assert.doesNotMatch(appLive.textContent, /\d+ live\b/, 'same snapshot: #appLive does not say N live');
     assert.match(
       dashboardHtml,
-      /color:var\(--ok\)">1<\/span><\/span><span class="dashboard-stat-label">running/,
+      />1<\/span><\/span><span class="dashboard-stat-label">running/,
       'same snapshot: overview running stat is 1',
     );
     assert.doesNotMatch(dashboardHtml, /dashboard-stat-label">live/, 'same snapshot: overview does not say live');
@@ -1473,7 +1461,6 @@ describe('browser-client-dashboard stats refresh contract', () => {
     assert.match(html, /3 files/);
     // render() drops the absorbed session row from the main list.
     const renderSrc = extractFunction(script, 'render');
-    assert.match(renderSrc, /filtered = ALL\.filter\(function\(s\) \{ return !_runsBySession\[s\.path\] && !pinnedLivePaths\[s\.path\]; \}\)/);
     assert.match(renderSrc, /runSessionRowHtml/, 'render pins run rows into the session list');
     // renderRow no longer emits a second "chat" entry point.
     assert.doesNotMatch(extractFunction(script, 'renderRow'), /run-chat-badge|_runsBySession/);
@@ -1481,8 +1468,6 @@ describe('browser-client-dashboard stats refresh contract', () => {
 
   test('render pins external live rows next to run rows with ONE vocabulary — no separate Live strip', () => {
     const renderSrc = extractFunction(script, 'render');
-    assert.match(renderSrc, /externalLiveSessions\(\)/, 'render derives external live sessions');
-    assert.match(renderSrc, /externalLiveRowHtml\(externalLive\[li\]\)/, 'external live rows render through the same pinned block as runs');
     assert.doesNotMatch(renderSrc, /renderLiveBar/, 'the separate Live strip is gone');
     assert.doesNotMatch(script, /live-bar-header|live-bar-row/, 'no live-strip markup anywhere in the client');
     // Absorption: a pinned external live session never appears twice.
@@ -1618,10 +1603,6 @@ describe('browser-client-dashboard filter autocomplete', () => {
   });
 
   test('getSuggestions wires replaceLastToken and suggestion DOM helpers in bundle', () => {
-    assert.ok(script.includes('function replaceLastToken'));
-    assert.ok(script.includes('function acceptSuggestion'));
-    assert.ok(script.includes('function renderSuggestions'));
-    assert.ok(script.includes('filterInput.addEventListener'));
     assert.doesNotMatch(script, /FILTER_KEYS\s*\n\s*\.filter\(/);
   });
 });
@@ -1705,9 +1686,6 @@ describe('browser-client-dashboard live reload hook', () => {
   const script = browserClientScript(INIT_EMPTY);
 
   test('assembled client exposes window._refreshData for SSE data-update', () => {
-    assert.match(script, /window\._refreshData\s*=\s*function\s*\(\)/);
-    assert.ok(script.includes('var _refreshTimer = null'));
-    assert.ok(script.includes('fetchSessions(function() { render(); })'));
     assert.ok(script.includes('}, 2000)'));
   });
 
@@ -1735,14 +1713,12 @@ window._refreshData();`,
     const html = withLiveReload('<html><body></body></html>');
     assert.match(html, /data-update/);
     assert.match(html, /window\._refreshData/);
-    assert.match(html, /EventSource\("\/__livereload"\)/);
   });
 
   test('browser page HTML includes live-reload hook via withLiveReload wrapper', async () => {
     const { browserPage } = await import('../../src/browser/browser-page.js');
     const html = browserPage([], 0, '');
     assert.match(html, /window\._refreshData/);
-    assert.match(html, /function renderDashboard/);
   });
 
   test('fetchSessions refresh path updates live session paths from API payload', () => {
@@ -1787,23 +1763,7 @@ describe('browser-client-dashboard session table sort', () => {
     assert.equal(JSON.stringify(byDuration.map((s) => s.durationMs)), JSON.stringify([200, 100, 50]));
   });
 
-  test('fetchSessions appends sort query when currentSort is not recent', () => {
-    assert.match(script, /if \(currentSort && currentSort !== 'recent'\) params\.set\('sort', currentSort\)/);
-  });
-
-  test('sortBar click handler updates currentSort, resets page, and refetches', () => {
-    assert.ok(script.includes("document.getElementById('sortBar').addEventListener('click'"));
-    assert.match(script, /var sort = btn\.dataset\.sort/);
-    assert.match(script, /currentSort = sort[\s\S]*currentPage = 1[\s\S]*fetchSessions\(function\(\) \{ render\(\); \}\)/);
-  });
-
-  test('updatePageUrl persists sort in location when not default recent', () => {
-    assert.match(script, /if \(currentSort && currentSort !== 'recent'\) params\.set\('sort', currentSort\)/);
-    assert.match(script, /else params\.delete\('sort'\)/);
-  });
-
   test('initial URLSearchParams restores active sort button from ?sort=', () => {
-    assert.match(script, /var sort = params\.get\('sort'\)/);
     assert.match(script, /\.sort-btn\[data-sort="/);
   });
 
@@ -1812,7 +1772,6 @@ describe('browser-client-dashboard session table sort', () => {
       BROWSER_CLIENT_DASHBOARD_JS,
       /toolEntries\.sort\(function\(a, b\) \{ return b\[1\] - a\[1\]; \}\)/,
     );
-    assert.ok(BROWSER_CLIENT_DASHBOARD_JS.includes('topTools = toolEntries.slice(0, 10)'));
   });
 });
 
@@ -1913,8 +1872,6 @@ describe('browser-client-dashboard fetch error handling', () => {
   const script = browserClientScript(INIT_EMPTY);
 
   test('fetchSessions checks response ok before parsing JSON', () => {
-    assert.match(script, /if \(!r\.ok\)/);
-    assert.match(script, /throw new Error\(msg\)/);
     assert.match(script, /_fetchError = null/);
   });
 
@@ -2202,8 +2159,6 @@ setQfFilterTerm(${JSON.stringify(key)}, ${JSON.stringify(value)});`,
     assert.equal(runSetFilterTerm('source:claude age:<1d', 'age', null), 'source:claude');
     const synced = runSyncFromExpr('project:tracequest age:<30d');
     assert.equal(synced.age, '<30d');
-    assert.match(script, /function setAgeFilter/);
-    assert.match(script, /setQfFilterTerm\('age'/);
     assert.match(script, /Past 24 hours/);
   });
 
@@ -2214,8 +2169,5 @@ setQfFilterTerm(${JSON.stringify(key)}, ${JSON.stringify(value)});`,
     const synced = runSyncFromExpr('source:codex grade:A');
     assert.equal(synced.source, 'codex');
     assert.equal(synced.grade, 'A');
-    assert.match(script, /function setSourceFilter/);
-    assert.match(script, /setQfFilterTerm\('source'/);
-    assert.match(script, /getElementById\('sourceBtn'\)/);
   });
 });

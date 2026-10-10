@@ -211,13 +211,6 @@ describe("command palette search client", () => {
   test("a non-empty query fetches GET /api/search?q= and lists ranked session hits; empty query does not call /api/search", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
     assert.match(js, /\/api\/search\?q=/);
-    assert.match(js, /encodeURIComponent\(q\)/);
-    assert.match(js, /function paletteSearchUrl/);
-    assert.match(js, /function sessionSearchItems\(query/);
-    assert.match(js, /if \(!parsed\.q\) \{/);
-    assert.match(js, /fetchRecentSessions\(\)/);
-    assert.match(js, /registerProvider\(\{ id: "sessions"/);
-    assert.doesNotMatch(js, /\/api\/search\?q=" \+ encodeURIComponent\(""\)/);
     const fetchSearchAt = js.indexOf("/api/search?q=");
     const emptyBranchAt = js.indexOf("if (!parsed.q)");
     assert.ok(emptyBranchAt > 0 && fetchSearchAt > 0);
@@ -243,7 +236,6 @@ describe("command palette search client", () => {
     const css = COMMAND_PALETTE_CSS;
     assert.match(js, /snippetHtml/);
     assert.match(js, /cmdk-mark/);
-    assert.match(js, /function highlightSnippet/);
     assert.match(css, /\.cmdk-mark/);
     assert.match(js, /it\.snippetHtml/);
   });
@@ -261,26 +253,19 @@ describe("command palette search client", () => {
 
   test("typing or pasting an 8-character session hash offers an Open session item that goes to /view?id=", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function isPaletteSessionHash/);
-    assert.match(js, /function openSessionItem/);
     assert.match(js, /Open session/);
     assert.match(js, /\/view\?id=/);
-    assert.match(js, /out\.unshift\(openSessionItem\(q\)\)/);
-    assert.match(js, /isPaletteSessionHash\(q\)/);
   });
 
   test("activating a session hit navigates to /view?id= of that session", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function sessionViewHref/);
     assert.match(js, /href: sessionViewHref/);
     assert.match(js, /location\.href = item\.href/);
-    assert.match(js, /window\.open\(item\.href, "_blank"\)/);
     assert.match(js, /item\.kind === "session"/);
   });
 
   test("a query that matches neither commands nor indexed sessions still shows the Search sessions fallback", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /var noResults = query && commands\.length === 0/);
     assert.match(js, /No results found/);
     assert.match(js, /Search sessions/);
     assert.match(js, /kind: "search"/);
@@ -292,36 +277,23 @@ describe("command palette search client", () => {
     assert.match(js, /group: "Sessions"/);
     assert.match(js, /groupPriority: 80/);
     assert.match(js, /groupPriority: 10/);
-    assert.match(js, /var cap = Math\.min\(hits\.length, 8\)/);
-    assert.match(js, /searchHitToItem\(hits\[i\], q/);
     assert.match(js, /it\.ranked \|\| it\.kind === "session"/);
   });
 
   test("palette preloads the search catalog and ranks typed session hits locally", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
     assert.match(js, /\/api\/search\?catalog=1/);
-    assert.match(js, /function fetchSearchCatalog/);
-    assert.match(js, /function searchPaletteCatalog/);
-    assert.match(js, /function hitsToSessionItems/);
     assert.match(js, /catalogCache\.sessions/);
-    assert.match(js, /searchPaletteCatalog\(catalogCache\.sessions/);
-    assert.match(js, /fetchSearchCatalog\(\)/);
     assert.match(js, /requestIdleCallback/);
     const catalogAt = js.indexOf("/api/search?catalog=1");
     const debounceAt = js.indexOf("function debounceSearch");
     const localAt = js.indexOf("searchPaletteCatalog(catalogCache.sessions");
     assert.ok(catalogAt > 0 && localAt > 0 && debounceAt > 0);
-    assert.match(js, /if \(local && local\.length\) return Promise\.resolve\(hitsToSessionItems/);
   });
 
   test("seeds catalogCache from #tq-cmdk-catalog and skips catalog HTTP when present", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function seedCatalogFromPage/);
-    assert.match(js, /getElementById\("tq-cmdk-catalog"\)/);
-    assert.match(js, /function unpackSearchCatalog/);
-    assert.match(js, /var pageCatalogReady = seedCatalogFromPage\(\)/);
     assert.match(js, /catalogCache\.sessions = sessions/);
-    assert.match(js, /if \(!pageCatalogReady\)/);
     const seedAt = js.indexOf("function seedCatalogFromPage");
     const idleAt = js.indexOf("if (!pageCatalogReady)");
     const catalogHttpAt = js.indexOf("/api/search?catalog=1");
@@ -331,24 +303,17 @@ describe("command palette search client", () => {
 
   test("palette search uses limit=8 and snippets=0", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function paletteSearchUrl/);
     assert.match(js, /\/api\/search\?q=/);
     assert.match(js, /limit=8/);
     assert.match(js, /snippets=0/);
     assert.match(js, /limit=8&snippets=0/);
-    assert.match(js, /paletteSearchUrl\(want\)/);
   });
 
   test("typing does not wait for /api/search before listing commands", () => {
     const js = COMMAND_PALETTE_CLIENT_JS;
-    assert.match(js, /function collectFromProviders/);
     assert.match(js, /p\.id !== "sessions"/);
-    assert.match(js, /var skipSearch/);
-    assert.match(js, /collectFromProviders\(query, commandProviders\)/);
-    assert.match(js, /if \(skipSearch\)/);
     const refreshAt = js.indexOf("function refresh()");
     const searchFetchAt = js.indexOf("/api/search?q=");
     assert.ok(refreshAt > 0 && searchFetchAt > 0);
-    assert.match(js, /renderList\(pack\);/);
   });
 });

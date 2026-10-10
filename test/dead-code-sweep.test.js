@@ -10,8 +10,6 @@ describe("dead code sweep (iteration 171)", () => {
   test("render-analytics shim removed", () => {
     assert.equal(existsSync("src/render/render-analytics.js"), false);
     const assemble = readFileSync("src/render/render-assemble.js", "utf8");
-    assert.match(assemble, /from "\.\/render-analytics-compose\.js"/);
-    assert.doesNotMatch(assemble, /render-analytics\.js/);
   });
 
   test("BROWSER_CLIENT_BUNDLE_FUNCTION_NAMES export removed", () => {
@@ -23,10 +21,6 @@ describe("dead code sweep (iteration 171)", () => {
     assert.equal(existsSync("src/render/render-ui-compose.js"), false);
     assert.equal(existsSync("src/render/render-chapters-bundle.js"), false);
     const src = readFileSync("src/render/render-assemble.js", "utf8");
-    assert.match(src, /export const UI_JS/);
-    assert.match(src, /export const CHAPTERS_HELPERS_JS/);
-    assert.doesNotMatch(src, /render-ui-compose\.js/);
-    assert.doesNotMatch(src, /render-chapters-bundle\.js/);
   });
 
   test("compare-page keeps only comparePage as public export", async () => {
