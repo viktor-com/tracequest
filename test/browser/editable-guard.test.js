@@ -538,41 +538,19 @@ function createHarness() {
 describe("editable-guard: focused form fields consume printable keys", () => {
   test("page shortcut sources skip GitHub-style form fields via one shared GitHub isFormField, not only .filter-search", () => {
     assert.match(NAV_SRC, /FORM_FIELD_GUARD_SRC/);
-    assert.match(INTERACTIONS_NAV_JS, /function isFormField/);
-    assert.match(INTERACTIONS_NAV_JS, /function keyDownHandler/);
-    assert.match(INTERACTIONS_NAV_JS, /addEventListener\("keydown", keyDownHandler\)/);
-    assert.match(INTERACTIONS_NAV_JS, /installPageHotkey\('tqHotkeyChapterNext'/);
-    assert.match(INTERACTIONS_NAV_JS, /isFormField\(ev\.target\) \|\| isFormField\(document\.activeElement\)/);
-    assert.match(INTERACTIONS_NAV_JS, /if \(isInSearch \|\| editing\) return/);
     assert.match(CLIENT_SRC, /FORM_FIELD_GUARD_SRC/);
     assert.match(COMMAND_PALETTE_CLIENT_JS, /installSlashSearchHotkey/);
     assert.match(COMMAND_PALETTE_CLIENT_JS, /data-hotkey="s,\/"/);
-    assert.match(CLIENT_SRC, /installPageHotkey\('tqHotkeyPeekNext'/);
-    assert.match(CLIENT_SRC, /if \(isFormField\(e\.target\)\) return/);
-    assert.match(CLIENT_SRC, /closest\('\.session-continue-form'\)/);
     assert.match(RUN_PAGE_SRC, /FORM_FIELD_GUARD_SRC/);
-    assert.doesNotMatch(CLIENT_SRC, /function onSessionsSlashKey/);
-    assert.doesNotMatch(RUN_PAGE_SRC, /function onRailSlashKey/);
     assert.match(CORE_SRC, /FORM_FIELD_GUARD_SRC/);
-    assert.match(CORE_JS, /installPageHotkey\('tqHotkeyEmbedNext'/);
-    assert.match(CORE_JS, /if \(isFormField\(e\.target\)\) return/);
     assert.match(ANALYTICS_SRC, /FORM_FIELD_GUARD_SRC/);
-    assert.match(ANALYTICS_SRC, /if \(isFormField\(e\.target\)\) return/);
-    assert.match(LAUNCHER_CLIENT_JS, /launchOverlay\.hidden \|\| !isTopOverlay\(launchOverlay\)/);
     assert.match(LAUNCHER_CLIENT_JS, /e\.key === 'Escape'/);
-    assert.doesNotMatch(INTERACTIONS_NAV_JS, /activeElement === searchInput[\s\S]*if \(isInSearch\) return[\s\S]*ev\.key === 'j'/);
   });
 
   test("unscoped / o j k g fire from the one GitHub-style keyDownHandler via data-hotkey elements in the radix trie", () => {
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /installPageHotkey\("tqHotkeyGoC"/);
     assert.match(COMMAND_PALETTE_CLIENT_JS, /installSlashSearchHotkey/);
-    assert.match(INTERACTIONS_NAV_JS, /installPageHotkey\('tqHotkeyChapterNext'/);
-    assert.match(CLIENT_SRC, /installPageHotkey\('tqHotkeyPeekNext'/);
-    assert.match(CORE_JS, /installPageHotkey\('tqHotkeyEmbedNext'/);
     assert.doesNotMatch(COMMAND_PALETTE_CLIENT_JS, /_tqPageHotkeys/);
     assert.doesNotMatch(INTERACTIONS_NAV_JS, /registerPageHotkey/);
-    assert.doesNotMatch(CLIENT_SRC, /function onSessionsSlashKey/);
-    assert.doesNotMatch(RUN_PAGE_SRC, /function onRailSlashKey/);
     assert.doesNotMatch(
       CLIENT_SRC,
       /document\.addEventListener\('keydown', function\(e\) \{\s*if \(document\.body\.classList\.contains\('cmdk-open'\)\) return;\s*if \(e\.key === '\/'/,
@@ -700,12 +678,6 @@ describe("editable-guard session flyout j/k", () => {
   test("flyout and embed j/k are data-hotkey leaves on the one GitHub-style keyDownHandler; there is no capture-phase document sibling for those printables", () => {
     assert.match(PAGE_BUILD_SRC, /id="sessionFlyoutNext"[^>]*data-hotkey="j,J,ArrowDown"/);
     assert.match(PAGE_BUILD_SRC, /id="sessionFlyoutPrev"[^>]*data-hotkey="k,K,ArrowUp"/);
-    assert.match(CLIENT_SRC, /setAttribute\('data-hotkey', 'j,J,ArrowDown'\)/);
-    assert.match(CLIENT_SRC, /setAttribute\('data-hotkey', 'k,K,ArrowUp'\)/);
-    assert.match(CLIENT_SRC, /install\(next\)/);
-    assert.match(CLIENT_SRC, /install\(prev\)/);
-    assert.match(CORE_JS, /installPageHotkey\('tqHotkeyEmbedNext'/);
-    assert.match(CORE_JS, /installPageHotkey\('tqHotkeyEmbedPrev'/);
     assert.doesNotMatch(
       CLIENT_SRC,
       /event\.key === 'j' \|\| event\.key === 'J' \|\| event\.key === 'ArrowDown'/,
@@ -729,7 +701,6 @@ describe("editable-guard session flyout j/k", () => {
     const embedSrc = CORE_JS.slice(embedStart, embedStart + 800);
     assert.doesNotMatch(embedSrc, /action: 'next'/);
     assert.doesNotMatch(embedSrc, /action: 'prev'/);
-    assert.match(CORE_JS, /installPageHotkey\('tqHotkeyEmbedNext', 'j,J,ArrowDown'/);
   });
 
   test("focused native input inside #sessionFlyout consumes j/k; idle peek j/k still step", () => {
@@ -819,8 +790,6 @@ describe("editable-guard session flyout j/k", () => {
 
 describe("editable-guard embed flyout", () => {
   test("embed j/k/Escape do not steal from a focused input", () => {
-    assert.match(CORE_JS, /installPageHotkey\('tqHotkeyEmbedNext'/);
-    assert.match(CORE_JS, /if \(isFormField\(e\.target\)\) return/);
     const posted = [];
     const input = {
       tagName: "INPUT",

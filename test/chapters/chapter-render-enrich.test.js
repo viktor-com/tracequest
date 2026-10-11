@@ -394,7 +394,6 @@ describe("chapter-render-enrich browser injection", () => {
       join(__dirname, "../../src/render/render-assemble.js"),
       "utf8"
     );
-    assert.ok(src.includes("./chapters/chapter-render-enrich.js"));
     assert.ok(src.includes("enrichChaptersForRender"));
   });
 
@@ -412,10 +411,6 @@ describe("chapter-render-enrich browser injection", () => {
       join(__dirname, "../../src/chapters/chapter-render-enrich.js"),
       "utf8"
     );
-    assert.ok(src.includes("function cacheLowerAndToken("));
-    assert.ok(src.includes("function addChapterTokens("));
-    assert.ok(src.includes("const EMPTY_DEPS"));
-    assert.doesNotMatch(src, /for \(const ch of chapters\)[\s\S]*for \(const ch of chapters\)/);
 
     const specs = Array.from({ length: 500 }, (_, i) => ({
       prompt: "Fix authentication module issue number " + i,

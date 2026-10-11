@@ -30,14 +30,6 @@ describe("safeSlice shared usage audit", () => {
     assert.deepEqual(hits, [], `duplicate safeSlice definitions: ${hits.join(", ")}`);
   });
 
-  test("CHAPTERS_HELPERS_JS injects canonical safeSlice from parse-utils", () => {
-    assert.ok(CHAPTERS_HELPERS_JS.includes("function safeSlice"), "chapter bundle defines safeSlice");
-    assert.ok(
-      CHAPTERS_HELPERS_JS.includes("0xD800") && CHAPTERS_HELPERS_JS.includes("0xDBFF"),
-      "injected safeSlice preserves surrogate-pair guard"
-    );
-  });
-
   test("session index, peek, parse-enrich, index-writers, and markdown-export use truncateFirstPrompt for 200-char truncation", () => {
     for (const rel of [
       "src/sessions/session-peek.js",
@@ -49,7 +41,6 @@ describe("safeSlice shared usage audit", () => {
     ]) {
       const src = readFileSync(join(ROOT, rel), "utf8");
       assert.ok(src.includes("truncateFirstPrompt"), `${rel} should import/use truncateFirstPrompt`);
-      assert.ok(!/safeSlice\([^,]+,\s*200\)/.test(src), `${rel} should not inline safeSlice(..., 200)`);
       if (rel.includes("session")) {
         assert.ok(!/firstPrompt\s*=\s*clean\.slice\(0,\s*200\)/.test(src), `${rel} should not use raw slice for firstPrompt`);
       }

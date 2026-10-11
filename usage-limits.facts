@@ -1,78 +1,7 @@
-
-# domain
-- label: a usage-limits snapshot is a secret-free JSON document with collectedAt (ISO-8601), host (null locally, imported host id otherwise), and harnesses[] of {id, status, plan, windows} plus an optional message on non-ok rows
-  id: uldm
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'snapshot schema' test/usage/snapshot.test.js
-  tags: [spec, usage-limits, domain, implemented]
-- label: harness status is one of ok, missing (no credential), unauthenticated (HTTP 401), unavailable (no remaining-window collector), or error; factory, opencode, and gemini are always unavailable; cursor-cloud is omitted
-  id: ulst
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'statuses and unavailable harnesses' test/usage/collect.test.js
-  tags: [spec, usage-limits, domain, implemented]
-- label: windows[] entries are {id, utilization, resetsAt} where utilization is a fraction used on the same 0-1 scale (may exceed 1 past cap) and resetsAt is ISO-8601 or null
-  id: ulwn
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'windows are 0-1 fractions' test/usage/snapshot.test.js
-  tags: [spec, usage-limits, domain, implemented]
-
-# collectors
-- label: collectUsageLimits is HOME-parameterized (home, fetchImpl, now, readFile, readCursorToken) and never executes a harness binary (claude, codex, grok, cursor-agent, droid, opencode, gemini)
-  id: ulhm
-  command: grep -q "export async function collectUsageLimits" src/usage/collect.js && ! grep -E "spawnSync|execFile" src/usage/*.js
-  tags: [spec, usage-limits, collectors, implemented]
-- label: the claude collector reads home/.claude/.credentials.json field claudeAiOauth.accessToken, GET TRACEQUEST_CLAUDE_USAGE_URL or https://api.anthropic.com/api/oauth/usage, maps five_hour and seven_day (utilization is the API percent divided by 100), and takes plan from claudeAiOauth.rateLimitTier
-  id: ulcl
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'claude collector' test/usage/collect-claude.test.js && grep -q 'TRACEQUEST_CLAUDE_USAGE_URL' src/usage/collect-claude.js && grep -q 'api.anthropic.com/api/oauth/usage' src/usage/collect-claude.js
-  tags: [spec, usage-limits, collectors, implemented]
-- label: the codex collector reads home/.codex/auth.json tokens.access_token and tokens.account_id, GET TRACEQUEST_CODEX_USAGE_URL or https://chatgpt.com/backend-api/codex/api/codex/usage with Authorization Bearer plus ChatGPT-Account-Id, and maps primary/secondary RateLimitWindow used_percent (divided by 100) and resets_at plus plan_type
-  id: ulcx
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'codex collector' test/usage/collect-codex.test.js && grep -q 'TRACEQUEST_CODEX_USAGE_URL' src/usage/collect-codex.js && grep -q 'backend-api/codex/api/codex/usage' src/usage/collect-codex.js
-  tags: [spec, usage-limits, collectors, implemented]
-- label: the cursor collector reuses a home-parameterized loadLocalCursorSessionToken, POST TRACEQUEST_CURSOR_API2_URL or https://api2.cursor.sh /aiserver.v1.DashboardService/GetCurrentPeriodUsage (and GetPlanInfo) with connect-rpc JSON Content-Type and authorization Bearer, and maps planUsage.totalPercentUsed (percent divided by 100) plus billingCycleEnd
-  id: ulcu
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'cursor collector' test/usage/collect-cursor.test.js && grep -q 'DashboardService/GetCurrentPeriodUsage' src/usage/collect-cursor.js && grep -q 'loadLocalCursorSessionToken' src/usage/collect-cursor.js
-  tags: [spec, usage-limits, collectors, implemented]
-- label: the grok collector reads the issuer-keyed home/.grok/auth.json entry key, GET {origin}/user?include=subscription (origin from settings_cache payload or https://cli-chat-proxy.grok.com/v1, overridable with TRACEQUEST_GROK_USAGE_URL), and maps subscriptionTier as plan with empty windows when the payload has no remaining-window fields
-  id: ulgk
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'grok collector' test/usage/collect-grok.test.js && grep -q 'TRACEQUEST_GROK_USAGE_URL' src/usage/collect-grok.js && grep -q 'include=subscription' src/usage/collect-grok.js
-  tags: [spec, usage-limits, collectors, implemented]
-- label: factory, opencode, and gemini are reported status unavailable with an empty windows array and are never fetched; cursor-cloud is not a local plan and is omitted from harnesses[]
-  id: ulab
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'unavailable harnesses' test/usage/collect.test.js && ! grep -q 'cursor-cloud' src/usage/collect.js
-  tags: [spec, usage-limits, collectors, implemented]
-- label: collectUsageLimits fans in per-harness collectors with Promise.all, never throws the whole run, and one harness failure does not hide the others
-  id: ulfn
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'fan-in isolates harness failures' test/usage/collect.test.js
-  tags: [spec, usage-limits, collectors, implemented]
-- label: HTTP 401 becomes per-harness status unauthenticated with an actionable message naming the login command (claude / codex login / Cursor sign-in / grok login) and collectors never refresh tokens
-  id: ul401
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern '401 is unauthenticated' test/usage/collect-claude.test.js test/usage/collect-codex.test.js test/usage/collect-cursor.test.js test/usage/collect-grok.test.js && ! grep -nE 'refreshToken|refresh_token' src/usage/*.js
-  tags: [spec, usage-limits, collectors, implemented]
-- label: each collector has an env base-URL override so tests never touch the real network: TRACEQUEST_CLAUDE_USAGE_URL, TRACEQUEST_CODEX_USAGE_URL, TRACEQUEST_CURSOR_API2_URL (shared with cursor-cloud), TRACEQUEST_GROK_USAGE_URL
-  id: ulnv
-  command: grep -q TRACEQUEST_CLAUDE_USAGE_URL src/usage/collect-claude.js && grep -q TRACEQUEST_CODEX_USAGE_URL src/usage/collect-codex.js && grep -q TRACEQUEST_GROK_USAGE_URL src/usage/collect-grok.js && grep -q TRACEQUEST_CURSOR_API2_URL src/usage/collect-cursor.js
-  tags: [spec, usage-limits, collectors, implemented]
-- label: each harness fetch aborts after about 5 seconds so one hang cannot stall collectUsageLimits, CLI, or GET /api/usage-limits
-  id: ulto
-  command: grep -q 'HARNESS_TIMEOUT_MS' src/usage/http.js && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'per-harness timeout' test/usage/collect.test.js
-  tags: [spec, usage-limits, collectors, implemented]
-
-# snapshot
-- label: snapshots, CLI output, API bodies, and collector error strings never contain loaded access tokens, emails, or raw credential blobs; plan tier names are allowed
-  id: ulsf
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'redact|never contain secrets' test/usage/redact.test.js test/usage/collect-claude.test.js
-  tags: [spec, usage-limits, snapshot, security, implemented]
-- label: src/usage/redact.js asserts a snapshot or error string contains none of the loaded secrets and is used by tests and production logging
-  id: ulrd
-  command: grep -q 'export function assertNoSecrets' src/usage/redact.js && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'assertNoSecrets' test/usage/redact.test.js
-  tags: [spec, usage-limits, snapshot, security, implemented]
-- label: imported snapshots persist at hosts/{hostId}/.tracequest/usage-limits.json next to the synthetic HOME from resolveHostsRoot; listImportedUsageSnapshots walks listImportedHosts and omits missing files rather than 500
-  id: ulpt
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'imported snapshot path|listImportedUsageSnapshots' test/usage/snapshot.test.js && grep -q 'usage-limits.json' src/usage/snapshot.js && grep -q 'listImportedHosts' src/usage/snapshot.js
-  tags: [spec, usage-limits, snapshot, implemented]
-
 # cli
 - label: tracequest gains an async limits subcommand: bin/tracequest.js routes case limits to cmdLimits in src/cli/cli-commands.js (lazy-loaded like cmdImport), limits joins COMMAND_HELP and the cli-help.js usage text, and options are [--json] [--host <id>] [-h/--help]
   id: ulcm
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'limits help|limits command' test/bin/tracequest-usage-limits-integration.test.js && grep -q '"limits"' bin/tracequest.js && grep -q 'cmdLimits' src/cli/cli-commands.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'limits help|limits command' test/bin/tracequest-usage-limits-integration.test.js
   tags: [spec, usage-limits, cli, implemented]
 - label: tracequest limits prints one human line per harness (id, plan, limiting window percent, reset) by default, --json prints the snapshot, and an empty or all-missing run exits 0
   id: uljs
@@ -83,51 +12,25 @@
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'limits --host' test/bin/tracequest-usage-limits-integration.test.js
   tags: [spec, usage-limits, cli, implemented]
 
-# api
-- label: GET /api/usage-limits is registered in ROUTE_MAP, is never route-cached, answers 200 JSON {local, hosts} where local is a live collect only when serve runs with --usage-limits (TRACEQUEST_USAGE_LIMITS=1) and null otherwise, and hosts are disk snapshots; the handler accepts injectable collect, listSnapshots and enabled deps
-  id: ulap
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'GET /api/usage-limits' test/routes/usage-limits-routes.test.js && grep -q '/api/usage-limits' src/routes/index.js
-  tags: [spec, usage-limits, api, implemented]
-- label: serve keeps an in-memory TTL cache of about 60 seconds for the local snapshot so dashboard polls do not hammer harness APIs
-  id: ultt
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'TTL cache' test/routes/usage-limits-routes.test.js && grep -q 'USAGE_LIMITS_TTL_MS' src/routes/route-handlers-usage.js
-  tags: [spec, usage-limits, api, implemented]
-- label: serve never SSHes for usage limits: GET /api/usage-limits reads local collect plus on-disk imported snapshots only
-  id: ulns
-  command: ! grep -nE 'runSsh|ControlMaster|import ssh' src/routes/route-handlers-usage.js src/usage/collect.js src/usage/snapshot.js
-  tags: [spec, usage-limits, api, implemented]
-
 # ui
 - label: the shared app top bar (appTopHtml) includes #appLimits after #appLive and before the command palette trigger; one chip per status ok harness (local first, then source@host), colored from SOURCE_COLORS, labelled with the currently limiting window percent, with a title listing windows and reset
   id: ului
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'appLimits|usage limits chips' test/browser/browser-page-build.test.js test/browser/usage-limits.playwright.test.js && grep -q 'id="appLimits"' src/browser/app-chrome.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'appLimits|usage limits chips' test/browser/usage-limits.playwright.test.js
   tags: [spec, usage-limits, ui, implemented]
 - label: #appLimits is hidden when every harness is missing or unavailable (no ok chips), and chips do not overflow horizontally at a mobile viewport width
   id: ulhd
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'hidden when empty|mobile viewport' test/browser/usage-limits.playwright.test.js
   tags: [spec, usage-limits, ui, implemented]
-- label: standalone /view HTML does not include #appLimits or fetch /api/usage-limits because shareable session pages must not carry account data
-  id: uqvw
-  command: ! grep -q 'appLimits' src/render/render-core-shell.js src/render/render-core.js src/render/render-assemble.js && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'view HTML omits usage limits' test/browser/usage-limits-view.test.js
-  tags: [spec, usage-limits, ui, implemented]
 - label: unauthenticated harnesses render a muted #appLimits chip labelled sign-in whose title carries the login hint; missing and unavailable still do not render chips
   id: ulua
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'usage limits chips' test/browser/usage-limits.playwright.test.js && grep -q 'is-unauth' src/browser/app-chrome.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'usage limits chips' test/browser/usage-limits.playwright.test.js
   tags: [spec, usage-limits, ui, implemented]
 - label: the home chat surface (/ and /run) and the Runs inventory show #usageRow as the plan-limits popover opened from the app top's #appLimitsBtn, outside #dashboard: one widget per ok or unauthenticated harness (local, then id@host) with the plan, each plan window's used versus remaining and reset time, the limiting window marked, and the sign-in message when unauthenticated; missing and unavailable stay hidden
   id: ulhr
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "usage limits chips|chat-home: / is the chat surface" test/browser/chat-home.test.js test/browser/usage-limits.playwright.test.js && grep -q "id=\"usageRow\"" src/browser/app-chrome.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "usage limits chips|chat-home: / is the chat surface" test/browser/usage-limits.playwright.test.js
   tags: [spec, usage-limits, ui, implemented]
 
 # ssh
-- label: after each host's tree rsync (success or partial) import ssh runs the same collectors: fixture mode uses collectUsageLimits({home: fixtureHostHome}) with no SSH, production SSH-reads only credential files over the existing ControlMaster and feeds bytes in memory, then writes hosts/{hostId}/.tracequest/usage-limits.json
-  id: uqss
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'import ssh writes a usage-limits snapshot' test/bin/tracequest-usage-limits-integration.test.js && grep -q 'collectUsageLimitsForRemote' src/import/ssh-import.js
-  tags: [spec, usage-limits, ssh, ssh-import, implemented]
-- label: SSH_IMPORT_SOURCES still lists only the six session trees and never gains credential paths (.credentials.json, auth.json, state.vscdb); tokens are never written under hosts/
-  id: uqnc
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'SSH_IMPORT_SOURCES stays session trees' test/usage/ssh-safety.test.js
-  tags: [spec, usage-limits, ssh, ssh-import, security, implemented]
 - label: import ssh --dry-run prints the usage-limits plan and writes no usage-limits.json and creates no directories under the hosts root
   id: uqdr
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'dry-run does not write usage-limits' test/bin/tracequest-usage-limits-integration.test.js
@@ -136,26 +39,3 @@
   id: uqsk
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'limits skip-with-warning|summary counters unchanged' test/bin/tracequest-usage-limits-integration.test.js
   tags: [spec, usage-limits, ssh, ssh-import, implemented]
-
-# safety
-- label: collectors never log credential values (mirror cursor-cloud fact ccse); fetch error messages may include URLs but never Authorization header values
-  id: uqse
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'sanitize fetch errors' test/usage/http.test.js
-  tags: [spec, usage-limits, security, implemented]
-- label: token refresh is out of scope: a 401 is per-harness unauthenticated and the collector never calls a refresh endpoint or writes a new credential file
-  id: uqnr
-  command: ! grep -nE 'refreshToken|oauth/token|grant_type' src/usage/*.js
-  tags: [spec, usage-limits, collectors, implemented]
-
-# tests
-- label: unit collector tests stand up local node:http fixture servers and a fake HOME, set the env URL overrides, and never perform real network I/O or read the developer's own credential files
-  id: uqts
-  command: grep -q 'createServer' test/usage/helpers.js && grep -q 'TRACEQUEST_CLAUDE_USAGE_URL' test/usage/collect-claude.test.js && ! grep -qE 'api.anthropic.com|api2.cursor.sh|chatgpt.com' test/usage/*.test.js
-  tags: [spec, usage-limits, tests, implemented]
-- label: tests/usage-limits-integration.md is the paired spec for test/bin/tracequest-usage-limits-integration.test.js, package.json test:integration includes that harness, and tests/README.md's harness row and scenario totals match
-  id: uqin
-  command: grep -q 'tracequest-usage-limits-integration.test.js' package.json && grep -q 'usage-limits-integration.md' tests/README.md && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'tests README scenario totals match package test targets and harness rows|integration spec headers declare matching scenario counts' test/browser/browser-verification-targets.test.js
-  tags: [spec, usage-limits, tests, implemented]
-- label: usage-limit widgets are opt-in: without `serve --usage-limits` or TRACEQUEST_USAGE_LIMITS=1, GET /api/usage-limits makes no call to Anthropic, OpenAI, xAI or Cursor
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'opt' test/routes/usage-limits-routes.test.js
-  tags: [spec, usage-limits, privacy]

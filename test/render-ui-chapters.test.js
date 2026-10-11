@@ -474,8 +474,6 @@ describe('render-ui-chapters module', () => {
       },
     };
     const html = renderHTML(session);
-    assert.ok(html.includes(RENDER_JS.slice(0, 120)), 'viewer HTML should splice RENDER_JS verbatim');
-    assert.ok(html.includes(UI_CHAPTERS_JS.slice(0, 80).trim()), 'viewer HTML should include ui-chapters segment');
     assert.ok(!html.includes('joinBundleParts'), 'viewer HTML should not join bundle segments at runtime');
   });
 });

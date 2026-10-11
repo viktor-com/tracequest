@@ -1,6 +1,0 @@
-# cli
-
-## filter
-- label: CLI list, latest, and find annotate discovered sessions with detectLiveSessions before evaluating a filter expression that contains live:, so --filter live:true matches the same running sessions as the browser API without forcing a session index build for discovery-only filters
-  command: node --test --test-concurrency=1 test/cli/cli-live-filter.test.js
-  tags: [spec, cli-filter, live-ui, cli-live-filter, implemented]

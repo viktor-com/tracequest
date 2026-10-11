@@ -46,6 +46,9 @@ jobs:
       - name: Build sidecar release binary
         run: npm run build:sidecar
 
+      - name: Run facts check (--tags spec)
+        run: npx --yes @avcodes/facts check --tags "spec"
+
       - name: Run tests
         run: npm test
 
@@ -59,28 +62,6 @@ jobs:
         run: |
           node bin/tracequest.js --version
           node bin/tracequest.js --help
-
-  # The spec facts run ~770 commands serially (~13 min), so they get their own
-  # job running alongside `ci` instead of in front of its test steps.
-  facts:
-    runs-on: ubuntu-latest
-    env:
-      TRACEQUEST_SKIP_PERF_ASSERTS: "1"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm install
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - run: npx playwright install --with-deps chromium
-      - uses: dtolnay/rust-toolchain@stable
-      - run: npm run build:sidecar
-      - name: Run facts check (--tags spec)
-        run: npx --yes @avcodes/facts check --tags "spec"
 
   # Follows the README quickstart on a clean runner with no Rust toolchain:
   # clone, npm install, npm run demo, and the UI serves the bundled samples.

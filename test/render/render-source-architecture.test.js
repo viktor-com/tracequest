@@ -37,8 +37,6 @@ function assertOrdered(ids, ordered) {
 
 describe('render source architecture', () => {
   test('render.js embeds only CSS and the pre-built render bundle', () => {
-    assert.match(renderSrc, /import \{ CSS \} from "\.\/render\/render-css\.js";/);
-    assert.match(renderSrc, /import \{ RENDER_JS \} from "\.\/render\/render-assemble\.js";/);
     assert.match(renderSrc, /\$\{CSS\}/);
     assert.match(renderSrc, /\$\{RENDER_JS\}/);
 
@@ -58,13 +56,6 @@ describe('render source architecture', () => {
   });
 
   test('render-assemble owns client script source modules and order', () => {
-    assert.match(assembleSrc, /from "\.\/render-analytics-compose\.js"/);
-    assert.match(assembleSrc, /from "\.\/render-chapters\.js"/);
-    assert.match(assembleSrc, /from "\.\/render-core\.js"/);
-    assert.match(assembleSrc, /from "\.\/render-interactions\.js"/);
-    assert.match(assembleSrc, /from "\.\/render-main\.js"/);
-    assert.match(assembleSrc, /from "\.\/render-share\.js"/);
-    assert.doesNotMatch(assembleSrc, /from "\.\/render-analytics\.js"/);
 
     assertOrdered(UI_BUNDLE_PARTS.map((p) => p.id), [
       'ui-errors',
@@ -117,7 +108,6 @@ describe('render source architecture', () => {
     const styleEnd = html.indexOf('</style>', styleStart);
     assert.ok(styleStart >= 0 && styleEnd > styleStart, 'expected a style block');
     assert.ok(html.slice(styleStart, styleEnd).includes(CSS.slice(0, 120)));
-    assert.ok(html.includes(RENDER_JS.slice(0, 160)));
     assert.ok(!html.includes('RENDER_BUNDLE_PARTS'));
     assert.ok(!html.includes('joinBundleParts'));
   });

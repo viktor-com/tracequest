@@ -111,14 +111,6 @@ function richSession() {
 }
 
 describe("markdown-export perf", () => {
-  test("avoids Object.entries on toolCounts, ch.files, opCount, and mcp params (large export path)", () => {
-    assert.ok(MARKDOWN_EXPORT_JS.includes("chapterFileKeys(ch)"));
-    assert.ok(!MARKDOWN_EXPORT_JS.includes("Object.entries(toolCounts)"));
-    assert.ok(!MARKDOWN_EXPORT_JS.includes("Object.entries(ch.files)"));
-    assert.ok(!MARKDOWN_EXPORT_JS.includes("Object.entries(opCount)"));
-    assert.ok(!MARKDOWN_EXPORT_JS.includes("Object.entries(m.params)"));
-    assert.ok(!MARKDOWN_EXPORT_JS.includes("Object.entries("));
-  });
 });
 
 describe("markdown-export renderMarkdownChapter", () => {

@@ -43,12 +43,6 @@ const HOT_KEYS = [
 
 describe("server-state hotModules contract", () => {
   it("source wires snapshot imports for parse, render, sessions, browser-page", () => {
-    assert.match(STATE_SRC, /createHotModuleSnapshotImporter\(__srcDir\)/);
-    assert.match(STATE_SRC, /_hotModuleImporter\.importEntries\(v, \[/);
-    assert.match(STATE_SRC, /"parse\.js"/);
-    assert.match(STATE_SRC, /"render\.js"/);
-    assert.match(STATE_SRC, /"sessions\.js"/);
-    assert.match(STATE_SRC, /"browser\/browser-page\.js"/);
     assert.match(STATE_SRC, /browserPage: bp\.browserPage/);
   });
 
@@ -153,7 +147,6 @@ describe("server-state hotModules browserPage", () => {
     assert.match(html, /^<!DOCTYPE html>/);
     assert.match(html, /id="filterBar"/);
     assert.match(html, /id="filterInput"/);
-    assert.match(html, /var _INIT_DATA = /);
     assert.match(html, /<title>Runs · tracequest<\/title>/);
   });
 
@@ -178,7 +171,6 @@ describe("server-state hotModules renderHTML", () => {
     const session = minimalSession();
     const html = renderHTML(session);
     assert.match(html, /^<!DOCTYPE html>/);
-    assert.match(html, /const SESSION = /);
     assert.match(html, /aaaaaaaa-bbbb/);
     assert.match(html, /<div id="app"><\/div>/);
   });

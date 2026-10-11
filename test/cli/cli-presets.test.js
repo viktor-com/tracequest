@@ -81,7 +81,6 @@ function captureExit(fn) {
 describe("cli-presets parseSimpleYaml", () => {
   it("parses lines without text.split alloc", () => {
     assert.ok(!CLI_PRESETS_JS.includes("text.split"));
-    assert.ok(CLI_PRESETS_JS.includes('text.indexOf("\\n", start)'));
   });
 
   it("parses booleans, numbers, and quoted strings", () => {

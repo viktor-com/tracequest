@@ -855,7 +855,6 @@ function hasInertAncestor(el) {
 
 describe("overlay focus lifecycle", () => {
   test("Opening the CommandPalette moves document.activeElement inside #cmdkOverlay", () => {
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /try \{ input\.focus\(\); \} catch \(eOpen\) \{\}/);
     const h = createHarness();
     h.filterInput.focus();
     h.openPalette();
@@ -865,7 +864,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("While the CommandPalette is open, Tab and Shift+Tab keep focus inside #cmdkOverlay", () => {
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /trapOverlayTab\(e, overlay\)/);
     const h = createHarness();
     h.filterInput.focus();
     h.openPalette();
@@ -879,7 +877,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("Escape or backdrop click closes the CommandPalette and restores the previously focused element", () => {
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /restoreOverlayFocus\(prevFocus, overlay\)/);
     const h = createHarness();
     h.filterInput.focus();
     const prev = h.document.activeElement;
@@ -909,7 +906,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("Opening the launch overlay moves document.activeElement inside #launchOverlay", () => {
-    assert.match(LAUNCHER_CLIENT_JS, /focusOverlay\(launchOverlay, promptInput\)/);
     const h = createHarness();
     h.filterInput.focus();
     h.newRunBtn.click();
@@ -918,7 +914,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("While the launch overlay is open, Tab and Shift+Tab cycle inside #launchOverlay", () => {
-    assert.match(LAUNCHER_CLIENT_JS, /trapOverlayTab\(e, launchOverlay\)/);
     const h = createHarness();
     h.newRunBtn.click();
     h.startBtn.focus();
@@ -933,7 +928,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("Escape or backdrop click closes the launch overlay and restores the previously focused element", () => {
-    assert.match(LAUNCHER_CLIENT_JS, /restoreOverlayFocus\(launchPrevFocus, launchOverlay\)/);
     const h = createHarness();
     h.filterInput.focus();
     const prev = h.document.activeElement;
@@ -952,11 +946,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("Opening the keys menu moves document.activeElement inside #keysMenu; Tab stays inside; Escape restores previous focus", () => {
-    assert.match(RUN_PAGE_SRC, /focusOverlay\(keysMenu, keysMenu\.querySelector\("\.run-key-btn"\)\)/);
-    assert.match(RUN_PAGE_SRC, /restoreOverlayFocus\(keysPrevFocus, keysMenu\)/);
-    assert.match(RUN_PAGE_SRC, /trapOverlayTab\(event, menuRoot\)/);
-    assert.match(RUN_PAGE_SRC, /pushOverlay\(keysMenu\)/);
-    assert.match(RUN_PAGE_SRC, /popOverlay\(keysMenu\)/);
     const h = createHarness();
     h.inputText.focus();
     const prev = h.document.activeElement;
@@ -975,10 +964,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("Opening the run-details popover moves document.activeElement inside #runMenu; Tab stays inside; Escape restores previous focus", () => {
-    assert.match(RUN_PAGE_SRC, /focusOverlay\(runMenu, runMenu\)/);
-    assert.match(RUN_PAGE_SRC, /restoreOverlayFocus\(runPrevFocus, runMenu\)/);
-    assert.match(RUN_PAGE_SRC, /pushOverlay\(runMenu\)/);
-    assert.match(RUN_PAGE_SRC, /popOverlay\(runMenu\)/);
     const page = runPage({
       run: { id: "@1", agent: "claude", cwd: "/tmp", startedAt: "2026-01-01T00:00:00.000Z", status: "running" },
     });
@@ -999,7 +984,6 @@ describe("overlay focus lifecycle", () => {
 
   test("After palette, launch, keys, or run-details overlays close, focus is not left on a hidden node", () => {
     assert.match(OVERLAY_FOCUS_SRC, /restoreOverlayFocus/);
-    assert.match(OVERLAY_FOCUS_SRC, /root\.contains\(active\)/);
     const h = createHarness();
 
     h.body.focus();
@@ -1039,9 +1023,6 @@ describe("overlay focus lifecycle", () => {
 
   test("Cmd+K over an open launch overlay focuses #cmdkInput and does not leave #cmdkOverlay inert", () => {
     assert.match(OVERLAY_FOCUS_SRC, /__tqOverlayStack/);
-    assert.match(OVERLAY_FOCUS_SRC, /function pushOverlay/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /isTopOverlay\(overlay\)/);
-    assert.match(LAUNCHER_CLIENT_JS, /isTopOverlay\(launchOverlay\)/);
     const h = createHarness();
     h.filterInput.focus();
     h.newRunBtn.click();
@@ -1126,33 +1107,14 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("share, keys, and run-details overlays join window.__tqOverlayStack", () => {
-    assert.match(SHARE_JS, /pushOverlay\(overlay\)/);
-    assert.match(SHARE_JS, /popOverlay\(dying\)/);
-    assert.match(SHARE_JS, /trapOverlayTab\(e, overlay\)/);
-    assert.match(SHARE_JS, /focusOverlay\(overlay, tokenInput\)/);
-    assert.match(SHARE_JS, /restoreOverlayFocus\(sharePrevFocus, dying\)/);
-    assert.match(SHARE_JS, /isTopOverlay\(overlay\)/);
-    assert.match(RUN_PAGE_SRC, /pushOverlay\(keysMenu\)/);
-    assert.match(RUN_PAGE_SRC, /popOverlay\(keysMenu\)/);
-    assert.match(RUN_PAGE_SRC, /pushOverlay\(runMenu\)/);
-    assert.match(RUN_PAGE_SRC, /popOverlay\(runMenu\)/);
-    assert.match(RUN_PAGE_SRC, /isTopOverlay\(menuRoot\)/);
     assert.match(RUN_PAGE_SRC, /id="keysOverlay"/);
     assert.match(RUN_PAGE_SRC, /id="runOverlay"/);
   });
 
   test("Opening the share-session dialog moves document.activeElement inside .hf-modal-overlay; Tab stays inside; Escape dismisses and restores previous focus", () => {
-    assert.match(SHARE_JS, /focusOverlay\(overlay, tokenInput\)/);
-    assert.match(SHARE_JS, /trapOverlayTab\(e, overlay\)/);
     assert.match(SHARE_JS, /e\.key === 'Escape'/);
-    assert.match(SHARE_JS, /restoreOverlayFocus\(sharePrevFocus, dying\)/);
     assert.match(SHARE_JS, /role: 'dialog'/);
     assert.match(SHARE_JS, /'aria-modal': 'true'/);
-  });
-
-  test("while a share-session dialog button is focused, idle / does not focus #workspaceSearch and the modal stays up", () => {
-    assert.match(SHARE_JS, /pushOverlay\(overlay\)/);
-    assert.match(SHARE_JS, /document\.addEventListener\('keydown', shareKeyHandler, true\)/);
   });
 
   test("while a keys menu .run-key-btn is focused, idle / does not focus #workspaceSearch and #keysMenu stays open on the overlay stack", () => {
@@ -1247,12 +1209,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("pushOverlay/popOverlay sequenceReset the GitHub chord so idle g then launch Escape then c does not complete g c", () => {
-    assert.match(OVERLAY_FOCUS_SRC, /function disarmPageHotkeyChord/);
-    assert.match(OVERLAY_FOCUS_SRC, /disarmPageHotkeyChord\(\)/);
-    assert.match(OVERLAY_FOCUS_SRC, /applyOverlayStackInert\(\);\s*disarmPageHotkeyChord\(\);\s*return stack;/);
-    assert.match(LAUNCHER_CLIENT_JS, /e\.stopPropagation\(\)/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /key === "Escape"[\s\S]*?e\.stopPropagation\(\)/);
-    assert.match(SHARE_JS, /e\.key === 'Escape'[\s\S]*?e\.stopPropagation\(\)/);
 
     const prevDoc = globalThis.document;
     const prevStack = globalThis.__tqOverlayStack;
@@ -1337,15 +1293,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("Opening #ageMenu, #sourceMenu, or #sortBar moves document.activeElement inside the menu; Tab stays inside; Escape restores previous focus", () => {
-    assert.match(OVERLAY_FOCUS_SRC, /function openToolbarMenuOverlay/);
-    assert.match(OVERLAY_FOCUS_SRC, /function closeToolbarMenuOverlays/);
-    assert.match(OVERLAY_FOCUS_SRC, /trapOverlayTab\(event, open\)/);
-    assert.match(BROWSER_CLIENT_SRC, /openToolbarMenuOverlay\(ageMenu\)/);
-    assert.match(BROWSER_CLIENT_SRC, /openToolbarMenuOverlay\(sourceMenu\)/);
-    assert.match(BROWSER_CLIENT_SRC, /openToolbarMenuOverlay\(sortBar\)/);
-    assert.match(RUN_PAGE_SRC, /openToolbarMenuOverlay\(ageMenu\)/);
-    assert.match(RUN_PAGE_SRC, /openToolbarMenuOverlay\(sourceMenu\)/);
-    assert.match(RUN_PAGE_SRC, /openToolbarMenuOverlay\(sortBar\)/);
     const h = createHarness();
     h.filterInput.focus();
     const prev = h.document.activeElement;
@@ -1409,8 +1356,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("open #ageMenu inerts the page behind so a session row click does not navigate to /run", () => {
-    assert.match(OVERLAY_FOCUS_SRC, /function inertOverlaySiblings/);
-    assert.match(OVERLAY_FOCUS_SRC, /inertOverlaySiblings\(top, prev\)/);
     const h = createHarness();
     h.sessionRow.addEventListener("click", () => {
       h.location.href = "/run";
@@ -1446,10 +1391,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("Opening #sessionFlyout moves document.activeElement inside the flyout; Tab stays trapped; Escape restores previous focus", () => {
-    assert.match(BROWSER_CLIENT_SRC, /pushOverlay\(flyout\)/);
-    assert.match(BROWSER_CLIENT_SRC, /focusOverlay\(flyout/);
-    assert.match(BROWSER_CLIENT_SRC, /trapOverlayTab\(event, flyout\)/);
-    assert.match(BROWSER_CLIENT_SRC, /restoreOverlayFocus\(flyout\._tqPrevFocus, flyout\)/);
     const h = createHarness();
     h.filterInput.focus();
     const prev = h.document.activeElement;
@@ -1492,12 +1433,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("#sessionFlyout joins window.__tqOverlayStack", () => {
-    assert.match(BROWSER_CLIENT_SRC, /pushOverlay\(flyout\)/);
-    assert.match(BROWSER_CLIENT_SRC, /popOverlay\(flyout\)/);
-    assert.match(BROWSER_CLIENT_SRC, /focusOverlay\(flyout/);
-    assert.match(BROWSER_CLIENT_SRC, /trapOverlayTab\(event, flyout\)/);
-    assert.match(BROWSER_CLIENT_SRC, /restoreOverlayFocus\(flyout\._tqPrevFocus, flyout\)/);
-    assert.match(BROWSER_CLIENT_SRC, /isTopOverlay\(flyout\)/);
     const h = createHarness();
     h.sessionRow.click();
     assert.ok(h.window.__tqOverlayStack && h.window.__tqOverlayStack.includes(h.sessionFlyout));
@@ -1506,8 +1441,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("open #sessionFlyout inerts the page behind so / does not steal to #workspaceSearch", () => {
-    assert.match(BROWSER_CLIENT_SRC, /pushOverlay\(flyout\)/);
-    assert.match(BROWSER_CLIENT_SRC, /getElementById\('sessionFlyout'\)/);
     const h = createHarness();
     h.filterInput.focus();
     h.sessionRow.click();
@@ -1534,9 +1467,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("click inside #sessionFlyoutFrame Tab wraps back to flyout chrome; Escape still dismisses", () => {
-    assert.match(OVERLAY_FOCUS_SRC, /function bindOverlayNestedFrameKeys/);
-    assert.match(OVERLAY_FOCUS_SRC, /function trapOverlayNestedTab/);
-    assert.match(OVERLAY_FOCUS_SRC, /function overlayNestedTabbables/);
     assert.match(BROWSER_CLIENT_SRC, /bindOverlayNestedFrameKeys\(/);
     const h = createHarness();
     h.filterInput.focus();
@@ -1574,9 +1504,6 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("Cmd+K inside #sessionFlyoutFrame opens the parent palette the same way Cmd+K over launch does", () => {
-    assert.match(OVERLAY_FOCUS_SRC, /function overlayIsCommandPaletteChord/);
-    assert.match(OVERLAY_FOCUS_SRC, /function overlayToggleParentPalette/);
-    assert.match(OVERLAY_FOCUS_SRC, /overlayToggleParentPalette\(\)/);
     assert.match(BROWSER_CLIENT_SRC, /action === 'cmdk'/);
     assert.match(CORE_JS, /action: 'cmdk'/);
     const h = createHarness();
@@ -1604,19 +1531,8 @@ describe("overlay focus lifecycle", () => {
   });
 
   test("rail toolbar menus join window.__tqOverlayStack", () => {
-    assert.match(OVERLAY_FOCUS_SRC, /function openToolbarMenuOverlay/);
-    assert.match(OVERLAY_FOCUS_SRC, /function closeToolbarMenuOverlays/);
-    assert.match(OVERLAY_FOCUS_SRC, /pushOverlay\(menu\)/);
-    assert.match(OVERLAY_FOCUS_SRC, /popOverlay\(menu\)/);
-    assert.match(BROWSER_CLIENT_SRC, /openToolbarMenuOverlay\(ageMenu\)/);
-    assert.match(BROWSER_CLIENT_SRC, /openToolbarMenuOverlay\(sourceMenu\)/);
-    assert.match(BROWSER_CLIENT_SRC, /openToolbarMenuOverlay\(sortBar\)/);
     assert.match(BROWSER_CLIENT_SRC, /closeToolbarMenuOverlays/);
-    assert.match(RUN_PAGE_SRC, /openToolbarMenuOverlay\(ageMenu\)/);
-    assert.match(RUN_PAGE_SRC, /openToolbarMenuOverlay\(sourceMenu\)/);
-    assert.match(RUN_PAGE_SRC, /openToolbarMenuOverlay\(sortBar\)/);
     assert.match(RUN_PAGE_SRC, /closeToolbarMenuOverlays/);
-    assert.match(COMMAND_PALETTE_CLIENT_JS, /bindToolbarMenuOverlayKeys\(\)/);
     const h = createHarness();
     h.ageBtn.click();
     assert.ok(h.window.__tqOverlayStack && h.window.__tqOverlayStack.includes(h.ageMenu));

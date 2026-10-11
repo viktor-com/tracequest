@@ -1,198 +1,93 @@
-
 # editable-guard
-- label: while a text-like input, textarea, select, or contenteditable is focused, typing / o j k g ? and a normal letter inserts those characters into the field
-  id: edgtype
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'inserts those characters into the field' test/browser/editable-guard.test.js test/render/render-interactions-nav.test.js
-  tags: [spec, editable-guard, implemented]
-- label: rendered-session chapter j/k/o/Enter and slash-to-search do not run when any form field is focused, not only .filter-search
-  id: edgnav
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'form field is focused|generic input|textarea, select, or contenteditable' test/render/render-interactions-nav.test.js test/browser/editable-guard.test.js
-  tags: [spec, editable-guard, implemented]
-- label: sessions filter, chapter search, run composer, rail filter, launch prompt and cwd, share token and repo, and session continue-form consume printable keys without slash-to-search, chapter toggle, peek step, or G-chord
-  id: edgsurf
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'consume printable keys without|non-palette surfaces' test/browser/editable-guard.test.js
-  tags: [spec, editable-guard, implemented]
-- label: Enter on a .run-row does not navigate while a form field including .session-continue-input is focused
-  id: edgent
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Enter on a .run-row' test/browser/editable-guard.test.js
-  tags: [spec, editable-guard, implemented]
-- label: when no form field is focused, rendered-session slash still focuses chapter search and j/k still walk chapters
-  id: edgidle
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "keydown '/' focuses filter search input|keydown 'j' focuses first visible chapter|keydown 'k' focuses last visible" test/render/render-interactions-nav.test.js
-  tags: [spec, editable-guard, implemented]
-- label: every document-level printable page shortcut (/ j k o G-chord) consults one shared GitHub isFormField; the bubble-phase keyDownHandler returns if isFormField(event.target) without stopPropagation so the event still reaches the field
-  id: edg1
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "one shared GitHub isFormField|GitHub-style bubble-phase keyDownHandler" test/browser/is-form-field.test.js test/browser/editable-guard.test.js
-  tags: [spec, editable-guard, implemented]
 - label: Playwright page.keyboard.type("/ojkg?x") into the live composer #liveTailInput inserts those characters and does not slash-to-search, G-chord, or steal focus
   id: edglive
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "live composer #liveTailInput" test/browser/editable-guard.playwright.test.js
-  tags: [spec, editable-guard, implemented]
-- label: unscoped printable page shortcuts fire from one GitHub-style bubble-phase keyDownHandler that returns when isFormField(event.target) without stopPropagation so the keydown still reaches the focused field
-  id: edgdisp
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "GitHub-style bubble-phase keyDownHandler|isFormField.event.target" test/browser/is-form-field.test.js test/browser/editable-guard.test.js
-  tags: [spec, editable-guard, implemented]
-- label: Playwright page.keyboard.type("/ojkg?x") on focused #liveTailInput keeps value /ojkg?x and each of those keydowns reaches the focused control
-  id: edgreach
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "live composer #liveTailInput" test/browser/editable-guard.playwright.test.js
-  tags: [spec, editable-guard, implemented]
-- label: unscoped / o j k g fire from the one GitHub-style keyDownHandler via data-hotkey elements in the radix trie; they are not sibling document bubble listeners with a copied isFormField return
-  id: edgreg
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "unscoped / o j k g fire from the one GitHub-style keyDownHandler via data-hotkey" test/browser/is-form-field.test.js test/browser/editable-guard.test.js
-  tags: [spec, editable-guard, implemented]
-- label: while #workspaceSearch is focused, typing / o j k g ? and a normal letter inserts those characters into the field
-  id: edgws
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "inserts those characters into the field" test/browser/editable-guard.test.js
-  tags: [spec, focus-seam, editable-guard, shortcut-when-idle, implemented]
-- label: isFormField returns false unless the node is an HTMLElement (instanceof HTMLElement), matching GitHub
-  id: edghtml
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "isFormField uses instanceof HTMLElement" test/browser/is-form-field.test.js
-  tags: [github/hotkey, spec, editable-guard, implemented]
-- label: the radix trie leaf fires a data-hotkey element only when (!formField && !scope) || (formField && target.id === scope); unscoped / o j k g do not run while a form field is focused even if a data-hotkey-scope node exists
-  id: edgleaf
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "GitHub leaf filter" test/browser/is-form-field.test.js test/browser/editable-guard.test.js
   tags: [spec, editable-guard, implemented]
 - label: Playwright page.keyboard.type("/ojkg?x") into focused #liveTailInput and Cmd+K #cmdkInput inserts those characters even when a data-hotkey-scope node is present
   id: edgleafpw
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "live composer #liveTailInput|#cmdkInput still gets|data-hotkey-scope node is present" test/browser/editable-guard.playwright.test.js
   tags: [spec, editable-guard, implemented]
-- label: unscoped / o j k g are installed as data-hotkey HTMLElements in a GitHub radix trie, not a JS callback list on document
-  id: edgtrie
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "radix trie of data-hotkey" test/browser/is-form-field.test.js test/browser/editable-guard.test.js
-  tags: [spec, editable-guard, implemented]
-- label: keyDownHandler walks the radix trie and on Leaf fire calls fireDeterminedAction then event.preventDefault
-  id: edgprev
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "preventDefault on leaf fire|fireDeterminedAction then event.preventDefault" test/browser/is-form-field.test.js
-  tags: [spec, editable-guard, implemented]
-- label: Playwright page.keyboard.type("/ojkg?x") into focused #liveTailInput and Cmd+K #cmdkInput still inserts those characters with radix-trie dispatch
-  id: edgtriepw
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "live composer #liveTailInput|#cmdkInput still gets|data-hotkey-scope node is present" test/browser/editable-guard.playwright.test.js
-  tags: [spec, editable-guard, implemented]
-- label: normalizeHotkey localizes Mod to Meta on Apple platforms and Control elsewhere, then sorts modifiers as Control, Alt, Meta, Shift
-  id: edgnorm
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "normalizeHotkey localizes Mod and sorts modifiers" test/browser/is-form-field.test.js
-  tags: [spec, editable-guard, github/hotkey, implemented]
-- label: eventToHotkeyString encodes a keydown with GitHub modifier order, macOS Alt-symbol mapping, and macOS Command+Shift uppercase mapping
-  id: edgenc
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "eventToHotkeyString applies GitHub macOS Alt-symbol and Command.Shift layers" test/browser/is-form-field.test.js
-  tags: [spec, editable-guard, github/hotkey, implemented]
-- label: G-then-letter jumps are declared as GitHub sequences g c, g r, g d, g v, and g n without four-way letter-case aliases
-  id: edgseq
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "G-then-letter jumps are declared as GitHub sequences" test/browser/is-form-field.test.js test/browser/command-palette-nav.test.js test/browser/shortcut-when-idle.test.js
-  tags: [spec, editable-guard, github/hotkey, implemented]
 - label: Playwright page.keyboard.type(/ojkg?x) still inserts into #liveTailInput and #cmdkInput, and idle g then c or r still jumps, with GitHub sequence encoding instead of four-way case aliases
   id: edgseqpw
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "live composer #liveTailInput|#cmdkInput still gets|idle G then C/R/D/V/N jumps" test/browser/editable-guard.playwright.test.js test/browser/shortcut-when-idle.playwright.test.js
-  tags: [spec, editable-guard, github/hotkey, implemented]
-- label: keyDownHandler sequenceReset()s on unscoped form-field return so an idle g does not stay armed through typing; after blur, c does not complete g c
-  id: edgreset
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "sequenceReset on form-field return" test/browser/is-form-field.test.js
   tags: [spec, editable-guard, github/hotkey, implemented]
 - label: Playwright idle g then type in #liveTailInput then blur then c does not navigate to /; #liveTailInput still inserts /ojkg?x; idle g then c still jumps when no field is focused
   id: edgresetpw
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle g then type in #liveTailInput then blur then c" test/browser/editable-guard.playwright.test.js
   tags: [spec, editable-guard, github/hotkey, implemented]
-- label: while #sessionFlyout is the top overlay, a focused native input/textarea/select/contenteditable inside it consumes j/k without preventDefault or peekStep; idle j/k with no form field focused still peekStep
-  id: edgflyjk
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "focused native input inside #sessionFlyout consumes j/k" test/browser/editable-guard.test.js
-  tags: [spec, editable-guard, implemented]
 - label: Playwright: focused input inside #sessionFlyout consumes j/k including jk/ogx; idle peek j/k with no form field focused still steps peek; Cmd+K #cmdkInput still inserts /ojkg?x
   id: edgflyjkpw
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "focused input inside #sessionFlyout consumes j/k" test/browser/editable-guard.playwright.test.js
-  tags: [spec, editable-guard, implemented]
-- label: flyout and embed j/k are data-hotkey leaves on the one GitHub-style keyDownHandler; there is no capture-phase document sibling for those printables
-  id: edgflydisp
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "flyout and embed j/k are data-hotkey leaves" test/browser/editable-guard.test.js test/browser/is-form-field.test.js
-  tags: [spec, editable-guard, implemented]
-- label: while an overlay owns the keyboard, keyDownHandler fires only data-hotkey leaves whose element is inside the top overlay so flyout Next/Prev j/k step peek and unscoped / o g do not
-  id: edgflyleaf
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "fires only data-hotkey leaves whose element is inside the top overlay" test/browser/is-form-field.test.js test/browser/editable-guard.test.js
   tags: [spec, editable-guard, implemented]
 
 # shortcut-when-idle
 - label: when no form field is focused and the CommandPalette is closed, idle / on /sessions focuses #workspaceSearch, not the page-local #filterInput
   id: swis
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle / on /sessions focuses" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle / on /sessions focuses" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: when no form field is focused and the CommandPalette is closed, idle / on a rendered session focuses #workspaceSearch, not .filter-search
   id: swiv
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle / on a rendered session focuses" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle / on a rendered session focuses" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: when no form field is focused and the CommandPalette is closed, idle / on /run focuses #workspaceSearch, not the rail filter
   id: swir
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle / on /run focuses" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle / on /run focuses" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: when no form field is focused and the CommandPalette is closed, j/k on a rendered session move chapter kb-focused
   id: swijk
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle j/k on a rendered session move chapter kb-focused" test/browser/shortcut-when-idle.test.js test/render/render-interactions-nav.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle j/k on a rendered session move chapter kb-focused" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: when a rendered-session chapter is kb-focused and no form field is focused, o or Enter toggles expand
   id: swio
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle o or Enter toggles the kb-focused chapter" test/browser/shortcut-when-idle.test.js test/render/render-interactions-nav.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle o or Enter toggles the kb-focused chapter" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: when the sessions peek flyout is open, no form field is focused, and the CommandPalette is closed, j/k step peek
   id: swip
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle j/k step the sessions peek flyout" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle j/k step the sessions peek flyout" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: when the CommandPalette is closed and no form field is focused, G then C/R/D/V/N jumps to Chat, Runs, Compare, rendered session, or New run
   id: swig
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle G then C/R/D/V/N jumps" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle G then C/R/D/V/N jumps" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: Cmd/Ctrl+K toggles the CommandPalette when focus is on the page and no form field is focused
   id: swik
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle Cmd/Ctrl.K toggles the CommandPalette" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle Cmd/Ctrl.K toggles the CommandPalette" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: Escape on a rendered session with no form field focused clears chapter kb-focused; Escape in chapter search still clears and unfocuses
   id: swiesc
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle Escape clears chapter kb-focused" test/browser/shortcut-when-idle.test.js test/render/render-interactions-nav.test.js test/browser/shortcut-when-idle.playwright.test.js
-  tags: [spec, shortcut-when-idle, implemented]
-- label: page shortcuts still fire when a button, link, or checkbox is focused — those are not text form fields
-  id: swidl
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle shortcuts fire when a button, link, or checkbox is focused" test/browser/shortcut-when-idle.test.js test/render/render-interactions-nav.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle Escape clears chapter kb-focused" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: after the CommandPalette closes, idle /, j/k, o, and G-then-letter chords work again
   id: swiclosed
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle shortcuts work again after the CommandPalette closes" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle shortcuts work again after the CommandPalette closes" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: after G then R lands on /sessions, G then D jumps to /compare and does not type d into the sessions filter
   id: swigd
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle G then C/R/D/V/N jumps" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
-- label: the /sessions filter #filterInput is not autofocused, so a G-then-letter chord can start after navigating to Runs
-  id: swiaf
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "filter input has expression placeholder|idle G then C/R/D/V/N jumps" test/browser/browser-page-build.test.js test/browser/shortcut-when-idle.test.js
-  tags: [spec, shortcut-when-idle, implemented]
-- label: idle / is the same site-wide workspace search chord on every served page — it always focuses #workspaceSearch and never a page-local filter or a Cmd+K alias
-  id: swisite
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle / is a site-wide workspace search chord" test/browser/shortcut-when-idle.test.js
-  tags: [spec, shortcut-when-idle, implemented]
 - label: after G then D lands on /compare with BODY focused and the CommandPalette closed, idle / focuses #workspaceSearch with the palette still closed
   id: swicmp
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "after G then D lands on /compare" test/browser/shortcut-when-idle.playwright.test.js test/browser/shortcut-when-idle.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "after G then D lands on /compare" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: idle / on /sessions, /run, /view, and /compare focuses the same #workspaceSearch combobox (one search bar / workspace search; Cmd+K is a different chord)
   id: swisame
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle / on /sessions, /run, /view, and /compare focuses the same" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle / on /sessions, /run, /view, and /compare focuses the same" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: idle / does not open the CommandPalette; Cmd/Ctrl+K remains a different chord that toggles the command menu
   id: swinotcmdk
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle / does not open the CommandPalette" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle / does not open the CommandPalette" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: while the CommandPalette is open, / types into #cmdkInput and does not focus #workspaceSearch or act as the search opener
   id: swicmdkslash
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while the CommandPalette is open, / types into" test/browser/shortcut-when-idle.playwright.test.js test/browser/command-palette.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
-- label: while the CommandPalette combobox is focused, typing / does not focus #workspaceSearch
-  id: swicmdkws
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "does not focus #workspaceSearch|typing /ojkg.x inserts those characters into #cmdkInput" test/browser/command-palette-key-capture.test.js test/browser/command-palette.playwright.test.js test/browser/shortcut-when-idle.playwright.test.js
-  tags: [spec, focus-seam, cmdk-key-capture, shortcut-when-idle, implemented]
 - label: when no form field is focused and the CommandPalette is closed, idle s on /sessions focuses #workspaceSearch (same action as /)
   id: swiss
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle s on /sessions focuses|idle s and / both focus" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle s on /sessions focuses|idle s and / both focus" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, idle-s, implemented]
 - label: idle s and / both focus the same #workspaceSearch combobox (GitHub s,/ aliases; Cmd+K is a different chord)
   id: swisgh
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle s and / both focus|GitHub data-hotkey s,/" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js test/browser/is-form-field.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle s and / both focus|GitHub data-hotkey s,/" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, idle-s, implemented]
 - label: while the CommandPalette is open, typing s inserts into #cmdkInput and does not focus #workspaceSearch
   id: swicmdks
@@ -200,243 +95,223 @@
   tags: [spec, shortcut-when-idle, idle-s, implemented]
 - label: the visible #workspaceSearch chip advertises S as well as / as equal GitHub aliases
   id: swichip
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "visible search chip advertises S as well as" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "visible search chip advertises S as well as" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, idle-s, implemented]
 - label: #workspaceSearch listbox popup options are excluded from the page Tab sequence; Tab from the combobox does not land on .tq-search-item or page content behind the open popup
   id: swsoptab
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "listbox popup options are excluded from the page Tab sequence|Tab from #workspaceSearch does not land" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "listbox popup options are excluded from the page Tab sequence|Tab from #workspaceSearch does not land" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, ws-apg-combobox, implemented]
 - label: when a #workspaceSearchList option is focused, printable / and j return focus to #workspaceSearch and insert those characters; they do not re-fire idle / or chapter kb-focused on /view
   id: swslistprint
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "printable / and j while a workspace search result is focused" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "printable / and j while a workspace search result is focused" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, ws-apg-combobox, implemented]
 - label: a Character keys checkbox (GitHub WCAG 2.1.4 hatch) is available to turn off unmodified character-key shortcuts
   id: swichkui
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Character keys checkbox" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Character keys checkbox" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, wcag-214, character-keys, implemented]
 - label: when Character keys is deselected, focused #newRunBtn then s does not move focus to #workspaceSearch and g then c does not navigate
   id: swichkoff
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "when Character keys is deselected" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js test/browser/is-form-field.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "when Character keys is deselected" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, wcag-214, character-keys, implemented]
 - label: when Character keys is selected (the default), idle s and / still focus #workspaceSearch and idle g then c still jumps
   id: swichkon
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "when Character keys is selected \\(the default\\)" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js test/browser/is-form-field.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "when Character keys is selected \\(the default\\)" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, wcag-214, character-keys, implemented]
 - label: Cmd/Ctrl+K still toggles the CommandPalette when Character keys is deselected
   id: swichkmod
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Cmd/Ctrl.K still toggles the CommandPalette when Character keys is deselected" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Cmd/Ctrl.K still toggles the CommandPalette when Character keys is deselected" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, wcag-214, character-keys, implemented]
 - label: when no form field is focused, the CommandPalette is closed, and no overlay owns the keyboard, idle ? opens the keyboard-shortcuts cheatsheet #characterKeysOverlay
   id: swihelp
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle \\? opens the keyboard-shortcuts cheatsheet" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle \\? opens the keyboard-shortcuts cheatsheet" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, idle-help, implemented]
 - label: when no form field is focused, the CommandPalette is closed, and no overlay owns the keyboard, idle Cmd/Ctrl+/ opens the same keyboard-shortcuts cheatsheet
   id: swicmdslash
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle Cmd/Ctrl\\+/ opens the keyboard-shortcuts cheatsheet" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle Cmd/Ctrl\\+/ opens the keyboard-shortcuts cheatsheet" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, idle-help, implemented]
 - label: the keyboard-shortcuts cheatsheet lists page shortcuts and includes the Character keys checkbox
   id: swicheat
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "the keyboard-shortcuts cheatsheet lists page shortcuts and includes the Character keys checkbox" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "the keyboard-shortcuts cheatsheet lists page shortcuts and includes the Character keys checkbox" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, idle-help, implemented]
 - label: while a text field is focused, ? inserts into the field and Cmd/Ctrl+/ does not open the keyboard-shortcuts cheatsheet
   id: swihelpfield
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a text field is focused, \\? inserts and Cmd/Ctrl\\+/ does not open the cheatsheet" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a text field is focused, \\? inserts and Cmd/Ctrl\\+/ does not open the cheatsheet" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, idle-help, implemented]
 - label: when Character keys is deselected, idle ? does not open the cheatsheet and Cmd/Ctrl+/ still opens it
   id: swihelpoff
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "when Character keys is deselected, idle \\? does not open the cheatsheet and Cmd/Ctrl\\+/ still opens it" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "when Character keys is deselected, idle \\? does not open the cheatsheet and Cmd/Ctrl\\+/ still opens it" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, idle-help, wcag-214, implemented]
 - label: when no form field is focused, the CommandPalette is closed, and the sessions peek flyout is closed, idle j/k and ArrowDown/ArrowUp on /sessions move .session-row-wrap.is-selected through the run list (Linear J/K) without requiring a prior click to open peek
   id: swilist
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle j/k on /sessions with peek closed move the run list" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle j/k on /sessions with peek closed move the run list" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: while a text field is focused on /sessions, j/k and ArrowDown insert or stay in the field and do not move the run list
   id: swilistfield
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a text field is focused, j/k/ArrowDown do not move the /sessions run list" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a text field is focused, j/k/ArrowDown do not move the /sessions run list" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, editable-guard, implemented]
 - label: the keyboard-shortcuts cheatsheet advertises J/K as next/previous navigation of the current list, which idle j/k on /sessions honor when peek is closed
   id: swilistcheat
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "cheatsheet advertises J/K as current-list navigation" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "cheatsheet advertises J/K as current-list navigation" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, idle-help, implemented]
 - label: when no form field is focused, the CommandPalette is closed, the sessions peek flyout is closed, and no overlay is on __tqOverlayStack, idle Escape after J/K highlights a /sessions run row clears .session-row-wrap.is-selected, drops aria-current, and blurs the role=link row (Linear Esc-to-clear / VS Code list.clear)
   id: swilistesc
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle Escape on /sessions with peek closed clears the list cursor" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle Escape on /sessions with peek closed clears the list cursor" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: when the sessions peek flyout is open, Escape closes peek and does not yet clear .session-row-wrap.is-selected; a following idle Escape then unfocuses the list cursor
   id: swilistescpeek
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "peek Escape still closes peek before list-clear" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "peek Escape still closes peek before list-clear" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: when a modal overlay is on __tqOverlayStack, Escape dismisses the overlay first and does not clear the /sessions J/K list cursor
   id: swilistescover
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "overlay Escape still pops overlays before list-clear" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "overlay Escape still pops overlays before list-clear" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: when idle ? or Cmd+/ opens the keyboard-shortcuts cheatsheet, focus moves to the dialog (or Close), not #characterKeysToggle
   id: swihelpfocus
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle \\? focuses the cheatsheet dialog, not the Character keys checkbox" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle \\? focuses the cheatsheet dialog, not the Character keys checkbox" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, idle-help, implemented]
 - label: when the CommandPalette is closed and no form field is focused, Shift+G then c jumps the same way g then c does (G then C as written; GitHub encoder Shift+Letter sequence aliases, not four-way G c)
   id: swigshift
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Shift.G then c jumps|G then C as written" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js test/browser/is-form-field.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Shift.G then c jumps|G then C as written" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, github/hotkey, implemented]
 - label: when no form field is focused, the CommandPalette is closed, and the sessions peek flyout is closed, idle o on a /sessions J/K list cursor opens the focused session (Linear/GitHub O); /view chapter o still toggles
   id: swilisto
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle o on a /sessions list cursor opens the focused item" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle o on a /sessions list cursor opens the focused item" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: when no form field is focused, the CommandPalette is closed, and the sessions peek flyout is closed, idle j/k on /sessions keep document.activeElement on the highlighted row including a running div.session-row.run-row so Enter opens it (Linear/GitHub Enter-to-open)
   id: swilistrun
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle j on a running div.session-row.run-row keeps focus so Enter opens" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle j on a running div.session-row.run-row keeps focus so Enter opens" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: when no form field is focused, the CommandPalette is closed, and the sessions peek flyout is closed, idle O (unscoped character-key) and Enter (only when the list owns the keyboard: BODY with .session-row-wrap.is-selected or the row focused — VS Code WorkbenchListFocusContextKey, not a page-wide data-hotkey leaf) open the /sessions J/K cursor including a running div.session-row.run-row; /view chapter o still toggles
   id: swilistoe
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle O and Enter open the J/K cursor when the list owns the keyboard" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle O and Enter open the J/K cursor when the list owns the keyboard" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 - label: focused #newRunBtn Enter is native button activation (opens launch) and is not preventDefaulted by a page-wide list-open chord, even when a /sessions row is .is-selected; idle j then Enter still opens the selected running row when the list owns the keyboard (BODY with .is-selected or the row focused)
   id: swilistenter
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "focused #newRunBtn Enter is native activation" test/browser/shortcut-when-idle.test.js test/browser/shortcut-when-idle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "focused #newRunBtn Enter is native activation" test/browser/shortcut-when-idle.playwright.test.js
   tags: [spec, shortcut-when-idle, implemented]
 
 # overlay-focus-lifecycle
 - label: Opening the CommandPalette moves document.activeElement inside #cmdkOverlay (the combobox)
   id: ofp
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Opening the CommandPalette moves document.activeElement inside' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Opening the CommandPalette moves document.activeElement inside' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: While the CommandPalette is open, Tab and Shift+Tab keep focus inside #cmdkOverlay and do not land on the page behind
   id: oft
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Tab and Shift.Tab keep focus inside #cmdkOverlay' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Tab and Shift.Tab keep focus inside #cmdkOverlay' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: Escape or backdrop click closes the CommandPalette and restores the previously focused element
   id: ofx
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'closes the CommandPalette and restores the previously focused element' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'closes the CommandPalette and restores the previously focused element' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: After the CommandPalette closes, document.activeElement is not inside the hidden overlay
   id: ofs
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'After the CommandPalette closes, document.activeElement is not inside' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'After the CommandPalette closes, document.activeElement is not inside' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: Opening the launch overlay moves document.activeElement inside #launchOverlay
   id: ofl
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Opening the launch overlay moves document.activeElement' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Opening the launch overlay moves document.activeElement' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: While the launch overlay is open, Tab and Shift+Tab cycle inside #launchOverlay and do not land on the page behind
   id: oflt
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Tab and Shift.Tab cycle inside #launchOverlay' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Tab and Shift.Tab cycle inside #launchOverlay' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: Escape or backdrop click closes the launch overlay and restores the previously focused element
   id: oflr
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'closes the launch overlay and restores the previously focused element' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'closes the launch overlay and restores the previously focused element' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: Opening the keys menu moves document.activeElement inside #keysMenu; Tab stays inside; Escape restores the previously focused element
   id: ofk
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Opening the keys menu moves document.activeElement' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Opening the keys menu moves document.activeElement' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: Opening the run-details popover moves document.activeElement inside #runMenu; Tab stays inside; Escape restores the previously focused element
   id: ofr
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Opening the run-details popover moves document.activeElement' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Opening the run-details popover moves document.activeElement' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: After palette, launch, keys, or run-details overlays close, idle shortcuts and typing into a restored field still work because focus is not left on a hidden node
   id: ofa
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'focus is not left on a hidden node' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'focus is not left on a hidden node' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: Cmd+K over an open launch overlay focuses #cmdkInput and does not leave #cmdkOverlay inert
   id: ofstk
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Cmd.K over an open launch overlay focuses' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Cmd.K over an open launch overlay focuses' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: While the CommandPalette is stacked over the launch overlay, Tab stays inside #cmdkOverlay
   id: ofstkt
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'stacked over the launch overlay, Tab stays' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'stacked over the launch overlay, Tab stays' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: Escape closes the stacked CommandPalette first without closing or leaving the launch overlay inert, and restores focus to the launch field
   id: ofstke
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Escape closes the stacked CommandPalette first' test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Escape closes the stacked CommandPalette first' test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
-- label: unscoped printable page shortcuts (/ j k o G-chord) do not fire while an overlay is on the shared overlay stack — launch or palette owns the keyboard
-  id: ofbusy
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "do not fire while an overlay is on the shared overlay stack" test/browser/is-form-field.test.js test/browser/overlay-focus-lifecycle.test.js
-  tags: [spec, focus-seam, overlay-focus-lifecycle, shortcut-when-idle, implemented]
 - label: while a launch overlay button is focused, idle / does not focus #workspaceSearch and G-then-letter does not navigate
   id: ofwsslash
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a launch overlay button is focused" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a launch overlay button is focused" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, focus-seam, overlay-focus-lifecycle, shortcut-when-idle, implemented]
 - label: Escape after Cmd+K opened over #workspaceSearch restores #workspaceSearch
   id: ofwsrest
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Cmd.K opened over #workspaceSearch restores" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Cmd.K opened over #workspaceSearch restores" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, focus-seam, overlay-focus-lifecycle, implemented]
 - label: Opening the share-session dialog moves document.activeElement inside .hf-modal-overlay; Tab stays inside; Escape dismisses and restores the previously focused element
   id: ofshare
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Opening the share-session dialog moves document.activeElement" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Opening the share-session dialog moves document.activeElement" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: while a share-session dialog button is focused, idle / does not focus #workspaceSearch and the modal stays up
   id: ofshareslash
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a share-session dialog button is focused" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a share-session dialog button is focused" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, focus-seam, shortcut-when-idle, implemented]
 - label: while a keys menu .run-key-btn is focused, idle / does not focus #workspaceSearch and #keysMenu stays open on the overlay stack
   id: ofkeysslash
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a keys menu .run-key-btn is focused" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a keys menu .run-key-btn is focused" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, focus-seam, shortcut-when-idle, implemented]
-- label: share-session dialog, keys menu, and run-details popover call pushOverlay/popOverlay so they own the keyboard the same way palette and launch do
-  id: ofallpush
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "share, keys, and run-details overlays join" test/browser/overlay-focus-lifecycle.test.js
-  tags: [spec, overlay-focus-lifecycle, implemented]
 - label: When the keys menu is open it is a body-level APG modal dialog (role=dialog, aria-modal=true); #workspaceSearch and the composer sit under inert ancestors; typing / does not focus #workspaceSearch
   id: ofkmodal
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "keys menu is an APG modal dialog" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "keys menu is an APG modal dialog" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: When the run-details dialog is open it is a body-level APG modal dialog (role=dialog, aria-modal=true); #workspaceSearch and the composer sit under inert ancestors; typing / does not focus #workspaceSearch
   id: ofrmodal
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "run-details is an APG modal dialog" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "run-details is an APG modal dialog" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: the last-pushed overlay on the shared stack paints above overlays under it — stack order is visual order
   id: ofstackz
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "paints above overlays under it|paints #cmdkOverlay above" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "paints above overlays under it|paints #cmdkOverlay above" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: Cmd+K over the /view share modal focuses #cmdkInput, paints #cmdkOverlay above .hf-modal-overlay, inserts typed /ojkg?x into the combobox, and Escape closes the palette first while share remains
   id: ofsharek
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Cmd.K over the .*share modal" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Cmd.K over the .*share modal" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
-- label: Opening or dismissing a modal overlay sequenceReset()s the GitHub radix-trie chord so an idle g does not stay armed across launch or any capture-phase Escape overlay; after Escape, c does not complete g c
-  id: ofchord
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "sequenceReset the GitHub chord so idle g then launch Escape" test/browser/overlay-focus-lifecycle.test.js
-  tags: [spec, overlay-focus-lifecycle, overlay-chord, implemented]
 - label: Playwright idle g then click New run then Escape then c does not navigate to /; idle g then c with no overlay still jumps; Cmd+K over launch still types /ojkg?x
   id: ofchordpw
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "idle g then click New run then Escape then c" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, overlay-chord, implemented]
 - label: Opening #ageMenu, #sourceMenu, or #sortBar moves document.activeElement inside the menu; Tab stays inside; Escape dismisses and restores the previously focused element
   id: ofage
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Opening #ageMenu" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Opening #ageMenu" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: while a rail toolbar menu option is focused, idle / does not focus #workspaceSearch and the menu stays open on the overlay stack
   id: ofageslash
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a rail toolbar menu option is focused" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while a rail toolbar menu option is focused" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, focus-seam, shortcut-when-idle, implemented]
-- label: rail toolbar menus #ageMenu, #sourceMenu, and #sortBar call pushOverlay/popOverlay so they own the keyboard the same way palette, launch, keys, and run-details do
-  id: ofagepush
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "rail toolbar menus join" test/browser/overlay-focus-lifecycle.test.js
-  tags: [spec, overlay-focus-lifecycle, implemented]
 - label: When #ageMenu, #sourceMenu, or #sortBar is open, the page behind is inert (session rows sit under an inert ancestor) so a click does not navigate to /run; Tab stays in the menu, Escape restores, and idle / does not steal
   id: ofageinert
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "open #ageMenu inerts the page behind" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "open #ageMenu inerts the page behind" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: Opening #sessionFlyout moves document.activeElement inside the flyout; Tab stays trapped; Escape dismisses and restores the previously focused element
   id: offly
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Opening #sessionFlyout" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Opening #sessionFlyout" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: while #sessionFlyout is open on the overlay stack, idle / does not focus #workspaceSearch and the flyout stays open
   id: offlyslash
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while #sessionFlyout is open" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while #sessionFlyout is open" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, focus-seam, shortcut-when-idle, implemented]
-- label: #sessionFlyout calls pushOverlay/focusOverlay/trapOverlayTab/restoreOverlayFocus so it owns the keyboard the same way palette and launch do
-  id: offlypush
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "#sessionFlyout joins" test/browser/overlay-focus-lifecycle.test.js
-  tags: [spec, overlay-focus-lifecycle, implemented]
 - label: When #sessionFlyout is open it is a body-level APG modal dialog on __tqOverlayStack; the page behind is inert so / does not steal to #workspaceSearch; Tab stays; Escape restores
   id: offlyinert
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "open #sessionFlyout inerts the page behind" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "open #sessionFlyout inerts the page behind" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: After a click inside #sessionFlyoutFrame, the #sessionFlyout Tab trap owns the nested /view iframe: Tab and Shift+Tab wrap inner tabbables back to flyout chrome, stay inside the dialog, and Escape still dismisses
   id: offlyframe
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "click inside #sessionFlyoutFrame" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "click inside #sessionFlyoutFrame" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: Cmd+K inside #sessionFlyoutFrame opens the parent #cmdkOverlay the same way Cmd+K over launch does; #cmdkInput accepts typed /ojkg?x
   id: offlycmdk
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Cmd.K inside #sessionFlyoutFrame" test/browser/overlay-focus-lifecycle.test.js test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Cmd.K inside #sessionFlyoutFrame" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]

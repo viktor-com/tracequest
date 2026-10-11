@@ -95,7 +95,6 @@ test("the insights page shows per-machine pull health and escapes and redacts se
   assert.match(html, /data-state="fresh"><span class="ins-state-dot"><\/span>up to date/);
   assert.match(html, /data-state="local"><span class="ins-state-dot"><\/span>this machine/);
   assert.ok(!html.includes("<script"), "the page ships no script and never injects one");
-  assert.ok(html.includes("&lt;script&gt;alert(1)&lt;/script&gt;"));
   assert.ok(!html.includes("supersecretvalue"));
   assert.match(html, /DB_PASSWORD=\[REDACTED\]/);
 

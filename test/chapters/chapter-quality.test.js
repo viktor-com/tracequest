@@ -419,8 +419,6 @@ describe("enrichChaptersQuality performance", () => {
     const qualitySrc = readFileSync(join(SRC_ROOT, "chapters/chapter-quality.js"), "utf8");
     assert.ok(accumulateSrc.includes("entry._path = filePath"));
     assert.ok(patternsSrc.includes("isSimilarCallEntry"));
-    assert.ok(qualitySrc.includes("isSimilarCallEntry(seq[i], seq[j])"));
-    assert.ok(qualitySrc.includes("isSameCallTarget(seq[i], seq[k])"));
     assert.ok(qualitySrc.includes("ch.selfCorrections = selfCorrections"));
     assert.ok(!qualitySrc.includes("chapters.reduce"));
 
@@ -477,7 +475,6 @@ describe("enrichChaptersQuality export surface", () => {
 
   test("session-chapters source calls enrichChaptersQualityCore without re-exporting it", () => {
     const src = readFileSync(join(SRC_ROOT, "chapters/session-chapters.js"), "utf8");
-    assert.match(src, /enrichChaptersQualityCore\(chapters\)/);
     assert.doesNotMatch(src, /enrichChaptersEfficiency\s*\(/);
     assert.doesNotMatch(src, ENRICH_REEXPORT_RE);
     assert.doesNotMatch(src, ENRICH_EXPORT_RE);

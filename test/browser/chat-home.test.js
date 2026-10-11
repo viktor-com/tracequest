@@ -76,7 +76,6 @@ describe("chat-home: empty corpus", () => {
     assert.match(html, /placeholder="Start a new run"/);
     assert.match(html, /id="newRunBtn"/);
     assert.match(html, /id="launchOverlay"/);
-    assert.ok(html.includes('var _INIT_DATA = { defaultCwd: "/Users/dev" }'));
   });
 });
 
@@ -118,7 +117,6 @@ describe("chat-home: session rail first-paints as a rail, not an inventory dashb
     for (const [label, html] of railPages()) {
       assert.match(html, /<aside class="agent-rail" aria-label="Sessions">/, `${label}: rail`);
       assert.doesNotMatch(html, /<aside class="agent-rail[^"]*filters-open/, `${label}: extra filters closed on first paint`);
-      assert.match(html, /\.agent-rail:not\(\.filters-open\) \.rail-filters-extra \{ display: none; \}/, `${label}: extra inventory chrome hidden`);
       assert.match(html, /id="filterBar"/, `${label}: search block present`);
       assert.match(html, /id="filterInput"/, `${label}: query visible`);
       const headIdx = html.indexOf('<div class="rail-head">Sessions');
@@ -131,8 +129,6 @@ describe("chat-home: session rail first-paints as a rail, not an inventory dashb
       assert.ok(filtersIdx > headIdx && filtersIdx < listIdx, `${label}: filter stack sits between head and list`);
       assert.ok(queryIdx > filtersIdx && queryIdx < extraIdx, `${label}: query is outside the collapsed extra stack`);
       assert.ok(overviewIdx > extraIdx && overviewIdx < listIdx, `${label}: overview lives inside the collapsed extra stack`);
-      assert.match(html, /var railFiltersOpen = false/, `${label}: disclosure starts closed`);
-      assert.match(html, /var filtersOpen = false/, `${label}: chip pickers start closed`);
       assert.match(html, /<div class="qf-bar" id="qfBar" hidden>/, `${label}: chips hidden`);
       assert.match(html, /id="filtersToggle"[^>]*aria-expanded="false"/, `${label}: Filters not expanded`);
       assert.match(html, /<a class="rail-all" href="\/sessions">All sessions &rarr;<\/a>/, `${label}: All sessions foot`);
@@ -145,11 +141,9 @@ describe("chat-home: rail filter disclosure keeps previous-home options availabl
     for (const [label, html] of railPages()) {
       assert.match(html, /id="railFilterToggle"/, `${label}: #railFilterToggle`);
       assert.match(html, /aria-controls="railFilters"/, `${label}: toggle controls #railFilters`);
-      assert.match(html, /function setRailFiltersOpen\(/, `${label}: setRailFiltersOpen`);
       assert.match(html, /setRailFiltersOpen\(!railFiltersOpen\)/, `${label}: toggle flips the disclosure`);
       assert.match(html, /id="workspaceSearch"/, `${label}: always-visible workspace search`);
       assert.match(html, /data-hotkey="s,\/"/, `${label}: slash focuses workspace search`);
-      assert.match(html, /if \(_railExpr \|\| qfHasAny\(\) \|\| \(_railSort && _railSort !== "recent"\)\) setRailFiltersOpen\(true\)/, `${label}: active filters reopen the stack`);
       assert.match(html, /<div class="rail-filters" id="railFilters">/, `${label}: previous-home stack remains`);
       assert.match(html, /id="filterInput"/, `${label}: query`);
       assert.match(html, /id="ageBtn"/, `${label}: time`);

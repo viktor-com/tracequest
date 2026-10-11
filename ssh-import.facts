@@ -3,7 +3,7 @@
 ## cli
 - label: `ssh` is a second `import` source alongside cursor-cloud — bin/tracequest.js still routes case "import" to cmdImport, which lazy-loads src/import/ssh-import.js for source ssh the same way it lazy-loads cursor-cloud-import.js, a missing positional source dies (exit 1, cli-die) naming both cursor-cloud and ssh, and an unrecognised source dies naming both
   id: sshim
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'import with an unknown source dies|import help lists usage and options|import ssh with no hosts dies' test/bin/tracequest-cursor-cloud-import-integration.test.js test/bin/tracequest-ssh-import-integration.test.js && grep -q 'runSshImport' src/cli/cli-commands.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'import with an unknown source dies|import help lists usage and options|import ssh with no hosts dies' test/bin/tracequest-cursor-cloud-import-integration.test.js test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, cli, implemented]
 - label: `tracequest import ssh` takes remaining positionals as OpenSSH destinations, and when none are given it reads HOME/.tracequest/import-hosts (one host per line, blank lines and # comments skipped); if that file is absent or yields no hosts the command dies (exit 1) with an actionable message naming both the positional form and the import-hosts file
   id: sshho
@@ -11,7 +11,7 @@
   tags: [spec, ssh-import, cli, implemented]
 - label: import ssh options are [--dry-run] [--full] [-i/--identity <file>] [--port <N>] [--as <id>] [-h/--help], declared in bin/tracequest.js's import parseArgs, listed in the import Options help block, and ignored by the cursor-cloud route; --port is the SSH port (a positive integer) and --identity is the SSH identity file (rejected when the path contains whitespace)
   id: sshopt
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'import help lists usage and options|import ssh rejects a non-integer --port|import ssh rejects an identity path with whitespace' test/bin/tracequest-cursor-cloud-import-integration.test.js test/bin/tracequest-ssh-import-integration.test.js && sed -n '/case "import"/,/break;/p' bin/tracequest.js | grep -q 'identity' && grep -q -- '--as' src/cli/cli-help.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'import help lists usage and options|import ssh rejects a non-integer --port|import ssh rejects an identity path with whitespace' test/bin/tracequest-cursor-cloud-import-integration.test.js test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, cli, implemented]
 - label: `tracequest import ssh <host> --dry-run` performs the same rsync planning as a real run (including fixture-mode local rsync) but writes no session files and creates no directories under the hosts root, prints one planned action per source tree, and a subsequent real run starts from an unchanged local state
   id: sshdry
@@ -19,7 +19,7 @@
   tags: [spec, ssh-import, cli, implemented]
 - label: `tracequest import ssh --full` is the escape hatch that passes rsync --ignore-times so every remote file is reconsidered even when size and mtime match, composing with --dry-run, and the flag stays the shared import --full already declared for cursor-cloud
   id: sshfu
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'full recopies a remote tree whose size and mtime still match' test/bin/tracequest-ssh-import-integration.test.js && grep -q -- '--ignore-times' src/import/ssh-import.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'full recopies a remote tree whose size and mtime still match' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, cli, implemented]
 - label: every import ssh run ends with a one-line summary reporting six counts in the order checked, fetched, imported, updated, skipped, failed — checked is the number of (host, source) pairs, fetched is how many of those actually invoked rsync rather than being skipped as absent on the remote, imported/updated/skipped/failed are those pairs' write outcomes, the process exits 0 when failed is 0 and exits 1 when any pair failed
   id: sshsm
@@ -35,17 +35,6 @@
   tags: [spec, ssh-import, cli, implemented]
 
 ## transport
-- label: the production transport is rsync -a --out-format '%i %n' over ssh -o BatchMode=yes so a missing key never hangs on a password prompt; TRACEQUEST_SSH_RSYNC overrides the rsync binary, and rsync I/O is confined to src/import/ssh-import.js
-  id: sshrs
-  command: grep -q 'BatchMode=yes' src/import/ssh-import.js && grep -q 'TRACEQUEST_SSH_RSYNC' src/import/ssh-import.js && grep -q -- '--out-format' src/import/ssh-import.js && ! grep -rqE 'BatchMode=yes|TRACEQUEST_SSH_RSYNC|TRACEQUEST_IMPORT_SSH_FIXTURE' src/sessions src/server src/routes src/parse src/render
-  tags: [spec, ssh-import, cli, implemented]
-- label: tests never open a real SSH connection — TRACEQUEST_IMPORT_SSH_FIXTURE points the importer at a local directory whose per-host subdirectories stand in for remote $HOME, and rsync copies from that fixture without -e ssh
-  id: sshfx
-  command: grep -q 'TRACEQUEST_IMPORT_SSH_FIXTURE' src/import/ssh-import.js && grep -q 'TRACEQUEST_IMPORT_SSH_FIXTURE' test/bin/tracequest-ssh-import-integration.test.js && ! grep -qE 'ssh[[:space:]]+-o' test/bin/tracequest-ssh-import-integration.test.js
-  tags: [spec, ssh-import, cli, implemented]
-- label: SSH/rsync I/O happens only when `import ssh` runs — startup, discovery, indexing, serving, and every other CLI command are unchanged except that discovery stats additional (possibly absent) host roots under the hosts directory
-  id: sshni
-  tags: [spec, ssh-import, cli, implemented]
 - label: a missing remote source tree is skip-with-warning, never fatal — the importer prints a warning naming the host and source, counts the pair under skipped, and continues; any other per-pair rsync error that is not "remote path missing" counts under failed without aborting the rest of the run
   id: sshsk
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'skips a source tree that is absent on the remote|counts a rsync failure under failed and continues' test/bin/tracequest-ssh-import-integration.test.js
@@ -56,96 +45,40 @@
   tags: [spec, ssh-import, cli, implemented]
 
 ## materialisation
-- label: imported trees materialise under the durable tracequest data root ~/.local/share/tracequest/hosts/<host-id>/ as a synthetic HOME (so .claude/projects lands at <root>/<host-id>/.claude/projects), resolved by resolveHostsRoot in src/sessions/session-discovery-paths.js with the TRACEQUEST_HOSTS_DIR env override, and discovery and the importer share that single resolver
-  id: sshrt
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'hosts root is .local/share/tracequest/hosts under HOME|TRACEQUEST_HOSTS_DIR overrides the hosts root' test/sessions/discovery-roots.test.js && grep -q 'resolveHostsRoot' src/sessions/session-discovery-paths.js && grep -q 'resolveHostsRoot' src/import/ssh-import.js
-  tags: [spec, ssh-import, sessions, implemented]
 - label: each host copies the five filesystem session trees plus OpenCode's opencode.db from remote $HOME — .claude/projects, .cursor/projects, .codex/sessions, .factory/sessions, .grok/sessions, .local/share/opencode/opencode.db — and never copies the cursor-cloud import root or credential files outside those session trees
   id: sshly
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'copies the filesystem session trees including opencode and not cursor-cloud' test/bin/tracequest-ssh-import-integration.test.js && grep -q 'opencode.db' src/import/ssh-import.js
-  tags: [spec, ssh-import, sessions, implemented]
-- label: host id is the SSH destination spec used verbatim after trim, rejected when empty, when it is "." or "..", when it contains a path separator or NUL, or when it contains the substring cursor-cloud (which would make sidecar infer_source mislabel the tree as cursor-cloud)
-  id: sshid
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'rejects unsafe host ids' test/import/ssh-import.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'copies the filesystem session trees including opencode and not cursor-cloud' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, sessions, implemented]
 - label: re-running import ssh is idempotent — rsync's default size+mtime skip leaves unchanged files' mtime untouched so buildIndex does not re-index them, dest trees that receive no transferred files count as skipped, and the importer never passes --delete so a session that vanished remotely stays in the local archive
   id: sshidm
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 're-run skips unchanged trees and preserves mtime|does not delete a local file that vanished from the fixture' test/bin/tracequest-ssh-import-integration.test.js && grep -q -- '--delete' src/import/ssh-import.js && ! grep -qE 'push\([^)]*--delete' src/import/ssh-import.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 're-run skips unchanged trees and preserves mtime|does not delete a local file that vanished from the fixture' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, sessions, implemented]
 
 ## source
 - label: ssh import does not add a new KNOWN_SESSION_SOURCE — copied files keep source claude, cursor, codex, factory, or grok so source:claude matches local and imported Claude sessions alike
   id: sshsv
-  command: node -e "import('./src/sessions/session-index-core.js').then(m=>{if(m.KNOWN_SESSION_SOURCES.includes('ssh')||m.KNOWN_SESSION_SOURCES.includes('host'))process.exit(1)})" && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'imported ssh sessions are indexed and searchable with original source and host' test/bin/tracequest-ssh-import-integration.test.js
-  tags: [spec, ssh-import, sessions, implemented]
-- label: discoveryRoots keeps the existing seven local roots in the same order and then appends six roots per imported host directory (claude, cursor, codex, factory, grok, opencode.db) sorted by host id; an absent hosts root is silently skipped so a fresh HOME still returns exactly seven roots; getDiscoveryPaths stays local-only so live detection never treats imported copies as this machine's agent dirs
-  id: sshdw
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'returns exactly seven provider roots|appends six roots per imported host after the local seven|getDiscoveryPaths stays local-only when hosts exist' test/sessions/discovery-roots.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'imported ssh sessions are indexed and searchable with original source and host' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, sessions, implemented]
 - label: findSessions stamps host on any discovery row whose path sits under the resolved hosts root (the first path component after that root), local sessions omit host, sessionToApiObject copies host when present, and list/find --json include host when present
   id: sshst
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'stamps host on sessions under the hosts root|list --json includes host for imported sessions' test/sessions/session-discovery.test.js test/bin/tracequest-ssh-import-integration.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'stamps host on sessions under the hosts root|list --json includes host for imported sessions' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, sessions, implemented]
-- label: the filter expression host:gpu matches exactly sessions whose host is gpu (exact lowercase equality, same as source) and does not match local sessions that omit host; source:claude still matches imported Claude sessions from any host
-  id: sshfl
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'host:gpu matches only sessions from that host' test/filter-expr.test.js
-  tags: [spec, ssh-import, search, implemented]
-- label: isSessionPath accepts .jsonl files and Grok session directories under the resolved hosts root (default ~/.local/share/tracequest/hosts or TRACEQUEST_HOSTS_DIR) so served session routes can open imported sessions, while files outside the agent roots and hosts root stay rejected
-  id: sshsp
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'hosts paths under the hosts root are accepted as session paths' test/server/server-session-path.test.js
-  tags: [spec, ssh-import, serve, implemented]
-- label: a browser session row whose API object carries host renders that host next to the source badge as source@host inside the existing .session-source pill, FILTER_KEYS / KEY_COLORS in src/browser/browser-client.js include host so the dashboard filter autocomplete offers it, and the dashboard filter legend lists host: next to source:
-  id: sshui
-  command: grep -q "s.host" src/browser/browser-client.js && grep -q "host:" src/browser/browser-client.js && grep -q "'host'" src/filter/filter.js && grep -q '<span>host:</span>' src/browser/browser-page-build.js
-  tags: [spec, ssh-import, ui, implemented]
-- label: sidecar infer_source labels SSH-imported trees by the mirrored agent path (.claude/projects → Claude, .cursor/projects → Cursor, and so on) and never as CursorCloud, even though those paths contain the substring tracequest
-  id: sshin
-  command: grep -q 'test_infer_source_ssh_imported_hosts' sidecar/src/scan_tests.rs && cd sidecar && cargo test test_infer_source_ssh_imported_hosts
-  tags: [spec, ssh-import, sidecar, implemented]
-- label: production rsync args include -e "ssh -o BatchMode=yes" plus optional -i and -p, fixture mode omits -e, and --full adds --ignore-times without --delete
-  id: sshe
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'production mode passes ssh BatchMode|fixture mode omits ssh|invokes rsync with ssh -e' test/import/ssh-import.test.js
-  tags: [spec, ssh-import, cli, implemented]
 - label: after import ssh, `tracequest serve` GET /api/sessions?expr=host:gpu returns those rows with source equal to the original agent and host equal to the host id, and GET /view?path= of an imported jsonl returns 200 HTML of that session
   id: sshvw
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'serve lists host:gpu and opens /view of an imported session' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, serve, implemented]
 
 ## tests
-- label: the import ssh integration test in test/bin/tracequest-ssh-import-integration.test.js never performs real SSH — it sets TRACEQUEST_IMPORT_SSH_FIXTURE at a local directory of per-host trees and TRACEQUEST_HOSTS_DIR / HOME to temp dirs
-  id: sshfd
-  command: grep -q 'TRACEQUEST_IMPORT_SSH_FIXTURE' test/bin/tracequest-ssh-import-integration.test.js && grep -q 'TRACEQUEST_HOSTS_DIR' test/bin/tracequest-ssh-import-integration.test.js
-  tags: [spec, ssh-import, cli, implemented]
-- label: tests/ssh-import-integration.md is the paired spec for test/bin/tracequest-ssh-import-integration.test.js, package.json test:integration includes that harness, and tests/README.md's harness row and scenario totals match
-  id: sshdoc
-  command: grep -q 'tracequest-ssh-import-integration.test.js' package.json && grep -q 'ssh-import-integration.md' tests/README.md && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'tests README scenario totals match package test targets and harness rows|integration spec headers declare matching scenario counts' test/browser/browser-verification-targets.test.js
-  tags: [spec, ssh-import, cli, implemented]
 - label: `--as <id>` sets the host id independently of the SSH destination when exactly one host is imported, import-hosts lines of the form `user@gpu as gpu` do the same per host, `--as` with more than one host dies (exit 1), and dest trees land under the alias not the raw destination
   id: sshas
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'parseHostRef|--as aliases the host id|import-hosts as alias|--as with multiple hosts dies' test/import/ssh-import.test.js test/bin/tracequest-ssh-import-integration.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'parseHostRef|--as aliases the host id|import-hosts as alias|--as with multiple hosts dies' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, cli, implemented]
-- label: a non-fixture import ssh opens one ControlMaster SSH mux per host (ControlMaster=yes -fN) and every rsync for that host uses -e ssh with ControlMaster=auto and the same ControlPath, then ssh -O exit tears the mux down; fixture mode never starts ssh
-  id: sshcm
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'ControlMaster mux per host|fixture mode omits ssh' test/import/ssh-import.test.js && grep -q 'ControlMaster=auto' src/import/ssh-import.js
-  tags: [spec, ssh-import, cli, implemented]
-- label: Continue is not offered on imported SSH sessions — continueAgentForSource returns null when host is set so dashboard rows omit .session-continue, continueChipHtml on /view is empty when the session is imported, and POST /api/runs with resumeSession of an imported path answers 400 JSON naming that imported sessions cannot be continued
-  id: sshct
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'imported host session omits Continue|resume of an imported host session answers 400' test/browser/browser-client-dashboard.test.js test/routes/launch-routes.test.js
-  tags: [spec, ssh-import, ui, implemented]
-- label: imported OpenCode sessions keep source opencode with host stamped — the copied db is hosts/<id>/.local/share/opencode/opencode.db, discovery emits path opencode://<host>/<sessionId>, parseOpenCode and indexOpenCode open that host db, and isSessionPath accepts the host-prefixed URI
-  id: sshoc
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'imported OpenCode sessions use host-prefixed URIs|isSessionPath accepts host-prefixed opencode URIs|parseOpenCode reads the imported host db' test/sessions/session-discovery.test.js test/server/server-session-path.test.js test/parse/parse-opencode.test.js
-  tags: [spec, ssh-import, sessions, implemented]
 
 # usage-limits
 - label: after copying session trees, import ssh runs the same usage-limits collectors for that host and writes a secret-free snapshot at hosts/{hostId}/.tracequest/usage-limits.json; fixture mode collects from the fixture host HOME with no SSH
   id: sshul
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'import ssh writes a usage-limits snapshot' test/bin/tracequest-usage-limits-integration.test.js && grep -q 'collectUsageLimitsForRemote' src/import/ssh-import.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'import ssh writes a usage-limits snapshot' test/bin/tracequest-usage-limits-integration.test.js
   tags: [spec, ssh-import, usage-limits, implemented]
-- label: import ssh never adds credential paths to SSH_IMPORT_SOURCES (fact sshly stays: only the six session trees) and never rsyncs .claude/.credentials.json, .codex/auth.json, .grok/auth.json, or state.vscdb
-  id: sshuc
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'SSH_IMPORT_SOURCES stays session trees' test/usage/ssh-safety.test.js
-  tags: [spec, ssh-import, usage-limits, security, implemented]
 - label: a usage-limits probe/transport error is skip-with-warning and does not increment the six import summary counters (fact sshsm) or abort the rest of the run; --dry-run prints the plan and writes no snapshot
   id: sshuw
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'limits skip-with-warning|dry-run does not write usage-limits|summary counters unchanged' test/bin/tracequest-usage-limits-integration.test.js

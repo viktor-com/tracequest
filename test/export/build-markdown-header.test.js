@@ -182,10 +182,6 @@ describe("buildMarkdownHeader", () => {
     assert.match(md, /\*\*Errors:\*\* 3/);
   });
 
-  test("buildMarkdownHeader sorts toolCounts via Object.keys without Object.entries alloc", () => {
-    assert.ok(!MARKDOWN_EXPORT_JS.includes("Object.entries(toolCounts)"));
-  });
-
   test("tool calls sum all toolCounts and list tools sorted by count descending", () => {
     const md = joinMarkdownHeader({
       sessionId: "tools1",

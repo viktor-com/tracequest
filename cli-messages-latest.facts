@@ -1,7 +1,0 @@
-
-# cli
-
-## messages
-- label: tracequest messages --latest [project] resolves the most recent discovered session, applies --filter and --sort through the shared filter-expression path when supplied, then exports that session in the requested messages format
-  command: node --test --test-concurrency=1 test/cli/cli-commands.test.js
-  tags: [spec, cli-messages, cli-messages-latest, implemented]

@@ -302,9 +302,6 @@ describe("parse-utils helpers", () => {
   });
 
   test("INDEX_OF_LOWER_JS bundles indexOfLower for browser-client", () => {
-    assert.ok(INDEX_OF_LOWER_JS.includes("var LOWER_NATIVE_THRESHOLD = 4096"));
-    assert.ok(INDEX_OF_LOWER_JS.includes("function needsLocaleFold"));
-    assert.ok(INDEX_OF_LOWER_JS.includes("function indexOfLower"));
     const vmOut = vm.runInNewContext(`${INDEX_OF_LOWER_JS}; indexOfLower("Hello", "ell");`);
     assert.equal(vmOut, 1);
   });

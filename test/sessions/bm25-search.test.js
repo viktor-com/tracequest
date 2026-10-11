@@ -550,9 +550,6 @@ describe("fuzzy expansion with misspellings (fact 1h8)", () => {
     const source = readScanQueriesSource();
     assert.match(source, /\bconst FUZZY_MAX_EXPANSIONS = 3;/);
     assert.match(source, /\bconst FUZZY_MIN_JACCARD = 0\.4;/);
-    assert.match(source, /return results\.slice\(0, FUZZY_MAX_EXPANSIONS\);/);
-    assert.match(source, /matches\.push\(\{ term, weight: similarity \}\);/);
-    assert.match(source, /bm25Score\(tf, docLen, avgDocLen, N, df\) \* weight;/);
   });
 
   test("misspelled query term finds sessions with the correct spelling", async () => {

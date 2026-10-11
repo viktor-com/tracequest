@@ -34,8 +34,8 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
     env:
-      # Perf budgets are skipped per leg via matrix.skip_perf; `npm test` and the
-      # facts job both honour TRACEQUEST_SKIP_PERF_ASSERTS.
+      # Perf budgets are skipped per leg via matrix.skip_perf; this covers
+      # `facts check` (which runs perf-backed facts) and `npm test` alike.
       TRACEQUEST_SKIP_PERF_ASSERTS: ${{ matrix.skip_perf || '0' }}
 
     steps:
@@ -68,6 +68,9 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Run facts check (--tags spec)
+        run: npx --yes @avcodes/facts check --tags "spec"
 
       - name: Run tests
         run: npm test
@@ -109,26 +112,8 @@ jobs:
           path: dist/*.tgz
           if-no-files-found: error
 
-  # Spec facts are platform-agnostic and take ~12 min, so they run once, in
-  # parallel with the per-platform builds, instead of on every leg.
-  facts:
-    runs-on: ubuntu-24.04
-    env:
-      TRACEQUEST_SKIP_PERF_ASSERTS: "1"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - uses: dtolnay/rust-toolchain@stable
-      - run: npm run build:sidecar
-      - name: Run facts check (--tags spec)
-        run: npx --yes @avcodes/facts check --tags "spec"
-
   publish:
-    needs: [build, facts]
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write

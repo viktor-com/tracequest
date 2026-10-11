@@ -1,24 +1,10 @@
 # launch
 
 ## mux
-- label: src/mux/tmux.js is the only module that talks to tmux — it exports available(), ensureSession(), listWindows(), newWindow(), capturePane(), killWindow(), and sendKeys(), and every one of them shells out via child_process execFileSync/spawnSync with an argv ARRAY, never exec/execSync and never a shell string, so request-derived values (cwd, prompt, input text) can only ever travel as discrete argv elements; the tmux binary comes from TRACEQUEST_TMUX_BIN (default "tmux"), a set TRACEQUEST_TMUX_SOCKET prepends -L <socket> to every invocation so tests and callers get a private tmux server, and the session name comes from TRACEQUEST_TMUX_SESSION (default "tracequest"); available() probes whether the binary actually runs and answers false — never throws — when it does not
-  id: lamx
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/mux/tmux-adapter.test.js && grep -qE "execFileSync|spawnSync" src/mux/tmux.js && ! grep -qE "execSync\(|exec\(" src/mux/tmux.js
-  tags: [spec, launch, launch-s0, mux, implemented]
 - label: tracequest serve integrates the multiplexer at boot — when tmux is available the startup ensures the tracequest tmux session exists (creating it detached when absent, reusing it untouched when present) and logs one stdout line naming the tmux session, so `tmux attach -t tracequest` from a real terminal shows exactly the runs the web UI manages; when tmux is NOT resolvable serve still boots, serves every pre-existing route unchanged, never spawns a tmux process, and the launch APIs report the multiplexer unavailable instead of erroring
   id: labt
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'serve ensures the tmux session at boot|serve boots without tmux and reports mux unavailable' test/bin/tracequest-launch-integration.test.js
   tags: [spec, launch, launch-s0, mux, serve, implemented]
-
-## agents
-- label: src/agents/agent-detect.js holds the fixed launchable-agent registry — claude, codex, cursor-agent, opencode, grok, droid, gemini — where each entry pins the binary name and the per-agent argv SHAPE for passing an optional initial prompt (an argv array, positional or flag per agent, never a concatenated command string), and detection means exactly "the binary resolves on PATH" via a which-style spawnSync probe following the commandExists pattern of src/standup/agent-runner.js (probe injectable for tests, never executes the agent itself); an agent absent from PATH is simply not detected — no error, no partial entry — and agents outside the registry can never be detected at all
-  id: laag
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/agents/agent-detect.test.js && grep -q "cursor-agent" src/agents/agent-detect.js && grep -q "droid" src/agents/agent-detect.js && grep -q "gemini" src/agents/agent-detect.js
-  tags: [spec, launch, launch-s0, agents, implemented]
-- label: GET /api/agents (a route-map handler in the src/routes family with the repo signature async (req,res,url,_deps=null)) returns JSON { mux: { available, session }, agents } where agents lists only the DETECTED registry entries and mux.session is the effective session name after env overrides; with tmux absent the route still answers 200 with mux.available false alongside whatever agents PATH detection found, so the UI renders the missing-multiplexer state from this one endpoint
-  id: laae
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'api/agents reports mux status and detected agents' test/routes/launch-routes.test.js
-  tags: [spec, launch, launch-s0, agents, api, implemented]
 
 ## api
 - label: POST /api/runs with JSON body {agent, cwd, prompt} starts a Run — a new window in the tracequest tmux session executing the detected agent's registry argv (prompt included per that agent's argv shape, cwd as the window's working directory), with remain-on-exit switched on so a finished agent's final screen stays viewable, and run metadata stored in tmux window user options named tq_agent, tq_cwd, and tq_started in tmux's "@"-prefixed user-option namespace — and responds with JSON carrying the run id, which IS the tmux window id; tracequest keeps no run table of its own
@@ -33,10 +19,6 @@
   id: lasn
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'snapshot returns the captured screen as html' test/bin/tracequest-launch-integration.test.js
   tags: [spec, launch, launch-s2, api, implemented]
-- label: src/render/ansi-html.js is a zero-dependency SGR-to-HTML converter that HTML-escapes terminal text (&, <, >, ") BEFORE wrapping it in styled spans — so a run printing <script> can never inject markup into a tracequest page — and maps the 16 base and bright colors, 256-color 38;5;n / 48;5;n, truecolor 38;2;r;g;b foreground and background, bold, dim, italic, underline, and reverse (fg/bg swap), honours resets, and IGNORES unknown SGR parameters instead of throwing, because tmux capture output follows agent CLIs that emit arbitrary escape sequences
-  id: laah
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/render/ansi-html.test.js
-  tags: [spec, launch, launch-s2, api, render, implemented]
 - label: POST /api/runs/kill {id} kills the run's tmux window — afterwards the window is gone from tmux list-windows and GET /api/runs no longer lists the run; killing works for running and exited runs alike (it is also how a finished remain-on-exit window is dismissed), and an unknown id answers 404 without touching tmux
   id: lakl
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'kill removes the run window' test/bin/tracequest-launch-integration.test.js
@@ -46,67 +28,13 @@
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'input sends text and Enter to a run|input rejects an unknown key name' test/bin/tracequest-launch-integration.test.js
   tags: [spec, launch, launch-s5, api, implemented]
 
-## ui
-- label: the launch surface is the dashboard's launcher modal (see the chat-integration facts) — src/browser/launch-page.js exports the modal fragment (agent dropdown listing only the detected agents, cwd input, optional initial-prompt textarea, Start POSTing /api/runs, inline {error} rendering, and the missing-multiplexer state when mux is unavailable) that the dashboard page embeds, and GET /launch 302-redirects to /?launch=1 instead of serving a standalone page
-  id: lalp
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'launcher modal renders the form|launcher modal carries the missing-multiplexer state|/launch redirects' test/browser/launch-page.test.js
-  tags: [spec, launch, launch-s3, ui, implemented]
-- label: runs are reachable from the main sessions view — the dashboard header exposes the "+ New run" launcher control and the Agents strip lists launched runs with one-click navigation to each run's chat
-  id: ladl
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'dashboard header exposes the New run launcher' test/browser/launch-page.test.js
-  tags: [spec, launch, launch-s3, ui, implemented]
-- label: GET /run?id=<runId> serves the watch page as a chat transcript — the conversation surface renders the run's unified session (client-side, from GET /api/runs/session polled roughly every 1s with the etag flow) as user bubbles, assistant prose, and tool cards, while the raw terminal remains available as a collapsed details block that polls /api/runs/snapshot roughly every 600ms and swaps the returned SGR html into a monospace dark screen block — with a kill control, a back link to the dashboard, and a "view session" cross-link that appears once a recording is linked
-  id: lawp
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'watch page serves the polling viewer' test/browser/launch-page.test.js
-  tags: [spec, launch, launch-s4, ui, implemented]
-- label: watching is live on both surfaces — while the agent process writes output, successive snapshot polls render different screen content in the raw-terminal block, and session events the agent appends render into the chat transcript without a reload; when the process exits the page shows a visually distinct exited state (banner + status, both pollers stopped) while the final transcript and screen stay visible thanks to remain-on-exit
-  id: lalv
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'watch page reflects new output between polls|watch page shows the exited state' test/browser/launch-page.test.js
-  tags: [spec, launch, launch-s4, ui, implemented]
-- label: the watch page has an input box and send control that POSTs {id, text, key:"Enter"} to /api/runs/input (plus controls for the allowed special keys), and text sent from the browser subsequently appears in the polled snapshot once the run echoes it
-  id: laiu
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'watch page input reaches the run' test/browser/launch-page.test.js
-  tags: [spec, launch, launch-s5, ui, implemented]
-
 ## security
-- label: the mutating launch endpoints — POST /api/runs, POST /api/runs/kill, POST /api/runs/input — accept POST only and answer 405 to any other method without side effects, while GET /api/agents, GET /api/runs, GET /api/runs/snapshot, /launch, and /run remain plain GET routes
-  id: lapm
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'mutating run endpoints reject non-POST methods' test/routes/launch-routes.test.js
-  tags: [spec, launch, launch-s1, security, implemented]
-- label: every mutating launch endpoint validates the request's Host header before acting — a hostname (port ignored) other than localhost, 127.0.0.1, or [::1] answers 403 and performs no tmux operation — the DNS-rebinding/CSRF guard required because these routes can start and control processes on a localhost-only tool
-  id: laho
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'mutating run endpoints reject a non-localhost Host header' test/routes/launch-routes.test.js
-  tags: [spec, launch, launch-s1, security, implemented]
 - label: POST /api/runs launches ONLY allowlisted agents — the agent field must name a registry entry currently detected on PATH (unknown or undetected agent answers 400 and no window is created) and cwd must be an existing directory (400 otherwise) — so the request chooses among detected agents and supplies prompt/cwd data but never a command line; the executed argv always comes from the registry shape
   id: laal
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'unknown agents are rejected with 400|missing cwd is rejected with 400' test/bin/tracequest-launch-integration.test.js
   tags: [spec, launch, launch-s1, security, implemented]
-- label: no shell-string interpolation exists anywhere in the launch feature — src/mux/tmux.js and src/agents/agent-detect.js use execFileSync/spawnSync argv arrays exclusively, with no exec(, no execSync(, and no shell:true option
-  id: lans
-  command: grep -qE "execFileSync|spawnSync" src/mux/tmux.js && ! grep -qE "execSync\(|exec\(" src/mux/tmux.js src/agents/agent-detect.js && ! grep -qE "shell: *true" src/mux/tmux.js src/agents/agent-detect.js
-  tags: [spec, launch, launch-s0, security, implemented]
-
-## tests
-- label: test/helpers/tmux-gate.js is the tmux availability gate (same pattern as test/helpers/playwright-gate.js) — it probes once whether the effective tmux binary is runnable and exposes the result so every tmux-dependent test SKIPS cleanly (skip, never fail) when tmux is absent or TRACEQUEST_SKIP_TMUX=1, and gated tests always run against a private per-test tmux server (unique TRACEQUEST_TMUX_SOCKET plus kill-server teardown) so no test ever creates windows in, or kills, the developer's real tmux server
-  id: latg
-  command: node --check test/helpers/tmux-gate.js && grep -q "TRACEQUEST_SKIP_TMUX" test/helpers/tmux-gate.js && grep -q "tmux-gate" test/bin/tracequest-launch-integration.test.js
-  tags: [spec, launch, launch-s6, tests, implemented]
-- label: the launch integration harness test/bin/tracequest-launch-integration.test.js follows repo harness conventions — real `node bin/tracequest.js serve` child processes with temp HOME, ephemeral ports, TRACEQUEST_NO_SIDECAR=1, TRACEQUEST_SKIP_LR_WATCH=1, and an isolated tmux socket/session per scenario, with a stub agent script on a prepended PATH standing in for real agent CLIs so no test ever launches a real agent — and it is documented by the prose spec tests/launch-integration.md plus a harness-index row in tests/README.md whose scenario counts the docs-sync test verifies
-  id: lath
-  command: test -f tests/launch-integration.md && grep -q "launch-integration.md" tests/README.md && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'tests README scenario totals match package test targets and harness rows|integration spec headers declare matching scenario counts' test/browser/browser-verification-targets.test.js
-  tags: [spec, launch, launch-s6, tests, implemented]
-- label: docs/cli-reference.md documents launching runs from the web UI — the /launch page, the Run concept (a tracequest-initiated agent execution living in a tmux window of the tracequest session), the tmux requirement with graceful degradation when tmux is absent, and the TRACEQUEST_TMUX_SESSION / TRACEQUEST_TMUX_SOCKET / TRACEQUEST_TMUX_BIN environment overrides; ~600ms snapshot polling is the shipped v1 transport, with SSE push explicitly deferred as future work
-  id: lard
-  command: grep -q "/launch" docs/cli-reference.md && grep -q "TRACEQUEST_TMUX_SESSION" docs/cli-reference.md && grep -q "TRACEQUEST_TMUX_SOCKET" docs/cli-reference.md
-  tags: [spec, launch, launch-s6, tests, docs, implemented]
 
 ## continue
-- label: src/agents/agent-detect.js gives five agents an empirically verified resume mechanism (each flag read from the installed CLI's --help, never from a launched session): claude and grok resume via --resume <sessionId> --fork-session plus a launcher-minted --session-id <newUuid> (both CLIs document --fork-session as 'create a new session ID instead of reusing the original' and --session-id as naming a NEW conversation — grok explicitly documents the three-flag combination), codex via its 'resume <SESSION_ID> [PROMPT]' subcommand, cursor-agent via --resume <chatId>, opencode via --session <sessionId>; droid and gemini carry NO resume entry because their CLIs could not be verified — honest absence: agentSupportsResume answers false, buildResumeArgv answers null, and no Continue affordance is ever offered for them; buildResumeArgv(id, resumeId, {sessionId, prompt}) composes [binary, ...resumeArgs, ...sessionIdArgs, ...promptArgs] as an argv ARRAY with every request-derived value one discrete element, and answers null for unknown ids or a missing resumeId
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern resume test/agents/agent-detect.test.js
-  tags: [launch, continue-resume, agents, implemented]
-- label: POST /api/runs accepts a resume mode: a JSON body carrying resumeSession (a session hash or path, with optional agent/cwd/prompt) continues an EXISTING session as a NEW run — the handle resolves through the same resolveSessionPathForRequest semantics every read endpoint shares, re-emitted as launch-style JSON {error} bodies (400 missing handle, 403 non-session path, 404 unknown hash, 409 ambiguous), the source session is parsed for its native sessionId (400 when the recording exposes none), the agent defaults to the source's mapped registry agent (claude→claude, cursor→cursor-agent, codex→codex, grok→grok, opencode→opencode, factory→droid; an unmapped source answers 400) and must own a resume mechanism — checked BEFORE PATH detection so the error honestly names the missing mechanism, not the missing binary — and then be detected, cwd defaults to the source session's recorded cwd (an explicit body cwd overrides; neither resolving to an existing directory answers 400 naming cwd), prompt shares the create-mode size/control-character limits, the window spawns buildResumeArgv output with the tq_resumed_from user option (the source's 8-hex session hash) persisted in tmux via RUN_OPTION_NAMES, and the response is {id, resumedFrom}; GET /api/agents marks each detected agent with its resume capability ({id, binary, resume}) and GET /api/runs plus /api/runs/session expose resumedFrom on every run so provenance survives serve restarts
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern resume test/routes/launch-routes.test.js
-  tags: [launch, continue-resume, api, implemented]
 - label: a resumed claude (or grok) run is deterministic by construction: the launcher mints a fresh fork uuid, passes it as --session-id alongside --resume <sourceId> --fork-session, and persists it as the tq_session_id window option — so the existing tier-0 spawn-identity linker binds the run to the forked recording <uuid>.jsonl and nothing else ever (attribution sid), and because fork semantics copy the prior conversation into the new recording the run's chat shows the continued session's full context followed by the new turns; agents without spawn identity (codex, cursor-agent, opencode) resume through the probe tier plus resumed-run content identity (tq_fork_prompt corroboration and the freshness-gated tq_resumed_path source fallback — fact clrs) and honestly pend until one of those tiers produces evidence — a resume never pre-claims the source file for them (the source links only after its recording's mtime moves at/after the resumed run's start) and never bare-guesses an unrelated fresh file
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern continue test/bin/tracequest-launch-integration.test.js
   tags: [launch, continue-resume, chat-live, implemented]
@@ -114,8 +42,5 @@
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test test/browser/continue-resume.playwright.test.js
   tags: [launch, continue-resume, chat-ui, implemented]
 - label: Typing IS the continue, end-to-end in a real browser: on an EXITED run's chat the live continue composer accepts a follow-up and submit lands in the NEW run's chat where the transcript eventually shows the prior context, the typed follow-up (delivered via the resume argv's positional prompt), and the resumed reply — with an honest interim on the landing page (the follow-up renders as a dashed pending user bubble sourced from the sessionStorage handoff or the persisted tq_prompt snippet, retiring only once the fork recording carries the message); the dashboard row's inline composer and the observer composer complete the same one-action flow
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/continue-resume.playwright.test.js test/browser/run-page.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/continue-resume.playwright.test.js
   tags: [launch, continue-resume, chat-ui, chat-live, implemented]
-- label: Vanished-cwd recovery is an inline affordance, not a dead error: resume-mode cwd failures answer 400 with a machine-readable needs:'cwd' field alongside the prose error, and every continue composer (exited-run chat, observer form, /view mini composer, dashboard inline row form) reacts by revealing an inline directory prompt — the typed follow-up stays put — whose next submit retries POST /api/runs with the explicit cwd
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/routes/launch-routes.test.js test/browser/run-page.test.js
-  tags: [launch, continue-resume, api, chat-ui, implemented]

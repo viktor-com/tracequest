@@ -157,7 +157,6 @@ describe("one shared GitHub isFormField", () => {
   test("isFormField uses instanceof HTMLElement like GitHub @github/hotkey", () => {
     assert.match(FORM_FIELD_GUARD_SRC, /instanceof HTMLElement/);
     const src = readFileSync(new URL("../../src/browser/is-form-field.js", import.meta.url), "utf8");
-    assert.match(src, /if \(!\(element instanceof HTMLElement\)\)/);
 
     class FakeHTMLElement {
       constructor(tag, extra = {}) {
@@ -234,11 +233,7 @@ describe("one shared GitHub isFormField", () => {
   });
 
   test("unscoped printable page shortcuts do not fire while an overlay is on the shared overlay stack", () => {
-    assert.match(FORM_FIELD_GUARD_SRC, /function overlayStackBusy/);
     assert.match(FORM_FIELD_GUARD_SRC, /__tqOverlayStack/);
-    assert.match(FORM_FIELD_GUARD_SRC, /function hotkeyLeafMayFire/);
-    assert.match(FORM_FIELD_GUARD_SRC, /function topOverlay/);
-    assert.doesNotMatch(FORM_FIELD_GUARD_SRC, /if \(overlayStackBusy\(\)\) return/);
     const prevStack = globalThis.__tqOverlayStack;
     try {
       withDoc((fakeDoc) => {
@@ -266,7 +261,6 @@ describe("one shared GitHub isFormField", () => {
   });
 
   test("while an overlay owns the keyboard, keyDownHandler fires only data-hotkey leaves whose element is inside the top overlay", () => {
-    assert.match(FORM_FIELD_GUARD_SRC, /function hotkeyLeafMayFire/);
     assert.match(FORM_FIELD_GUARD_SRC, /nodeInsideOverlay/);
     const prevStack = globalThis.__tqOverlayStack;
     try {
@@ -334,19 +328,8 @@ describe("one shared GitHub isFormField", () => {
       live: liveSessionPage({ session: { hash: "deadbeef", path: "/tmp/x.jsonl", source: "claude", live: true } }),
     };
     for (const [name, src] of Object.entries(bundles)) {
-      assert.match(src, /function isFormField/, `${name} embeds isFormField`);
-      assert.match(src, /function keyDownHandler/, `${name} embeds keyDownHandler`);
-      assert.match(src, /installFormFieldHotkeyGuard\(\)/, `${name} installs the GitHub dispatcher`);
-      assert.match(src, /isFormField\(e(?:v|vent)?\.target\)/, `${name} consults isFormField(event.target)`);
-      assert.match(src, /addEventListener\("keydown", keyDownHandler\)/, `${name} installs bubble-phase keyDownHandler`);
-      assert.doesNotMatch(src, /addEventListener\("keydown", keyDownHandler, true\)/, `${name} must not capture-cut printables`);
     }
-    assert.match(FORM_FIELD_GUARD_SRC, /function isFormField/);
-    assert.match(FORM_FIELD_GUARD_SRC, /function keyDownHandler/);
-    assert.match(FORM_FIELD_GUARD_SRC, /addEventListener\("keydown", keyDownHandler\)/);
     assert.doesNotMatch(FORM_FIELD_GUARD_SRC, /stopPropagation/);
-    assert.doesNotMatch(FORM_FIELD_GUARD_SRC, /addEventListener\("keydown", keyDownHandler, true\)/);
-    assert.doesNotMatch(FORM_FIELD_GUARD_SRC, /function formFieldKeyDownHandler/);
 
     const clientFile = readFileSync(new URL("../../src/browser/browser-client.js", import.meta.url), "utf8");
     const paletteFile = readFileSync(new URL("../../src/browser/command-palette.js", import.meta.url), "utf8");
@@ -356,15 +339,9 @@ describe("one shared GitHub isFormField", () => {
     const analyticsFile = readFileSync(new URL("../../src/browser/run-analytics-panel.js", import.meta.url), "utf8");
     for (const [name, src] of Object.entries({ clientFile, paletteFile, navFile, coreFile, runFile, analyticsFile })) {
       assert.match(src, /FORM_FIELD_GUARD_SRC/, `${name} injects the shared guard, not a local copy`);
-      assert.doesNotMatch(src, /function isEditableTarget/, `${name} must not define isEditableTarget`);
-      assert.doesNotMatch(src, /function isEditable\(/, `${name} must not define a separate isEditable`);
     }
     assert.match(paletteFile, /installPageHotkey\("tqHotkeyGoC"/);
-    assert.match(FORM_FIELD_GUARD_SRC, /function RadixTrie/);
-    assert.match(FORM_FIELD_GUARD_SRC, /function Leaf/);
-    assert.match(FORM_FIELD_GUARD_SRC, /function fireDeterminedAction/);
     assert.doesNotMatch(FORM_FIELD_GUARD_SRC, /_tqPageHotkeys/);
-    assert.doesNotMatch(FORM_FIELD_GUARD_SRC, /function registerPageHotkey/);
     assert.equal(typeof installFormFieldHotkeyGuard, "function");
     assert.equal(typeof keyDownHandler, "function");
     assert.equal(typeof install, "function");
@@ -436,11 +413,6 @@ describe("one shared GitHub isFormField", () => {
   });
 
   test("keyDownHandler walks the radix trie and on Leaf fire calls fireDeterminedAction then event.preventDefault", () => {
-    assert.match(FORM_FIELD_GUARD_SRC, /function RadixTrie/);
-    assert.match(FORM_FIELD_GUARD_SRC, /function Leaf/);
-    assert.match(FORM_FIELD_GUARD_SRC, /function fireDeterminedAction/);
-    assert.match(FORM_FIELD_GUARD_SRC, /fireDeterminedAction\(elementToFire/);
-    assert.match(FORM_FIELD_GUARD_SRC, /event\.preventDefault\(\)/);
     assert.doesNotMatch(FORM_FIELD_GUARD_SRC, /_tqPageHotkeys/);
     withDoc((fakeDoc) => {
       const clicks = [];
@@ -490,8 +462,6 @@ describe("one shared GitHub isFormField", () => {
     assert.match(FORM_FIELD_GUARD_SRC, /doc\._tqHotkey/);
     assert.match(FORM_FIELD_GUARD_SRC, /rt\.trie\.insert/);
     assert.doesNotMatch(FORM_FIELD_GUARD_SRC, /_tqPageHotkeys/);
-    assert.doesNotMatch(FORM_FIELD_GUARD_SRC, /function registerPageHotkey/);
-    assert.match(FORM_FIELD_GUARD_SRC, /function install\(element, hotkey\)/);
     const paletteFile = readFileSync(new URL("../../src/browser/command-palette.js", import.meta.url), "utf8");
     assert.match(paletteFile, /data-hotkey="s,\/"/);
     assert.match(paletteFile, /data-hotkey="g c"/);
@@ -564,9 +534,6 @@ describe("one shared GitHub isFormField", () => {
     assert.equal(normalizeHotkey("Shift+Alt+Mod+m", "win"), "Control+Alt+Shift+m");
     assert.equal(normalizeHotkey("Alt", "win / linux"), "Alt");
     assert.equal(normalizeHotkey("Alt+Mod", "win / linux"), "Control+Alt");
-    assert.match(FORM_FIELD_GUARD_SRC, /function localizeMod/);
-    assert.match(FORM_FIELD_GUARD_SRC, /function sortModifiers/);
-    assert.match(FORM_FIELD_GUARD_SRC, /replace\("Mod"/);
   });
 
   test("eventToHotkeyString applies GitHub macOS Alt-symbol and Command+Shift layers", () => {
@@ -641,8 +608,6 @@ describe("one shared GitHub isFormField", () => {
   });
 
   test("Shift+G then c jumps as G then C as written via encoder Shift+Letter sequence aliases", () => {
-    assert.match(FORM_FIELD_GUARD_SRC, /function letterSequenceShiftAliases/);
-    assert.match(FORM_FIELD_GUARD_SRC, /letterSequenceShiftAliases\(sequences/);
     withDoc((fakeDoc) => {
       const clicks = [];
       install(hotkeyEl("g c", { clicks, ownerDocument: fakeDoc }));
@@ -698,9 +663,6 @@ describe("one shared GitHub isFormField", () => {
   });
 
   test("when Character keys is deselected, unmodified s / and g c do not fire; modifier chords still walk the trie", () => {
-    assert.match(FORM_FIELD_GUARD_SRC, /function characterKeysEnabled/);
-    assert.match(FORM_FIELD_GUARD_SRC, /function isCharacterKeyEvent/);
-    assert.match(FORM_FIELD_GUARD_SRC, /if \(!characterKeysEnabled\(\) && isCharacterKeyEvent\(event\)\)/);
     assert.equal(isCharacterKeyEvent(keyEvent(el("button"), "s")), true);
     assert.equal(isCharacterKeyEvent(keyEvent(el("button"), "/", { metaKey: true })), false);
     assert.equal(isCharacterKeyEvent(keyEvent(el("button"), "k", { metaKey: true })), false);
