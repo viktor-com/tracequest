@@ -1,5 +1,5 @@
 import { normalizeToolName } from "../parse/parse-enrich.js";
-import { visitCodexEventMsgPayload } from "../parse/codex-event-msg.js";
+import { codexCommandExecutionCmd, codexSubThreadItem, visitCodexEventMsgPayload } from "../parse/codex-event-msg.js";
 import { isCodexToolPayloadError, visitCodexResponseItemPayload } from "../parse/codex-response-item.js";
 import { parseToolArgs } from "../parse/parse-utils.js";
 import { trackIndexTool } from "./session-meta.js";
@@ -56,6 +56,15 @@ export function accumulateCodexEventMsgPayload(payload, state) {
     onWebSearchEnd() {
       trackIndexTool(state, "WebSearch");
       state.toolCounts["WebSearch"] = (state.toolCounts["WebSearch"] || 0) + 1;
+    },
+    // A review sub-thread's commands are Bash calls of the session (fact cdxsub).
+    onItemCompleted(p) {
+      const item = codexSubThreadItem(p, state.codexSessionId);
+      if (item?.type !== "CommandExecution") return;
+      trackIndexTool(state, "Bash");
+      state.toolCounts["Bash"] = (state.toolCounts["Bash"] || 0) + 1;
+      if (isCodexToolPayloadError(item)) state.errors++;
+      if (GIT_COMMIT_RE.test(codexCommandExecutionCmd(item))) state.commits++;
     },
   });
 }

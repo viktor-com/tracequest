@@ -264,19 +264,51 @@ pub(crate) fn append_index_search_text(search_text: &mut String, chunk: &str) {
     }
 }
 
-fn opencode_db_path() -> PathBuf {
+/// The opencode.db holding a session: `opencode://<id>` is a local session
+/// ($HOME/.local/share/opencode/opencode.db, or TRACEQUEST_OPCODE_DB), and
+/// `opencode://<host>/<id>` one imported from a hub host, read from that host's
+/// copy under the hosts root (TRACEQUEST_HOSTS_DIR, else
+/// $HOME/.local/share/tracequest/hosts) — the database parseOpenCode reads.
+fn opencode_db_path(session_path: &str) -> PathBuf {
+    let rest = session_path.strip_prefix("opencode://").unwrap_or(session_path);
+    let home = std::env::var("HOME").unwrap_or_default();
+    if let Some((host, _)) = rest.split_once('/') {
+        let hosts_root = match std::env::var("TRACEQUEST_HOSTS_DIR") {
+            Ok(dir) if !dir.is_empty() => PathBuf::from(dir),
+            _ => PathBuf::from(&home).join(".local/share/tracequest/hosts"),
+        };
+        return hosts_root.join(host).join(".local/share/opencode/opencode.db");
+    }
     if let Ok(path) = std::env::var("TRACEQUEST_OPCODE_DB") {
         return PathBuf::from(path);
     }
-    let home = std::env::var("HOME").unwrap_or_default();
     PathBuf::from(home).join(".local/share/opencode/opencode.db")
 }
 
+/// Read-only opencode.db connections one rayon worker reuses across the OpenCode
+/// sessions of an index pass: thousands of sessions share a few databases, and
+/// opening a multi-gigabyte WAL database per session costs more than reading it.
+#[derive(Default)]
+pub(crate) struct OpenCodeConns(HashMap<PathBuf, Option<Connection>>);
+
+impl OpenCodeConns {
+    fn get(&mut self, db_path: PathBuf) -> Option<&Connection> {
+        self.0
+            .entry(db_path)
+            .or_insert_with_key(|p| {
+                Connection::open_with_flags(p, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).ok()
+            })
+            .as_ref()
+    }
+}
+
 pub(crate) fn index_opencode(session: &Session) -> IndexEntry {
-    let db_path = opencode_db_path();
-    let conn = match Connection::open(&db_path) {
-        Ok(c) => c,
-        Err(_) => return empty_index_entry(),
+    index_opencode_in(&mut OpenCodeConns::default(), session)
+}
+
+pub(crate) fn index_opencode_in(conns: &mut OpenCodeConns, session: &Session) -> IndexEntry {
+    let Some(conn) = conns.get(opencode_db_path(&session.path)) else {
+        return empty_index_entry();
     };
 
     let session_id = &session.file;
@@ -286,23 +318,27 @@ pub(crate) fn index_opencode(session: &Session) -> IndexEntry {
     // Accumulate message text first; prepend title + single space at end (parity with JS indexOpenCode).
     let mut search_text = String::new();
     let mut chapters = 0i32;
-    let mut seen_messages: HashSet<String> = HashSet::new();
+    // The message of the previous row: its parts arrive together, so each
+    // message's JSON is parsed once rather than once per part.
+    let mut cur_msg_key: Option<String> = None;
+    let mut cur_msg: Option<serde_json::Value> = None;
     let mut tools: HashSet<String> = HashSet::new();
     let mut tool_counts: HashMap<String, i32> = HashMap::new();
     let mut errors = 0i32;
     let mut input_tokens = 0i64;
     let mut output_tokens = 0i64;
     let mut cache_read_tokens = 0i64;
-    let mut first_ts: Option<String> = None;
-    let mut last_ts: Option<String> = None;
+    // Worked time over the messages in time order (fact durac).
+    let mut span = ActiveSpan::default();
+    let mut steps = OpenCodeSteps::default();
 
     {
-        let mut stmt = match conn.prepare(
-            "SELECT m.data as msg_data, p.data as part_data, m.time_created \
+        let mut stmt = match conn.prepare_cached(
+            "SELECT m.data as msg_data, p.data as part_data, m.time_created, m.id \
              FROM message m \
              LEFT JOIN part p ON p.message_id = m.id \
              WHERE m.session_id = ? \
-             ORDER BY m.time_created",
+             ORDER BY m.time_created, m.id",
         ) {
             Ok(s) => s,
             Err(_) => return empty_index_entry(),
@@ -317,32 +353,42 @@ pub(crate) fn index_opencode(session: &Session) -> IndexEntry {
                 rusqlite::types::Value::Integer(i) => Some(i.to_string()),
                 _ => None,
             };
-            Ok((msg_data, part_data, time_created))
+            let msg_key = match row.get(3).ok().unwrap_or(rusqlite::types::Value::Null) {
+                rusqlite::types::Value::Text(s) => s,
+                rusqlite::types::Value::Integer(i) => i.to_string(),
+                _ => msg_data.clone(),
+            };
+            Ok((msg_data, part_data, time_created, msg_key))
         });
         if let Ok(rows) = rows {
             for row in rows.flatten() {
-                let (msg_data, part_data, time_created) = row;
-                if let Some(ref tc) = time_created {
-                    if !tc.is_empty() {
-                        if first_ts.is_none() || Some(tc) < first_ts.as_ref() {
-                            first_ts = Some(tc.clone());
+                let (msg_data, part_data, time_created, msg_key) = row;
+                if cur_msg_key.as_deref() != Some(msg_key.as_str()) {
+                    cur_msg = serde_json::from_str::<serde_json::Value>(&msg_data).ok();
+                    cur_msg_key = Some(msg_key);
+                    if let Some(data) = cur_msg.as_ref() {
+                        if model.is_none() {
+                            if let Some(m) = data.get("modelID").and_then(|v| v.as_str()) {
+                                model = Some(m.to_string());
+                            }
                         }
-                        if last_ts.is_none() || Some(tc) > last_ts.as_ref() {
-                            last_ts = Some(tc.clone());
+                        if data.get("role").and_then(|v| v.as_str()) == Some("user") {
+                            chapters += 1;
                         }
                     }
                 }
-                if let Ok(data) = serde_json::from_str::<serde_json::Value>(&msg_data) {
-                    if model.is_none() {
-                        if let Some(m) = data.get("modelID").and_then(|v| v.as_str()) {
-                            model = Some(m.to_string());
-                        }
-                    }
-                    if data.get("role").and_then(|v| v.as_str()) == Some("user")
-                        && seen_messages.insert(msg_data.clone())
-                    {
-                        chapters += 1;
-                    }
+                {
+                    let role = cur_msg
+                        .as_ref()
+                        .and_then(|d| d.get("role"))
+                        .and_then(|v| v.as_str());
+                    let at = time_created
+                        .as_deref()
+                        .and_then(parse_opencode_timestamp)
+                        .map(|d| d.timestamp_millis());
+                    steps.add_row(&mut span, cur_msg_key.as_deref().unwrap_or(""), role, at);
+                }
+                if let Some(data) = cur_msg.as_ref() {
                     if let Some(pd) = part_data {
                         if let Ok(part) = serde_json::from_str::<serde_json::Value>(&pd) {
                             match part.get("type").and_then(|v| v.as_str()) {
@@ -373,6 +419,9 @@ pub(crate) fn index_opencode(session: &Session) -> IndexEntry {
                                     }
                                 }
                                 Some("tool") => {
+                                    steps.note_tool(
+                                        part.get("tool").and_then(|v| v.as_str()).unwrap_or(""),
+                                    );
                                     if let Some(name) = part.get("tool").and_then(|v| v.as_str()) {
                                         let tn = normalize_tool_name(name);
                                         tools.insert(tn.clone());
@@ -413,17 +462,7 @@ pub(crate) fn index_opencode(session: &Session) -> IndexEntry {
         }
     }
 
-    let duration_ms = if let (Some(ref first), Some(ref last)) = (first_ts, last_ts) {
-        let first_dt = parse_opencode_timestamp(first);
-        let last_dt = parse_opencode_timestamp(last);
-        if let (Some(f), Some(l)) = (first_dt, last_dt) {
-            l.timestamp_millis() - f.timestamp_millis()
-        } else {
-            0
-        }
-    } else {
-        0
-    };
+    let duration_ms = span.active_ms();
 
     let mut tools_vec: Vec<String> = tools.into_iter().collect();
     tools_vec.sort_unstable();
@@ -783,6 +822,337 @@ pub(crate) fn is_claude_index_skippable_line(line: &str) -> bool {
     true
 }
 
+/// A gap this long with no event is a stall (agent waiting) or idle (human away).
+const STALL_MS: i64 = 5 * 60 * 1000;
+/// Longer than this is never one command running: the session was left and resumed.
+const MAX_STALL_MS: i64 = 6 * 60 * 60 * 1000;
+/// A model turn slower than this is a rate-limit pause or a suspended machine.
+const MAX_MODEL_WAIT_MS: i64 = 30 * 60 * 1000;
+
+/// Kind of a session's timestamped record (fact durac); Other is a line that is
+/// no message (metadata, notices). Mirrors JS active-time.js.
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) enum RecordKind {
+    #[default]
+    Other,
+    User,
+    Assistant,
+    /// The result of a quick tool (a file read or edit, a question to the user).
+    ToolResult,
+    /// An OpenCode assistant step after a prompt or a step without tools: the
+    /// gap before it is the model answering.
+    ModelStep,
+    /// The result of a long-running tool (is_long_running_tool): the gap
+    /// before it is the agent's wait.
+    ToolWait,
+}
+
+static SHELL_TOOL_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(?:bash|shell|exec|exec_command|run_terminal_cmd|run_command|execute|local_shell|terminal|monitor)$").unwrap()
+});
+static LONG_RUNNING_TOOL_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(?:agent|task|subagent|spawn_agent|wait_agent|taskoutput|bashoutput|startmissionrun|skill|webfetch|web_fetch|websearch|web_search|wait|write_stdin)$").unwrap()
+});
+
+/// Tools whose call keeps the agent waiting for work that runs meanwhile
+/// (commands, sub-agents, a mission's workers, fetches, MCP), matched on the
+/// normalized name. Mirrors JS isLongRunningTool.
+pub(crate) fn is_long_running_tool(normalized: &str) -> bool {
+    SHELL_TOOL_RE.is_match(normalized)
+        || LONG_RUNNING_TOOL_RE.is_match(normalized)
+        || normalized.starts_with("mcp__")
+}
+
+/// A session's duration is the time it was worked on (fact durac), the one
+/// computation behind insights agent time too: the gaps between consecutive
+/// timestamped records add up, except that a gap longer than STALL_MS counts
+/// only while the agent was the one waiting — up to MAX_STALL_MS when it ends
+/// at a long-running tool's result, up to MAX_MODEL_WAIT_MS when it ends at an
+/// assistant turn after a tool result (or at an OpenCode step answering a
+/// prompt). The days between a session's resumes, and a question or
+/// permission prompt left waiting, count nothing. Mirrors JS
+/// createActiveSpan/addActiveRecord.
+#[derive(Default)]
+pub(crate) struct ActiveSpan {
+    prev_ms: Option<i64>,
+    prev_kind: RecordKind,
+    active_ms: i64,
+    /// Active time up to the last message record (None before one).
+    at_message_ms: Option<i64>,
+    last_ts: String,
+    last_ts_ms: Option<i64>,
+    /// Tool call id -> whether that tool keeps the agent waiting.
+    waits: HashMap<String, bool>,
+}
+
+impl ActiveSpan {
+    pub(crate) fn add(&mut self, ts: &str, kind: RecordKind) {
+        // Consecutive records often share a timestamp: parse each string once.
+        if ts != self.last_ts {
+            self.last_ts.clear();
+            self.last_ts.push_str(ts);
+            self.last_ts_ms = chrono::DateTime::parse_from_rfc3339(ts)
+                .ok()
+                .map(|d| d.timestamp_millis());
+        }
+        if let Some(ms) = self.last_ts_ms {
+            self.add_ms(ms, kind);
+        }
+    }
+
+    pub(crate) fn add_ms(&mut self, ms: i64, kind: RecordKind) {
+        match self.prev_ms {
+            Some(prev) => {
+                let gap = ms - prev;
+                if gap > 0 && active_gap_counts(gap, kind, self.prev_kind) {
+                    self.active_ms += gap;
+                }
+                // Out-of-order records: gaps run from the latest time seen.
+                if ms > prev {
+                    self.prev_ms = Some(ms);
+                }
+            }
+            None => self.prev_ms = Some(ms),
+        }
+        if kind != RecordKind::Other {
+            self.prev_kind = kind;
+            self.at_message_ms = Some(self.active_ms);
+        }
+    }
+
+    /// Record a tool call by id and raw name, so its result knows what it waited for.
+    pub(crate) fn note_tool_call(&mut self, id: &str, name: &str) {
+        if !id.is_empty() {
+            self.waits.insert(
+                id.to_string(),
+                is_long_running_tool(&normalize_tool_name(name)),
+            );
+        }
+    }
+
+    /// ToolWait when any call id `id_re` finds in a result line is a long-running tool.
+    fn result_kind(&self, line: &str, id_re: &Regex) -> RecordKind {
+        for caps in id_re.captures_iter(line) {
+            if let Some(id) = caps.get(1) {
+                if self.waits.get(id.as_str()).copied().unwrap_or(false) {
+                    return RecordKind::ToolWait;
+                }
+            }
+        }
+        RecordKind::ToolResult
+    }
+
+    fn note_tool_use_blocks(&mut self, line: &str) {
+        if !line.contains("\"tool_use\"") {
+            return;
+        }
+        for caps in TOOL_USE_ID_NAME_RE.captures_iter(line) {
+            if let (Some(id), Some(name)) = (caps.get(1), caps.get(2)) {
+                self.note_tool_call(id.as_str(), name.as_str());
+            }
+        }
+    }
+
+    /// Worked time over every record.
+    pub(crate) fn active_ms(&self) -> i64 {
+        self.active_ms
+    }
+
+    /// Worked time up to the last message record, or over every record when
+    /// there is none (fact durcl).
+    pub(crate) fn active_ms_to_last_message(&self) -> i64 {
+        self.at_message_ms.unwrap_or(self.active_ms)
+    }
+}
+
+fn active_gap_counts(gap: i64, kind: RecordKind, prev_kind: RecordKind) -> bool {
+    if gap <= STALL_MS {
+        return true;
+    }
+    match kind {
+        RecordKind::ToolWait => gap <= MAX_STALL_MS,
+        RecordKind::ModelStep => gap <= MAX_MODEL_WAIT_MS,
+        RecordKind::Assistant => {
+            matches!(prev_kind, RecordKind::ToolResult | RecordKind::ToolWait)
+                && gap <= MAX_MODEL_WAIT_MS
+        }
+        _ => false,
+    }
+}
+
+/// A Claude Code / Factory tool_use block's id and name (written type, id, name).
+static TOOL_USE_ID_NAME_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#""type":\s*"tool_use",\s*"id":\s*"([^"]+)",\s*"name":\s*"([^"]+)""#).unwrap()
+});
+static TOOL_USE_ID_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#""tool_use_id":\s*"([^"]+)""#).unwrap());
+static CODEX_CALL_ID_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#""call_id":\s*"([^"]+)""#).unwrap());
+static CODEX_CALL_NAME_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#""name":\s*"([^"]+)""#).unwrap());
+
+fn has_json_kv(line: &str, compact: &str, spaced: &str) -> bool {
+    line.contains(compact) || line.contains(spaced)
+}
+
+/// Claude Code JSONL line kind (the substring tests index_claude routes lines
+/// with); notes the tool calls an assistant line makes.
+pub(crate) fn claude_record_kind(line: &str, span: &mut ActiveSpan) -> RecordKind {
+    if has_json_kv(line, "\"type\":\"assistant\"", "\"type\": \"assistant\"") {
+        span.note_tool_use_blocks(line);
+        RecordKind::Assistant
+    } else if has_json_kv(line, "\"type\":\"user\"", "\"type\": \"user\"") {
+        if line.contains("\"tool_result\"") {
+            span.result_kind(line, &TOOL_USE_ID_RE)
+        } else {
+            RecordKind::User
+        }
+    } else {
+        RecordKind::Other
+    }
+}
+
+/// Codex rollout line kind: response items are the conversation; event_msg,
+/// turn_context and session_meta lines are not.
+pub(crate) fn codex_record_kind(line: &str, span: &mut ActiveSpan) -> RecordKind {
+    if !has_json_kv(
+        line,
+        "\"type\":\"response_item\"",
+        "\"type\": \"response_item\"",
+    ) {
+        return RecordKind::Other;
+    }
+    if has_json_kv(
+        line,
+        "\"type\":\"function_call_output\"",
+        "\"type\": \"function_call_output\"",
+    ) || has_json_kv(
+        line,
+        "\"type\":\"custom_tool_call_output\"",
+        "\"type\": \"custom_tool_call_output\"",
+    ) {
+        return span.result_kind(line, &CODEX_CALL_ID_RE);
+    }
+    if has_json_kv(line, "\"type\":\"function_call\"", "\"type\": \"function_call\"")
+        || has_json_kv(
+            line,
+            "\"type\":\"custom_tool_call\"",
+            "\"type\": \"custom_tool_call\"",
+        )
+    {
+        let id = CODEX_CALL_ID_RE
+            .captures(line)
+            .and_then(|c| c.get(1))
+            .map(|m| m.as_str());
+        let name = CODEX_CALL_NAME_RE
+            .captures(line)
+            .and_then(|c| c.get(1))
+            .map(|m| m.as_str());
+        if let (Some(id), Some(name)) = (id, name) {
+            span.note_tool_call(id, name);
+        }
+        return RecordKind::Assistant;
+    }
+    if has_json_kv(line, "\"role\":\"user\"", "\"role\": \"user\"") {
+        return RecordKind::User;
+    }
+    if has_json_kv(line, "\"role\":\"developer\"", "\"role\": \"developer\"")
+        || has_json_kv(line, "\"role\":\"system\"", "\"role\": \"system\"")
+    {
+        return RecordKind::Other;
+    }
+    RecordKind::Assistant
+}
+
+/// Factory JSONL line kind; notes the tool calls an assistant message makes.
+pub(crate) fn factory_record_kind(line: &str, span: &mut ActiveSpan) -> RecordKind {
+    if !has_json_kv(line, "\"type\":\"message\"", "\"type\": \"message\"") {
+        return RecordKind::Other;
+    }
+    if has_json_kv(line, "\"role\":\"assistant\"", "\"role\": \"assistant\"") {
+        span.note_tool_use_blocks(line);
+        RecordKind::Assistant
+    } else if has_json_kv(line, "\"role\":\"user\"", "\"role\": \"user\"") {
+        if line.contains("\"tool_result\"") {
+            span.result_kind(line, &TOOL_USE_ID_RE)
+        } else {
+            RecordKind::User
+        }
+    } else {
+        RecordKind::Other
+    }
+}
+
+/// OpenCode messages in time order (fact durac): an assistant message is one
+/// agent step whose tools ran inside it, so the gap before step N+1 is step
+/// N's work. It counts like the wait for step N's tool results (ToolWait when
+/// one is long-running, ToolResult when all were quick, such as a question to
+/// the user) or, after a prompt or a step without tools, like the model
+/// answering (ModelStep). Mirrors JS createOpenCodeSteps/addOpenCodeRow.
+#[derive(Default)]
+pub(crate) struct OpenCodeSteps {
+    id: Option<String>,
+    role: Option<String>,
+    tools: bool,
+    wait: bool,
+}
+
+impl OpenCodeSteps {
+    /// Add one message/part join row's message: a new message is a record.
+    pub(crate) fn add_row(
+        &mut self,
+        span: &mut ActiveSpan,
+        message_id: &str,
+        role: Option<&str>,
+        time_ms: Option<i64>,
+    ) {
+        if self.id.as_deref() != Some(message_id) {
+            let prev_step = self.role.as_deref() == Some("assistant");
+            let kind = if role != Some("assistant") {
+                RecordKind::User
+            } else if prev_step && self.wait {
+                RecordKind::ToolWait
+            } else if prev_step && self.tools {
+                RecordKind::ToolResult
+            } else {
+                RecordKind::ModelStep
+            };
+            if let Some(ms) = time_ms {
+                span.add_ms(ms, kind);
+            }
+            self.id = Some(message_id.to_string());
+            self.role = role.map(|r| r.to_string());
+            self.tools = false;
+            self.wait = false;
+        }
+    }
+
+    /// A tool part of the current message (`name` is "" when the part names none).
+    pub(crate) fn note_tool(&mut self, name: &str) {
+        self.tools = true;
+        if is_long_running_tool(&normalize_tool_name(name)) {
+            self.wait = true;
+        }
+    }
+}
+
+/// Grok events.jsonl event kind: a turn starts at a prompt, a tool completes
+/// (naming its tool), the model's first token.
+pub(crate) fn grok_event_kind(event_type: Option<&str>, tool_name: Option<&str>) -> RecordKind {
+    match event_type {
+        Some("turn_started") => RecordKind::User,
+        Some("tool_completed") => {
+            if is_long_running_tool(&normalize_tool_name(tool_name.unwrap_or(""))) {
+                RecordKind::ToolWait
+            } else {
+                RecordKind::ToolResult
+            }
+        }
+        Some("first_token") => RecordKind::Assistant,
+        _ => RecordKind::Other,
+    }
+}
+
 pub(crate) fn index_claude(path: &Path) -> IndexEntry {
     let mut first_prompt: Option<String> = None;
     let mut model: Option<String> = None;
@@ -799,22 +1169,19 @@ pub(crate) fn index_claude(path: &Path) -> IndexEntry {
     let mut errors = 0i32;
     let mut files: HashSet<String> = HashSet::new();
     let mut commits = 0i32;
-    let mut first_ts: Option<String> = None;
-    let mut last_ts: Option<String> = None;
+    // Worked time (fact durac); it ends at the last user/assistant line (fact
+    // durcl): lines a lingering process writes after it (system notices, queue
+    // operations) do not stretch the session.
+    let mut span = ActiveSpan::default();
 
     let result = process_file_lines(path, |line| {
         if line.is_empty() || is_claude_index_skippable_line(line) {
             return;
         }
         // Fast timestamp extraction via regex
-        if let Some(caps) = TS_RE.captures(line) {
-            let ts = caps.get(1).map(|m| m.as_str().to_string());
-            if let Some(ref t) = ts {
-                if first_ts.is_none() {
-                    first_ts = Some(t.clone());
-                }
-                last_ts = Some(t.clone());
-            }
+        if let Some(t) = TS_RE.captures(line).and_then(|caps| caps.get(1)) {
+            let kind = claude_record_kind(line, &mut span);
+            span.add(t.as_str(), kind);
         }
         // Tool_use extraction
         if line.contains("\"tool_use\"") {
@@ -957,21 +1324,7 @@ pub(crate) fn index_claude(path: &Path) -> IndexEntry {
         eprintln!("Error reading {}: {}", path.display(), e);
     }
 
-    let duration_ms = if let (Some(ref first), Some(ref last)) = (first_ts, last_ts) {
-        let first_dt = chrono::DateTime::parse_from_rfc3339(first)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .ok();
-        let last_dt = chrono::DateTime::parse_from_rfc3339(last)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .ok();
-        if let (Some(f), Some(l)) = (first_dt, last_dt) {
-            l.timestamp_millis() - f.timestamp_millis()
-        } else {
-            0
-        }
-    } else {
-        0
-    };
+    let duration_ms = span.active_ms_to_last_message();
 
     let mut tools_vec: Vec<String> = tools.into_iter().collect();
     tools_vec.sort_unstable();
@@ -1440,7 +1793,116 @@ fn codex_payload_error(payload: &serde_json::Value) -> bool {
         .any(|key| payload.get(key).is_some_and(codex_output_error))
 }
 
+/// Raw codex index: `model` keeps its original session_meta-first precedence
+/// (model_provider, else the first turn_context model). Session indexing goes
+/// through `index_codex_session`, which reports the model id (fact cdxmodel);
+/// only the unit tests read the raw form.
+#[cfg(test)]
 pub(crate) fn index_codex(path: &Path) -> IndexEntry {
+    index_codex_with_named_model(path).0
+}
+
+/// Codex index as build_index stores it: the model is the first turn_context
+/// model id (e.g. gpt-5-codex), else the thread_settings_applied model, else the
+/// session_meta base_instructions provenance model; session_meta model_provider
+/// ("openai") only names the vendor and stays the fallback (facts cdxmodel,
+/// cdxprov, mirrors Node indexCodexJsonl).
+pub(crate) fn index_codex_session(path: &Path) -> IndexEntry {
+    let (mut entry, named_model) = index_codex_with_named_model(path);
+    if named_model.is_some() {
+        entry.model = named_model;
+    }
+    entry
+}
+
+fn non_empty_str(v: Option<&serde_json::Value>) -> Option<String> {
+    v.and_then(|m| m.as_str())
+        .filter(|m| !m.is_empty())
+        .map(|m| m.to_string())
+}
+
+/// Model id a session_meta payload names in base_instructions.provenance (fact cdxprov).
+fn codex_provenance_model(meta_payload: &serde_json::Value) -> Option<String> {
+    non_empty_str(
+        meta_payload
+            .get("base_instructions")
+            .and_then(|b| b.get("provenance"))
+            .and_then(|p| p.get("model")),
+    )
+}
+
+/// Model id an event_msg thread_settings_applied payload names (fact cdxprov).
+fn codex_thread_settings_model(event_payload: &serde_json::Value) -> Option<String> {
+    if event_payload.get("type").and_then(|t| t.as_str()) != Some("thread_settings_applied") {
+        return None;
+    }
+    non_empty_str(
+        event_payload
+            .get("thread_settings")
+            .and_then(|t| t.get("model")),
+    )
+}
+
+/// The item of an event_msg item_completed payload from another thread than
+/// the session's (a review sub-thread, fact cdxsub); None for the session's own
+/// thread, whose items mirror its response_items. Mirrors Node codexSubThreadItem.
+fn codex_sub_thread_item<'a>(
+    event_payload: &'a serde_json::Value,
+    session_id: Option<&str>,
+) -> Option<&'a serde_json::Value> {
+    if event_payload.get("type").and_then(|t| t.as_str()) != Some("item_completed") {
+        return None;
+    }
+    let thread_id = event_payload.get("thread_id").and_then(|t| t.as_str())?;
+    let session_id = session_id?;
+    if thread_id.is_empty() || thread_id == session_id {
+        return None;
+    }
+    event_payload.get("item").filter(|i| i.is_object())
+}
+
+/// Text blocks of a sub-thread UserMessage / AgentMessage item, joined by newlines.
+fn codex_sub_thread_item_text(item: &serde_json::Value) -> String {
+    let mut text = String::new();
+    for b in item
+        .get("content")
+        .and_then(|c| c.as_array())
+        .into_iter()
+        .flatten()
+    {
+        if let Some(t) = b.get("text").and_then(|t| t.as_str()).filter(|t| !t.is_empty()) {
+            if !text.is_empty() {
+                text.push('\n');
+            }
+            text.push_str(t);
+        }
+    }
+    text
+}
+
+/// Command line of a sub-thread CommandExecution item: parsed_cmd cmd, else the last argv element.
+fn codex_command_execution_cmd(item: &serde_json::Value) -> String {
+    if let Some(cmd) = non_empty_str(
+        item.get("parsed_cmd")
+            .and_then(|p| p.get(0))
+            .and_then(|p| p.get("cmd")),
+    ) {
+        return cmd;
+    }
+    match item.get("command") {
+        Some(serde_json::Value::Array(argv)) => argv
+            .last()
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        Some(serde_json::Value::String(cmd)) => cmd.clone(),
+        _ => String::new(),
+    }
+}
+
+/// One pass over a rollout: the raw entry plus the model id the rollout names
+/// (first turn_context model, else thread_settings_applied, else provenance).
+fn index_codex_with_named_model(path: &Path) -> (IndexEntry, Option<String>) {
     let mut first_prompt: Option<String> = None;
     let mut model: Option<String> = None;
     let mut search_text = String::new();
@@ -1455,21 +1917,22 @@ pub(crate) fn index_codex(path: &Path) -> IndexEntry {
     let mut errors = 0i32;
     let mut files: HashSet<String> = HashSet::new();
     let mut commits = 0i32;
-    let mut first_ts: Option<String> = None;
-    let mut last_ts: Option<String> = None;
+    // Worked time (fact durac).
+    let mut span = ActiveSpan::default();
+    let mut turn_model: Option<String> = None;
+    let mut settings_model: Option<String> = None;
+    let mut provenance_model: Option<String> = None;
+    // The session's own thread id: item_completed items of any other thread
+    // are a review sub-thread's work (fact cdxsub).
+    let mut session_id: Option<String> = None;
 
     let result = process_file_lines(path, |line| {
         if line.is_empty() || is_codex_index_skippable_line(line) {
             return;
         }
-        if let Some(caps) = TS_RE.captures(line) {
-            if let Some(ts) = caps.get(1) {
-                let t = ts.as_str();
-                if first_ts.is_none() {
-                    first_ts = Some(t.to_string());
-                }
-                last_ts = Some(t.to_string());
-            }
+        if let Some(t) = TS_RE.captures(line).and_then(|caps| caps.get(1)) {
+            let kind = codex_record_kind(line, &mut span);
+            span.add(t.as_str(), kind);
         }
 
         // Mirror Node indexCodexJsonl isIndexedLine: skip serde_json on irrelevant lines.
@@ -1484,23 +1947,30 @@ pub(crate) fn index_codex(path: &Path) -> IndexEntry {
         let obj_type = obj.get("type").and_then(|v| v.as_str());
 
         if obj_type == Some("session_meta") {
-            if let Some(provider) = obj
-                .get("payload")
-                .and_then(|p| p.get("model_provider"))
-                .and_then(|v| v.as_str())
-            {
-                model = Some(provider.to_string());
+            if let Some(payload) = obj.get("payload") {
+                if let Some(provider) = payload.get("model_provider").and_then(|v| v.as_str()) {
+                    model = Some(provider.to_string());
+                }
+                if provenance_model.is_none() {
+                    provenance_model = codex_provenance_model(payload);
+                }
+                if session_id.is_none() {
+                    session_id = non_empty_str(payload.get("id"));
+                }
             }
         }
 
         if obj_type == Some("turn_context") {
-            if model.is_none() {
+            if turn_model.is_none() {
                 if let Some(m) = obj
                     .get("payload")
                     .and_then(|p| p.get("model"))
                     .and_then(|v| v.as_str())
                 {
-                    model = Some(m.to_string());
+                    turn_model = Some(m.to_string());
+                    if model.is_none() {
+                        model = Some(m.to_string());
+                    }
                 }
             }
             if !saw_token_count_total {
@@ -1660,6 +2130,41 @@ pub(crate) fn index_codex(path: &Path) -> IndexEntry {
                 .cloned()
                 .unwrap_or(serde_json::Value::Null);
             let ptype = p.get("type").and_then(|v| v.as_str());
+            if ptype == Some("thread_settings_applied") && settings_model.is_none() {
+                settings_model = codex_thread_settings_model(&p);
+            }
+            if let Some(item) = codex_sub_thread_item(&p, session_id.as_deref()) {
+                match item.get("type").and_then(|t| t.as_str()) {
+                    Some("UserMessage") => {
+                        let text = codex_sub_thread_item_text(item);
+                        if is_codex_displayable_user_text(&text) {
+                            let clean = collapse_whitespace(&text);
+                            if first_prompt.is_none() {
+                                first_prompt = Some(clean.chars().take(200).collect::<String>());
+                            }
+                            chapters += 1;
+                            append_index_search_text(&mut search_text, &clean);
+                        }
+                    }
+                    Some("AgentMessage") => {
+                        let text = codex_sub_thread_item_text(item);
+                        if !text.is_empty() {
+                            append_index_search_text(&mut search_text, &text.replace('\n', " "));
+                        }
+                    }
+                    Some("CommandExecution") => {
+                        tools.insert("Bash".to_string());
+                        *tool_counts.entry("Bash".to_string()).or_insert(0) += 1;
+                        if codex_payload_error(item) {
+                            errors += 1;
+                        }
+                        if GIT_COMMIT_RE.is_match(&codex_command_execution_cmd(item)) {
+                            commits += 1;
+                        }
+                    }
+                    _ => {}
+                }
+            }
             if ptype == Some("user_message") {
                 if let Some(text) = p.get("message").and_then(|v| v.as_str()) {
                     if is_codex_displayable_user_text(text) {
@@ -1729,26 +2234,12 @@ pub(crate) fn index_codex(path: &Path) -> IndexEntry {
         eprintln!("Error reading {}: {}", path.display(), e);
     }
 
-    let duration_ms = if let (Some(ref first), Some(ref last)) = (first_ts, last_ts) {
-        let first_dt = chrono::DateTime::parse_from_rfc3339(first)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .ok();
-        let last_dt = chrono::DateTime::parse_from_rfc3339(last)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .ok();
-        if let (Some(f), Some(l)) = (first_dt, last_dt) {
-            l.timestamp_millis() - f.timestamp_millis()
-        } else {
-            0
-        }
-    } else {
-        0
-    };
+    let duration_ms = span.active_ms();
 
     let mut tools_vec: Vec<String> = tools.into_iter().collect();
     tools_vec.sort_unstable();
 
-    IndexEntry {
+    let entry = IndexEntry {
         first_prompt,
         model,
         term_freqs: Some(tokenize(&search_text)),
@@ -1764,7 +2255,8 @@ pub(crate) fn index_codex(path: &Path) -> IndexEntry {
         files: files.len() as i32,
         commits,
         mtime: 0,
-    }
+    };
+    (entry, turn_model.or(settings_model).or(provenance_model))
 }
 
 /// Match JS `Math.round(chars / 4)` for non-negative char counts.
@@ -1802,21 +2294,16 @@ pub(crate) fn index_factory(path: &Path) -> IndexEntry {
     let mut errors = 0i32;
     let mut files: HashSet<String> = HashSet::new();
     let mut commits = 0i32;
-    let mut first_ts: Option<String> = None;
-    let mut last_ts: Option<String> = None;
+    // Worked time (fact durac).
+    let mut span = ActiveSpan::default();
 
     let result = process_file_lines(path, |line| {
         if line.is_empty() || is_factory_index_skippable_line(line) {
             return;
         }
-        if let Some(caps) = TS_RE.captures(line) {
-            let ts = caps.get(1).map(|m| m.as_str().to_string());
-            if let Some(ref t) = ts {
-                if first_ts.is_none() {
-                    first_ts = Some(t.clone());
-                }
-                last_ts = Some(t.clone());
-            }
+        if let Some(t) = TS_RE.captures(line).and_then(|caps| caps.get(1)) {
+            let kind = factory_record_kind(line, &mut span);
+            span.add(t.as_str(), kind);
         }
         let is_assistant =
             line.contains("\"role\":\"assistant\"") || line.contains("\"role\": \"assistant\"");
@@ -1947,21 +2434,7 @@ pub(crate) fn index_factory(path: &Path) -> IndexEntry {
         total_tokens = input_tokens + output_tokens;
     }
 
-    let duration_ms = if let (Some(ref first), Some(ref last)) = (first_ts, last_ts) {
-        let first_dt = chrono::DateTime::parse_from_rfc3339(first)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .ok();
-        let last_dt = chrono::DateTime::parse_from_rfc3339(last)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .ok();
-        if let (Some(f), Some(l)) = (first_dt, last_dt) {
-            l.timestamp_millis() - f.timestamp_millis()
-        } else {
-            0
-        }
-    } else {
-        0
-    };
+    let duration_ms = span.active_ms();
 
     let mut tools_vec: Vec<String> = tools.into_iter().collect();
     tools_vec.sort_unstable();
@@ -2024,8 +2497,7 @@ pub(crate) fn is_grok_events_indexed_line(line: &str) -> bool {
 fn index_grok_events_lines(
     events_objs: &[serde_json::Value],
     model: &mut Option<String>,
-    first_ts: &mut Option<String>,
-    last_ts: &mut Option<String>,
+    span: &mut ActiveSpan,
     errors: &mut i32,
     tool_outcomes: &mut Vec<String>,
 ) {
@@ -2035,10 +2507,13 @@ fn index_grok_events_lines(
             .or_else(|| obj.get("timestamp"))
             .and_then(|v| v.as_str());
         if let Some(t) = ts {
-            if first_ts.is_none() {
-                *first_ts = Some(t.to_string());
-            }
-            *last_ts = Some(t.to_string());
+            span.add(
+                t,
+                grok_event_kind(
+                    obj.get("type").and_then(|v| v.as_str()),
+                    obj.get("tool_name").and_then(|v| v.as_str()),
+                ),
+            );
         }
         if obj.get("type").and_then(|v| v.as_str()) == Some("turn_started") {
             if let Some(m) = obj.get("model_id").and_then(|v| v.as_str()) {
@@ -2263,8 +2738,8 @@ pub(crate) fn index_grok(session_dir: &str) -> IndexEntry {
     let mut errors = 0i32;
     let mut files: HashSet<String> = HashSet::new();
     let mut commits = 0i32;
-    let mut first_ts: Option<String> = None;
-    let mut last_ts: Option<String> = None;
+    // Worked time over events.jsonl (fact durac).
+    let mut span = ActiveSpan::default();
     let mut input_chars = 0usize;
     let mut output_chars = 0usize;
     let mut tool_outcomes: Vec<String> = Vec::new();
@@ -2296,8 +2771,7 @@ pub(crate) fn index_grok(session_dir: &str) -> IndexEntry {
     index_grok_events_lines(
         &events_objs,
         &mut model,
-        &mut first_ts,
-        &mut last_ts,
+        &mut span,
         &mut errors,
         &mut tool_outcomes,
     );
@@ -2339,21 +2813,7 @@ pub(crate) fn index_grok(session_dir: &str) -> IndexEntry {
         }
     }
 
-    let duration_ms = if let (Some(ref first), Some(ref last)) = (first_ts, last_ts) {
-        let first_dt = chrono::DateTime::parse_from_rfc3339(first)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .ok();
-        let last_dt = chrono::DateTime::parse_from_rfc3339(last)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .ok();
-        if let (Some(f), Some(l)) = (first_dt, last_dt) {
-            l.timestamp_millis() - f.timestamp_millis()
-        } else {
-            0
-        }
-    } else {
-        0
-    };
+    let duration_ms = span.active_ms();
 
     let est_input_tokens = estimate_tokens_from_chars(input_chars);
     let est_output_tokens = estimate_tokens_from_chars(output_chars);
@@ -2380,27 +2840,124 @@ pub(crate) fn index_grok(session_dir: &str) -> IndexEntry {
     }
 }
 
+/// Codex entry format, stored as index.json's top-level `_codex` (fact cdxheal).
+/// Format 2 records the turn_context model id (index_codex_session); format 3
+/// also records, for a rollout without one, its thread_settings_applied or
+/// provenance model (fact cdxheal3); format 4 also counts a review sub-thread's
+/// prompt and commands (fact cdxsub). A reused codex entry from an index without
+/// this marker gets its model from codex_heal_model, or is re-indexed when it
+/// has neither a prompt nor a tool (fact cdxsub2). Mirrors Node
+/// CODEX_INDEX_FORMAT.
+pub const CODEX_INDEX_FORMAT: i64 = 4;
+
+/// The model id a codex index row should carry (facts cdxheal, cdxheal3): the
+/// first turn_context model id, reading only up to that line; for a rollout
+/// without one, its thread_settings_applied or provenance model (fact cdxprov);
+/// None when the rollout names no model.
+pub(crate) fn codex_heal_model(path: &Path) -> Option<String> {
+    let file = fs::File::open(path).ok()?;
+    let mut reader = std::io::BufReader::with_capacity(64 * 1024, file);
+    let mut line = Vec::new();
+    loop {
+        line.clear();
+        match reader.read_until(b'\n', &mut line) {
+            Ok(0) | Err(_) => return codex_model_outside_turn_context(path),
+            Ok(_) => {}
+        }
+        if !line.windows(14).any(|w| w == b"\"turn_context\"") {
+            continue;
+        }
+        let Ok(obj) = serde_json::from_slice::<serde_json::Value>(&line) else {
+            continue;
+        };
+        if obj.get("type").and_then(|t| t.as_str()) != Some("turn_context") {
+            continue;
+        }
+        if let Some(m) = obj
+            .get("payload")
+            .and_then(|p| p.get("model"))
+            .and_then(|m| m.as_str())
+            .filter(|m| !m.is_empty())
+        {
+            return Some(m.to_string());
+        }
+    }
+}
+
+/// thread_settings_applied model, else session_meta provenance model, of a
+/// rollout with no turn_context model id (fact cdxprov). Only lines naming
+/// either field are parsed.
+fn codex_model_outside_turn_context(path: &Path) -> Option<String> {
+    fn contains(line: &[u8], needle: &[u8]) -> bool {
+        line.windows(needle.len()).any(|w| w == needle)
+    }
+    let file = fs::File::open(path).ok()?;
+    let mut reader = std::io::BufReader::with_capacity(64 * 1024, file);
+    let mut line = Vec::new();
+    let mut provenance_model: Option<String> = None;
+    loop {
+        line.clear();
+        match reader.read_until(b'\n', &mut line) {
+            Ok(0) | Err(_) => return provenance_model,
+            Ok(_) => {}
+        }
+        if provenance_model.is_none()
+            && contains(&line, b"\"provenance\"")
+            && contains(&line, b"\"session_meta\"")
+        {
+            if let Ok(obj) = serde_json::from_slice::<serde_json::Value>(&line) {
+                if obj.get("type").and_then(|t| t.as_str()) == Some("session_meta") {
+                    provenance_model = obj.get("payload").and_then(codex_provenance_model);
+                }
+            }
+        }
+        if contains(&line, b"\"thread_settings_applied\"") {
+            if let Ok(obj) = serde_json::from_slice::<serde_json::Value>(&line) {
+                if obj.get("type").and_then(|t| t.as_str()) == Some("event_msg") {
+                    if let Some(m) = obj.get("payload").and_then(codex_thread_settings_model) {
+                        return Some(m);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Top-level index.json keys that are not session paths.
+const INDEX_META_KEYS: [&str; 2] = ["_v", "_codex"];
+
 /// Read existing disk cache and return entries whose _v version matches expected.
+#[cfg(test)]
 pub fn read_index_cache(path: &Path, expected_version: i32) -> HashMap<String, IndexEntry> {
+    read_index_cache_with_codex_format(path, expected_version).0
+}
+
+/// Like read_index_cache, plus whether the file's codex entries are in the
+/// current CODEX_INDEX_FORMAT.
+fn read_index_cache_with_codex_format(
+    path: &Path,
+    expected_version: i32,
+) -> (HashMap<String, IndexEntry>, bool) {
     let raw = match fs::read_to_string(path) {
         Ok(r) => r,
-        Err(_) => return HashMap::new(),
+        Err(_) => return (HashMap::new(), false),
     };
     let value: serde_json::Value = match serde_json::from_str(&raw) {
         Ok(v) => v,
-        Err(_) => return HashMap::new(),
+        Err(_) => return (HashMap::new(), false),
     };
     let version = match value.get("_v").and_then(|v| v.as_i64()) {
         Some(v) => v as i32,
-        None => return HashMap::new(),
+        None => return (HashMap::new(), false),
     };
     if version != expected_version {
-        return HashMap::new();
+        return (HashMap::new(), false);
     }
+    let codex_current = value.get("_codex").and_then(|v| v.as_i64()) == Some(CODEX_INDEX_FORMAT);
     let mut map = HashMap::new();
     if let Some(obj) = value.as_object() {
         for (key, val) in obj {
-            if key == "_v" {
+            if INDEX_META_KEYS.contains(&key.as_str()) {
                 continue;
             }
             if let Ok(entry) = serde_json::from_value::<IndexEntry>(val.clone()) {
@@ -2408,7 +2965,7 @@ pub fn read_index_cache(path: &Path, expected_version: i32) -> HashMap<String, I
             }
         }
     }
-    map
+    (map, codex_current)
 }
 
 /// A session arrived with a `source` this build does not know how to index.
@@ -2454,7 +3011,7 @@ pub const KNOWN_SOURCES: [&str; 7] = [
 fn indexer_for(source: &str) -> Option<fn(&Session) -> IndexEntry> {
     match source {
         "claude" => Some(|s| index_claude(Path::new(&s.path))),
-        "codex" => Some(|s| index_codex(Path::new(&s.path))),
+        "codex" => Some(|s| index_codex_session(Path::new(&s.path))),
         "cursor" => Some(|s| index_cursor(Path::new(&s.path))),
         "cursor-cloud" => Some(|s| index_cursor_cloud(Path::new(&s.path))),
         "factory" => Some(|s| index_factory(Path::new(&s.path))),
@@ -2470,6 +3027,11 @@ fn indexer_for(source: &str) -> Option<fn(&Session) -> IndexEntry> {
 /// SearchIndex (8rj). A session in this set is always re-parsed and returned with
 /// a fresh `termFreqs` even if its mtime-matched cache entry would otherwise be reused.
 ///
+/// A reused codex entry from an index without the current `_codex` marker gets
+/// its model id from the head of the rollout (facts cdxheal, cdxheal3), or is
+/// re-indexed when it has neither a prompt nor a tool (fact cdxsub2); the
+/// rest of the entry and every other source stay plain mtime cache hits.
+///
 /// Fails closed on an unrecognised `source` (fact z9k): the whole batch returns
 /// `Err` so no caller can persist or emit an entry for it.
 pub fn build_index(
@@ -2478,14 +3040,14 @@ pub fn build_index(
     sessions: &[Session],
     search_stale: &HashSet<String>,
 ) -> Result<HashMap<String, IndexEntry>, UnknownSourceError> {
-    let cache = read_index_cache(index_path, version);
+    let (cache, codex_current) = read_index_cache_with_codex_format(index_path, version);
 
     // Parse session files in parallel with rayon. The cache is read once and
     // shared immutably; each index_* function is pure (reads its own file/DB
     // connection and returns an IndexEntry), so per-session work is independent.
     sessions
         .par_iter()
-        .map(|session| {
+        .map_init(OpenCodeConns::default, |opencode_conns, session| {
             let key = session.path.clone();
             let mtime = session.mtime.timestamp_millis();
 
@@ -2502,13 +3064,30 @@ pub fn build_index(
             // Reuse cache entry when mtime matches AND session is not search-stale.
             if !search_stale.contains(&key) {
                 if let Some(entry) = cache.get(&key) {
-                    if entry.mtime == mtime {
-                        return Ok((key, entry.clone()));
+                    // A codex row from before fact cdxsub with no prompt and no
+                    // tool may be a review rollout whose work was all in its
+                    // sub-thread: re-index it once (fact cdxsub2).
+                    let codex_reindex = !codex_current
+                        && session.source == "codex"
+                        && entry.first_prompt.as_deref().unwrap_or("").is_empty()
+                        && entry.tool_counts.is_empty();
+                    if entry.mtime == mtime && !codex_reindex {
+                        let mut entry = entry.clone();
+                        if !codex_current && session.source == "codex" {
+                            if let Some(m) = codex_heal_model(Path::new(&key)) {
+                                entry.model = Some(m);
+                            }
+                        }
+                        return Ok((key, entry));
                     }
                 }
             }
 
-            let mut entry = indexer(session);
+            let mut entry = if session.source == "opencode" {
+                index_opencode_in(opencode_conns, session)
+            } else {
+                indexer(session)
+            };
             entry.mtime = mtime;
             Ok((key, entry))
         })
@@ -2526,6 +3105,12 @@ pub fn write_index_cache(
     }
     let mut wrapper = serde_json::Map::new();
     wrapper.insert("_v".to_string(), serde_json::Value::Number(version.into()));
+    // Every codex entry written here came from index_codex_session or was
+    // healed by build_index, so it is in the current format.
+    wrapper.insert(
+        "_codex".to_string(),
+        serde_json::Value::Number(CODEX_INDEX_FORMAT.into()),
+    );
     for (k, v) in entries {
         // Strip full-text payload fields — index.json is metadata only (yb5, 9ct).
         let mut stripped = v.clone();
@@ -2536,6 +3121,15 @@ pub fn write_index_cache(
         );
     }
     let json = serde_json::to_string(&serde_json::Value::Object(wrapper))?;
-    fs::write(path, json)?;
+    // Write to a sibling temp file and rename it into place so a concurrent
+    // reader (the Node server) never parses a half-written index.json.
+    let mut tmp_name = path.file_name().unwrap_or_default().to_os_string();
+    tmp_name.push(format!(".{}.sidecar.tmp", std::process::id()));
+    let tmp = path.with_file_name(tmp_name);
+    fs::write(&tmp, json)?;
+    if let Err(e) = fs::rename(&tmp, path) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
     Ok(())
 }

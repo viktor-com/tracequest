@@ -1,11 +1,13 @@
 import { safeSlice, truncateFirstPrompt, countWordsInStrings, sumToolCounts, joinFirstLines } from "../parse/parse-utils.js";
-import { estimateParsedStatsCost, fmtTokens, fmtCost, formatDuration, fmtMcpName } from "../filter/filter-formats.js";
+import { sessionFigures, fmtTokens, fmtCost, formatDuration, fmtMcpName } from "../filter/filter-formats.js";
 import { chapterFileKeys } from "../chapters/chapter-keys.js";
 import { buildSessionChapters } from "../chapters/session-chapters.js";
 import { sessionHash } from "../sessions/session-hash.js";
 
 function fmtDurationMd(ms) {
-  return formatDuration(ms, {
+  // Whole seconds round as the session view's formatDuration does (19.6 s is 20s
+  // on both); a sub-second duration still reads "< 1s".
+  return formatDuration(ms >= 1000 ? Math.round(ms / 1000) * 1000 : ms, {
     floorSeconds: true,
     includeSeconds: true,
     alwaysShowMinutes: true,
@@ -29,6 +31,7 @@ export function buildMarkdownHeader(session) {
   const lines = [];
   const s = { ...EMPTY_MARKDOWN_STATS, ...(session.stats ?? {}) };
   const toolCounts = s.toolCounts ?? {};
+  const fig = sessionFigures(session);
 
   lines.push(`# Session ${session.sessionHash || (session.path ? sessionHash(session.path) : "") || session.sessionId?.slice(0, 8) || "unknown"}`);
   lines.push("");
@@ -37,12 +40,11 @@ export function buildMarkdownHeader(session) {
   if (session.model) meta.push(`**Model:** ${session.model}`);
   if (session.source) meta.push(`**Source:** ${session.source}`);
   if (session.startTime) meta.push(`**Date:** ${new Date(session.startTime).toLocaleString()}`);
-  if (session.durationMs > 0) meta.push(`**Duration:** ${fmtDurationMd(session.durationMs)}`);
+  if (fig.durationMs > 0) meta.push(`**Duration:** ${fmtDurationMd(fig.durationMs)}`);
   if (session.cwd) meta.push(`**Working directory:** \`${session.cwd}\``);
   if (session.gitBranch) meta.push(`**Branch:** \`${session.gitBranch}\``);
 
-  const totalCost = estimateParsedStatsCost(session.model, s);
-  const costStr = fmtCost(totalCost);
+  const costStr = fmtCost(fig.cost);
   if (costStr) meta.push(`**Estimated cost:** ${costStr}`);
 
   if (meta.length) {
@@ -57,14 +59,13 @@ export function buildMarkdownHeader(session) {
   statParts.push(`- **Turns:** ${s.assistantTurns}`);
   const totalToolCalls = sumToolCounts(toolCounts);
   statParts.push(`- **Tool calls:** ${totalToolCalls}`);
-  const totalTok = s.totalInputTokens + s.totalOutputTokens;
-  if (totalTok > 0) {
+  if (fig.totalTokens > 0) {
     statParts.push(
-      `- **Tokens:** ${fmtTokens(totalTok)} (${fmtTokens(s.totalInputTokens)} in, ${fmtTokens(s.totalOutputTokens)} out)`,
+      `- **Tokens:** ${fmtTokens(fig.totalTokens)} (${fmtTokens(fig.inputTokens)} in, ${fmtTokens(fig.outputTokens)} out)`,
     );
   }
-  if (s.totalCacheHit > 0 && s.totalInputTokens > 0) {
-    statParts.push(`- **Cache hit:** ${Math.round(s.totalCacheHit / s.totalInputTokens * 100)}%`);
+  if (fig.cacheReadTokens > 0 && fig.inputTokens > 0) {
+    statParts.push(`- **Cache hit:** ${Math.round(fig.cacheReadTokens / fig.inputTokens * 100)}%`);
   }
   if (s.errors > 0) statParts.push(`- **Errors:** ${s.errors}`);
   const toolKeys = Object.keys(toolCounts);

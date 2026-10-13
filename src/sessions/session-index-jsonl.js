@@ -1,13 +1,18 @@
-import { existsSync, readFileSync } from "node:fs";
+import { closeSync, existsSync, fstatSync, openSync, readFileSync, readSync } from "node:fs";
 import { join } from "node:path";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
 import { errorPattern, normalizeToolName } from "../parse/parse-enrich.js";
 import {
   codexIndexedLineKind,
+  codexProvenanceModel,
+  codexSubThreadItem,
+  codexSubThreadItemText,
+  codexThreadSettingsModel,
   isCodexDisplayableUserText,
   isCodexIndexSkippableLine,
   isCodexIndexedJsonlLine,
   normalizeCodexUserPromptText,
+  resolveCodexModel,
   visitCodexEventMsgPayload,
 } from "../parse/codex-event-msg.js";
 import {
@@ -65,6 +70,16 @@ import {
   trackIndexTool,
 } from "./session-meta.js";
 import { cursorModelFromStateDb } from "./cursor-state-db.js";
+import {
+  addActiveRecord,
+  claudeRecordKind,
+  codexRecordKind,
+  createActiveSpan,
+  factoryRecordKind,
+  grokEventKind,
+  OTHER,
+  workedMsOfSpan,
+} from "./active-time.js";
 
 export { extractPrompt, emptyIndexMeta };
 
@@ -116,13 +131,21 @@ function extractTextFromMessage(obj, texts, depth = 0) {
   }
 }
 
-function accumulateTimestamp(line, state, timestampOnlyIfIncludes) {
+/** Epoch ms of an ISO timestamp, reusing the previous parse for a repeated string. */
+function timestampMs(state, ts) {
+  if (ts !== state._lastTs) {
+    state._lastTs = ts;
+    state._lastTsMs = Date.parse(ts);
+  }
+  return state._lastTsMs;
+}
+
+function accumulateTimestamp(line, state, timestampOnlyIfIncludes, recordKind) {
   if (timestampOnlyIfIncludes && !line.includes('"timestamp"')) return;
   const tsMatch = line.match(/"timestamp":\s*"([^"]+)"/);
   if (!tsMatch) return;
-  const ts = tsMatch[1];
-  if (!state.firstTs) state.firstTs = ts;
-  state.lastTs = ts;
+  // Every timestamped line is a record of the session's worked time (fact durac).
+  addActiveRecord(state.activeSpan, timestampMs(state, tsMatch[1]), recordKind ? recordKind(line, state.activeSpan) : OTHER);
 }
 
 function accumulateToolUse(line, state) {
@@ -209,6 +232,143 @@ function finalizeIndexState(state, defaultModel, finalizeState) {
 }
 
 /**
+ * How each JSONL source's indexer reads worked time (fact durac): which lines
+ * it skips, which carry a record, how a record is classified and whether the
+ * duration ends at the last message. indexedWorkedMs reads with the same.
+ */
+const CLAUDE_WORKED_TIME = Object.freeze({
+  skipLine: isClaudeIndexSkippableLine,
+  timestampOnlyIfIncludes: true,
+  recordKind: claudeRecordKind,
+  // The duration ends at the last user/assistant line (fact durcl).
+  durationEndsAtMessage: true,
+});
+const FACTORY_WORKED_TIME = Object.freeze({
+  skipLine: isFactoryIndexSkippableLine,
+  timestampOnlyIfIncludes: false,
+  recordKind: factoryRecordKind,
+  durationEndsAtMessage: false,
+});
+const CODEX_WORKED_TIME = Object.freeze({
+  skipLine: isCodexIndexSkippableLine,
+  timestampOnlyIfIncludes: false,
+  recordKind: codexRecordKind,
+  durationEndsAtMessage: false,
+});
+const WORKED_TIME_BY_SOURCE = { claude: CLAUDE_WORKED_TIME, factory: FACTORY_WORKED_TIME, codex: CODEX_WORKED_TIME };
+
+/** One Grok events.jsonl object's record (fact durac). */
+function addGrokEventRecord(state, obj, ts) {
+  addActiveRecord(state.activeSpan, timestampMs(state, ts), grokEventKind(obj.type, obj.tool_name));
+}
+
+/** One Grok events.jsonl line's record, as indexGrokJsonl reads it. */
+function grokWorkedLine(text, start, end, state) {
+  if (!isGrokEventsIndexedLine(text, start, end)) return;
+  const obj = parseJsonlLineAt(text, start, end);
+  const ts = obj?.ts || obj?.timestamp;
+  if (ts) addGrokEventRecord(state, obj, ts);
+}
+
+/** One JSONL line's record, as the source's indexer reads it (`opts`: its *_WORKED_TIME). */
+function jsonlWorkedLine(opts, text, start, end, state) {
+  if (opts.skipLine(text, start, end)) return;
+  accumulateTimestamp(text.slice(start, end), state, opts.timestampOnlyIfIncludes, opts.recordKind);
+}
+
+/**
+ * Worked-time reads by file, kept so a recording read again as it grows (a live
+ * session's view refreshing) is read only from where the last read stopped.
+ */
+const _workedReads = new Map();
+const MAX_WORKED_READS = 16;
+const WORKED_READ_CHUNK = 4 * 1024 * 1024;
+
+function newWorkedRead(key, st) {
+  return { key, dev: st.dev, ino: st.ino, offset: 0, state: { activeSpan: createActiveSpan(), _lastTs: null, _lastTsMs: NaN } };
+}
+
+/**
+ * Feed `read`'s state every complete line of `fd` from `read.offset` on and move
+ * the offset past the last newline. Returns the unterminated text after it (a
+ * line still being written, or a last line without a newline), or null.
+ */
+function readNewWorkedLines(fd, size, read, onLine) {
+  let pos = read.offset;
+  let carry = null;
+  while (pos < size) {
+    const buf = Buffer.allocUnsafe(Math.min(WORKED_READ_CHUNK, size - pos));
+    const n = readSync(fd, buf, 0, buf.length, pos);
+    if (n <= 0) break;
+    const data = carry ? Buffer.concat([carry, buf.subarray(0, n)]) : buf.subarray(0, n);
+    const dataStart = pos - (carry ? carry.length : 0);
+    pos += n;
+    const lastNl = data.lastIndexOf(0x0a);
+    if (lastNl < 0) {
+      carry = data;
+      continue;
+    }
+    const text = data.toString("utf8", 0, lastNl);
+    let at = 0;
+    while (at < text.length) {
+      const nl = text.indexOf("\n", at);
+      const lineEnd = nl === -1 ? text.length : nl;
+      if (lineEnd > at) onLine(text, at, lineEnd, read.state);
+      at = nl === -1 ? text.length : nl + 1;
+    }
+    read.offset = dataStart + lastNl + 1;
+    carry = lastNl + 1 < data.length ? data.subarray(lastNl + 1) : null;
+  }
+  return carry && carry.length ? carry.toString("utf8") : null;
+}
+
+/**
+ * The durationMs the index records for a Claude Code, Codex, Factory or Grok
+ * recording, read from its timestamped records alone (fact durac3): the same
+ * lines, classification and rule as its indexer, without the rest of an index
+ * pass. A recording read again after it grew is read only from where the last
+ * read stopped. Null for another source; 0 when the file cannot be read.
+ */
+export function indexedWorkedMs(path, source) {
+  const opts = WORKED_TIME_BY_SOURCE[source];
+  if (source !== "grok" && !opts) return null;
+  const file = source === "grok" ? join(path, "events.jsonl") : path;
+  const onLine = source === "grok" ? grokWorkedLine : (text, start, end, state) => jsonlWorkedLine(opts, text, start, end, state);
+  const key = `${source}\u0000${file}`;
+  let fd;
+  try {
+    fd = openSync(file, "r");
+  } catch (err) {
+    if (!isIndexDiskExpectedErr(err)) console.error(`indexedWorkedMs: failed to open ${file}:`, err.message);
+    return 0;
+  }
+  try {
+    const st = fstatSync(fd);
+    let read = _workedReads.get(key);
+    // A replaced or truncated file is read again from its start.
+    if (!read || read.dev !== st.dev || read.ino !== st.ino || st.size < read.offset) read = newWorkedRead(key, st);
+    _workedReads.delete(key);
+    const tail = readNewWorkedLines(fd, st.size, read, onLine);
+    _workedReads.set(key, read);
+    if (_workedReads.size > MAX_WORKED_READS) _workedReads.delete(_workedReads.keys().next().value);
+    let state = read.state;
+    if (tail) {
+      // The unterminated last line counts as the indexer would count it now,
+      // on a copy: the next read sees it again once it is complete.
+      state = { ...state, activeSpan: { ...state.activeSpan } };
+      onLine(tail, 0, tail.length, state);
+    }
+    return workedMsOfSpan(state.activeSpan, opts?.durationEndsAtMessage === true);
+  } catch (err) {
+    _workedReads.delete(key);
+    if (!isIndexDiskExpectedErr(err)) console.error(`indexedWorkedMs: failed to read ${file}:`, err.message);
+    return 0;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
  * Shared JSONL scan loop for Claude Code, Factory, and Codex session files.
  * Source-specific behavior is supplied via hooks (lineKind + line handlers).
  */
@@ -218,6 +378,8 @@ function indexClaudeFamilyJsonl(filePath, {
   isIndexedLine,
   lineKind,
   timestampOnlyIfIncludes = false,
+  recordKind,
+  durationEndsAtMessage = false,
   extractToolResultChunks = false,
   useClaudeAccumulators = true,
   accumulatorsOnlyOnIndexed = false,
@@ -230,12 +392,13 @@ function indexClaudeFamilyJsonl(filePath, {
 }) {
   try {
     const state = createIndexState();
+    state.durationEndsAtMessage = durationEndsAtMessage;
     const shouldIndex = (line) => isIndexedLine(line);
 
     forEachJsonlLineFromFile(filePath, (text, start, end) => {
       if (skipLine?.(text, start, end)) return;
       const line = text.slice(start, end);
-      accumulateTimestamp(line, state, timestampOnlyIfIncludes);
+      accumulateTimestamp(line, state, timestampOnlyIfIncludes, recordKind);
       const accLine = accumulatorIndexedLine ?? isIndexedLine;
       const runAccumulators =
         useClaudeAccumulators &&
@@ -302,12 +465,11 @@ function finalizeCharEstimateIndexState(state, { defaultModel }) {
 export function indexClaudeJsonl(filePath) {
   return indexClaudeFamilyJsonl(filePath, {
     label: "indexClaude",
-    skipLine: isClaudeIndexSkippableLine,
+    ...CLAUDE_WORKED_TIME,
     isIndexedLine: isClaudeFallbackSearchLine,
     accumulatorIndexedLine: isClaudeIndexedJsonlLine,
     accumulatorsOnlyOnIndexed: true,
     lineKind: claudeIndexedLineKind,
-    timestampOnlyIfIncludes: true,
     extractToolResultChunks: true,
     onUserLine(_line, state, parsedObj) {
       state.chapters++;
@@ -458,7 +620,7 @@ export function indexFactoryJsonl(filePath) {
   return indexClaudeFamilyJsonl(filePath, {
     label: "indexFactory",
     defaultModel: "claude (factory)",
-    skipLine: isFactoryIndexSkippableLine,
+    ...FACTORY_WORKED_TIME,
     accumulatorsOnlyOnIndexed: true,
     isIndexedLine: (line) =>
       line.includes('"type":"message"') || line.includes('"type": "message"'),
@@ -497,12 +659,101 @@ export {
   accumulateCodexResponseItemPayload,
 } from "./accumulate-codex-payload.js";
 
+/**
+ * The model id an index row of this codex rollout should carry (facts cdxheal,
+ * cdxheal3): the first turn_context model id, read from the head of the file
+ * and stopping at that line; for a rollout without one, the thread_settings_applied
+ * or base_instructions provenance model (fact cdxprov); null when the rollout
+ * names no model. Lets a cached index row get its model id without re-parsing
+ * the whole recording.
+ */
+export function codexHealModel(filePath) {
+  let fd;
+  try {
+    fd = openSync(filePath, "r");
+  } catch (err) {
+    if (!isIndexDiskExpectedErr(err)) console.error(`codexHealModel: open failed for ${filePath}:`, err.message);
+    return null;
+  }
+  try {
+    // Byte-level scan: only lines holding "turn_context" are decoded and parsed.
+    const chunk = Buffer.allocUnsafe(256 * 1024);
+    let buf = Buffer.alloc(0);
+    let searchFrom = 0;
+    for (;;) {
+      const n = readSync(fd, chunk, 0, chunk.length, null);
+      const eof = n === 0;
+      buf = buf.length ? Buffer.concat([buf, chunk.subarray(0, n)]) : Buffer.from(chunk.subarray(0, n));
+      let at = buf.indexOf(TURN_CONTEXT_NEEDLE, searchFrom);
+      let keepFrom = buf.lastIndexOf(0x0a) + 1;
+      while (at >= 0) {
+        const lineStart = buf.lastIndexOf(0x0a, at) + 1;
+        let lineEnd = buf.indexOf(0x0a, at);
+        if (lineEnd < 0) {
+          if (!eof) {
+            keepFrom = lineStart; // finish this line with the next read
+            break;
+          }
+          lineEnd = buf.length;
+        }
+        const model = turnContextModel(buf.toString("utf8", lineStart, lineEnd));
+        if (model) return model;
+        at = buf.indexOf(TURN_CONTEXT_NEEDLE, lineEnd);
+      }
+      if (eof) return codexModelOutsideTurnContext(filePath);
+      // Re-scan only the kept tail a needle could still straddle.
+      const kept = buf.length - keepFrom;
+      searchFrom = at >= 0 ? at - keepFrom : Math.max(0, kept - TURN_CONTEXT_NEEDLE.length + 1);
+      buf = buf.subarray(keepFrom);
+    }
+  } finally {
+    closeSync(fd);
+  }
+}
+
+const TURN_CONTEXT_NEEDLE = Buffer.from('"turn_context"');
+
+/**
+ * thread_settings_applied model, else session_meta provenance model, of a rollout
+ * with no turn_context model id (fact cdxprov). Only those few rollouts get this
+ * second read; only lines naming either field are parsed.
+ */
+function codexModelOutsideTurnContext(filePath) {
+  let settingsModel = null;
+  let provenanceModel = null;
+  try {
+    forEachJsonlLineFromFile(filePath, (rawLine) => {
+      if (!provenanceModel && rawLine.includes('"provenance"') && rawLine.includes('"session_meta"')) {
+        const obj = parseJsonlLine(rawLine);
+        if (obj?.type === "session_meta") provenanceModel = codexProvenanceModel(obj.payload);
+      }
+      if (rawLine.includes('"thread_settings_applied"')) {
+        const obj = parseJsonlLine(rawLine);
+        settingsModel = obj?.type === "event_msg" ? codexThreadSettingsModel(obj.payload) : null;
+        if (settingsModel) return false;
+      }
+    });
+  } catch (err) {
+    if (!isIndexDiskExpectedErr(err)) console.error(`codexHealModel: read failed for ${filePath}:`, err.message);
+  }
+  return settingsModel || provenanceModel;
+}
+
+function turnContextModel(line) {
+  try {
+    const obj = JSON.parse(line);
+    return obj?.type === "turn_context" && typeof obj.payload?.model === "string" && obj.payload.model ? obj.payload.model : null;
+  } catch {
+    return null;
+  }
+}
+
 export function indexCodexJsonl(filePath) {
   return indexClaudeFamilyJsonl(filePath, {
     label: "indexCodex",
     defaultModel: "codex",
     useClaudeAccumulators: false,
-    skipLine: isCodexIndexSkippableLine,
+    ...CODEX_WORKED_TIME,
     isIndexedLine: isCodexIndexedJsonlLine,
     lineKind: codexIndexedLineKind,
     onUserLine(_line, state, obj) {
@@ -550,9 +801,18 @@ export function indexCodexJsonl(filePath) {
     },
     onIndexedLine(_line, state, obj) {
       if (!obj) return null;
-      if (obj.type === "session_meta") state.model = obj.payload?.model_provider || "codex";
+      // turn_context names the model id, else thread_settings_applied or the
+      // base_instructions provenance; model_provider ("openai") is only the fallback (facts cdxmodel, cdxprov).
+      if (obj.type === "session_meta") {
+        if (!state.codexSessionId) state.codexSessionId = obj.payload?.id || null;
+        state.codexProvider = obj.payload?.model_provider || null;
+        if (!state.codexProvenanceModel) state.codexProvenanceModel = codexProvenanceModel(obj.payload);
+        state.model = codexIndexModel(state);
+      }
       if (obj.type === "turn_context") {
-        if (!state.model) state.model = obj.payload?.model || "codex";
+        const turnModel = obj.payload?.model;
+        if (turnModel && !state.codexTurnModel) state.codexTurnModel = turnModel;
+        state.model = codexIndexModel(state);
         if (!state.sawTokenCountTotal) {
           const usage = obj.payload?.last_token_usage;
           if (usage) {
@@ -568,11 +828,40 @@ export function indexCodexJsonl(filePath) {
         accumulateCodexResponseItemPayload(obj.payload || {}, filePath, state);
       }
       if (obj.type === "event_msg") {
+        const settingsModel = codexThreadSettingsModel(obj.payload);
+        if (settingsModel && !state.codexSettingsModel) {
+          state.codexSettingsModel = settingsModel;
+          state.model = codexIndexModel(state);
+        }
+        // A review sub-thread's prompt and replies (fact cdxsub); its commands
+        // are counted by accumulateCodexEventMsgPayload.
+        const item = codexSubThreadItem(obj.payload, state.codexSessionId);
+        if (item?.type === "UserMessage") {
+          const t = codexSubThreadItemText(item);
+          if (isCodexDisplayableUserText(t)) {
+            const clean = normalizeCodexUserPromptText(t);
+            if (!state.firstPrompt) state.firstPrompt = truncateFirstPrompt(clean);
+            state.chapters++;
+            pushIndexSearchChunk(state, clean);
+          }
+        } else if (item?.type === "AgentMessage") {
+          const t = codexSubThreadItemText(item);
+          if (t) pushIndexSearchChunk(state, foldNewlines(t));
+        }
         accumulateCodexEventMsgPayload(obj.payload, state);
       }
       return obj;
     },
   });
+}
+
+function codexIndexModel(state) {
+  return resolveCodexModel({
+    turnModel: state.codexTurnModel,
+    settingsModel: state.codexSettingsModel,
+    provenanceModel: state.codexProvenanceModel,
+    provider: state.codexProvider,
+  }) || "codex";
 }
 
 function processGrokChatLineObj(obj, sessionDir, state) {
@@ -695,8 +984,7 @@ function processGrokEventsLine(text, start, end, state, toolOutcomes) {
   const obj = parseJsonlLineAt(text, start, end);
   visitGrokEventsObj(obj, {
     onTimestamp(ts) {
-      if (!state.firstTs) state.firstTs = ts;
-      state.lastTs = ts;
+      addGrokEventRecord(state, obj, ts);
     },
     onModel(modelId) {
       state.model = modelId;

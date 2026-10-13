@@ -282,7 +282,9 @@ export const SHARE_JS = `
       }
     }
     var sid = escHtml(redactedSession.sessionHash || (redactedSession.sessionId || 'session').slice(0, 8));
-    var data = JSON.stringify(redactedSession).replace(/<\\//g, '<\\\\/');
+    // Escape comment openers too; the pattern is spelled -{2} because this
+    // script is itself inline and must never contain a literal comment opener.
+    var data = JSON.stringify(redactedSession).replace(/<\\//g, '<\\\\/').replace(/<!-{2}/g, '\\\\u003c!--');
     return '<!DOCTYPE html>\\n<html lang="en">\\n<head>\\n<meta charset="utf-8">\\n<meta name="viewport" content="width=device-width, initial-scale=1">\\n<title>tracequest — ' + sid + '</title>\\n<style>\\n' + css + '\\n</style>\\n</head>\\n<body>\\n<div id="app"></div>\\n<script>\\nconst SESSION = ' + data + ';\\n' + renderJs + '\\n</scr' + 'ipt>\\n</body>\\n</html>';
   }
 
@@ -333,7 +335,9 @@ export const SHARE_JS = `
     modal.appendChild(tokenInput);
     modal.appendChild(h('div', { className: 'hf-modal-hint' }, 'Saved locally in your browser'));
 
-    modal.appendChild(h('label', { className: 'hf-modal-label' }, 'HF dataset repo (namespace/repo)'));
+    var repoLabel = h('label', { className: 'hf-modal-label' }, 'HF dataset repo (namespace/repo)');
+    repoLabel.style.display = 'none';
+    modal.appendChild(repoLabel);
     var repoInput = h('input', { className: 'hf-modal-input', type: 'text', placeholder: 'username/tracequest-sessions (optional — defaults via whoami)' });
     repoInput.value = localStorage.getItem(HF_REPO_LS_KEY) || '';
     repoInput.style.display = 'none';
@@ -378,6 +382,7 @@ export const SHARE_JS = `
     function updateTarget() {
       target = gistRadio.checked ? 'gist' : 'hf';
       repoInput.style.display = target === 'hf' ? 'block' : 'none';
+      repoLabel.style.display = repoInput.style.display;
       tokenInput.value = localStorage.getItem(target === 'gist' ? GH_LS_KEY : HF_LS_KEY) || '';
       updatePrivateHint();
       scanPreview();

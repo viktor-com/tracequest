@@ -11,6 +11,7 @@ const LAST_RECORD_MAX = 2 * 1024 * 1024;
 
 const GROK_LIVE_PHASE = /^(waiting_for_model|streaming_|tool_execution|permission_prompt)/;
 const CLAUDE_IDLE_STOP = new Set(["end_turn", "stop_sequence", "max_tokens"]);
+const CLAUDE_INTERRUPT_MARKER = "[Request interrupted by user";
 
 function tryStat(path) {
   try {
@@ -268,6 +269,14 @@ export function grokSessionIsGenerating(sessionDir) {
   return false;
 }
 
+/** Claude Code's "[Request interrupted by user]" / "... for tool use]" turn-ending record. */
+function claudeUserInterrupted(obj) {
+  const content = obj?.message?.content;
+  if (typeof content === "string") return content.startsWith(CLAUDE_INTERRUPT_MARKER);
+  if (!Array.isArray(content)) return false;
+  return content.some((b) => b?.type === "text" && typeof b.text === "string" && b.text.startsWith(CLAUDE_INTERRUPT_MARKER));
+}
+
 export function claudeJsonlIsGenerating(objs) {
   const pending = new Set();
   let lastRole = null;
@@ -282,8 +291,15 @@ export function claudeJsonlIsGenerating(objs) {
         if (!lastStop) lastStop = "tool_use";
       }
     } else if (o?.type === "user") {
-      lastRole = "user";
       consumeToolResults(o, pending);
+      if (claudeUserInterrupted(o)) {
+        // Esc / a stopped subagent: Claude Code ends the turn with this marker
+        // and runs nothing further until the next prompt.
+        lastRole = "interrupted";
+        pending.clear();
+      } else {
+        lastRole = "user";
+      }
     } else if (o?.subtype === "away_summary" || o?.subtype === "turn_duration") {
       if (!lastStop) lastStop = "end_turn";
     }

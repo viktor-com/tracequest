@@ -15,7 +15,7 @@ export function fmtMcpName(name) {
   return rest.slice(0, idx).replace(/_/g, " ") + ": " + rest.slice(idx + 2).replace(/_/g, " ");
 }
 
-/** Compact token count (e.g. 1.2M, 42K). Falsy → opts.zeroLabel or ''. */
+/** Compact token count (e.g. 80.7B, 1.2M, 42K). Falsy → opts.zeroLabel or ''. */
 export function fmtTokens(n, opts) {
   const zeroLabel = opts && opts.zeroLabel !== undefined ? opts.zeroLabel : '';
   if (!n) return zeroLabel;
@@ -63,6 +63,7 @@ export function fmtCost(c, opts = {}) {
         : c >= 1
           ? 2
           : 3;
+  if (c >= 1000) return prefix + Number(c).toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
   return prefix + Number(c).toFixed(dec);
 }
 
@@ -158,11 +159,22 @@ export function computeGrade(s) {
   return s._gradeCache;
 }
 
+/**
+ * Session cost, billed like a chapter (estimateChapterTokenCost): cache reads at
+ * the cache-read rate, output at the output rate, and every other token of
+ * totalTokens (uncached input plus cache writes) at the input rate. inputTokens
+ * means different things per source (Codex counts its cached tokens in it; the
+ * sidecar keeps Claude cache writes out of it), so the uncached share comes from
+ * the total; an entry without totalTokens bills inputTokens as uncached input.
+ */
 export function estimateCost(s) {
   if (s._costCache !== undefined) return s._costCache;
   if (!s.inputTokens && !s.outputTokens) return 0;
   const { inRate, outRate, cacheReadRate } = getModelRates(s.model);
-  s._costCache = ((s.inputTokens || 0) * inRate + (s.cacheReadTokens || 0) * cacheReadRate + (s.outputTokens || 0) * outRate) / 1000000;
+  const cacheRead = s.cacheReadTokens || 0;
+  const output = s.outputTokens || 0;
+  const uncachedInput = s.totalTokens > 0 ? Math.max(0, s.totalTokens - output - cacheRead) : (s.inputTokens || 0);
+  s._costCache = (uncachedInput * inRate + cacheRead * cacheReadRate + output * outRate) / 1000000;
   return s._costCache;
 }
 
@@ -185,6 +197,40 @@ export function estimateParsedStatsCost(model, stats) {
     cacheHit: stats.totalCacheHit || 0,
     output: stats.totalOutputTokens || 0,
   });
+}
+
+/**
+ * Duration, tokens and cost of a parsed session as every page shows them: its
+ * per-session summary (the session list's figures) when the server attached one,
+ * else its parse stats. inputTokens includes cached tokens.
+ */
+export function sessionFigures(session) {
+  const sum = session.summary;
+  if (sum) {
+    const output = sum.outputTokens || 0;
+    const total = sum.totalTokens || 0;
+    return {
+      model: sum.model || session.model || '',
+      durationMs: sum.durationMs || 0,
+      totalTokens: total,
+      inputTokens: Math.max(0, total - output),
+      outputTokens: output,
+      cacheReadTokens: sum.cacheReadTokens || 0,
+      cost: estimateCost({ ...sum }),
+    };
+  }
+  const st = session.stats || {};
+  const input = st.totalInputTokens || 0;
+  const output = st.totalOutputTokens || 0;
+  return {
+    model: session.model || '',
+    durationMs: session.durationMs || 0,
+    totalTokens: input + output,
+    inputTokens: input,
+    outputTokens: output,
+    cacheReadTokens: st.totalCacheHit || 0,
+    cost: estimateParsedStatsCost(session.model, st),
+  };
 }
 
 /** Map API/CLI sort keys; `date` is an alias for `recent` (mtime descending). */

@@ -3,7 +3,8 @@
  * Utilization in the live API is a percent (25.0); stored as a 0-1 fraction.
  */
 import { join } from "node:path";
-import { homedir } from "node:os";
+import { homedir, userInfo } from "node:os";
+import { readKeychainPassword } from "../utils/macos-keychain.js";
 import {
   defaultReadFile,
   fetchUsageJson,
@@ -24,6 +25,31 @@ export function resolveClaudeUsageUrl() {
 
 export function claudeCredentialsPath(home = homedir()) {
   return join(home, ".claude", ".credentials.json");
+}
+
+/** The account's home from the user database — unlike $HOME, tests cannot point it at a fixture. */
+function osAccountHome() {
+  try {
+    return userInfo().homedir;
+  } catch {
+    return null;
+  }
+}
+
+/** Keychain service under which Claude Code on macOS stores its OAuth login. */
+export const CLAUDE_KEYCHAIN_SERVICE = "Claude Code-credentials";
+
+/**
+ * Claude Code on macOS keeps its live login in the login Keychain;
+ * ~/.claude/.credentials.json is a leftover that stops being refreshed, so
+ * reading only the file reported a signed-in user as unauthenticated (fact
+ * clkeych). Only the account's own home on darwin has that Keychain item; any
+ * other home (tests with HOME overridden, fixture hosts) or platform resolves
+ * to null without spawning.
+ */
+export function readClaudeKeychain(home, { platform = process.platform, accountHome = osAccountHome() } = {}) {
+  if (platform !== "darwin" || !accountHome || home !== accountHome) return Promise.resolve(null);
+  return readKeychainPassword(CLAUDE_KEYCHAIN_SERVICE);
 }
 
 function loadClaudeToken(home, readFile, credentialText) {
@@ -60,9 +86,18 @@ export async function collectClaudeUsage({
   fetchImpl = fetch,
   readFile = defaultReadFile,
   credentialText = null,
+  readKeychain = readClaudeKeychain,
   timeoutMs,
 } = {}) {
-  const loaded = loadClaudeToken(home, readFile, credentialText);
+  let loaded = null;
+  if (credentialText == null) {
+    const keychainText = await readKeychain(home);
+    if (keychainText) {
+      const fromKeychain = loadClaudeToken(home, readFile, keychainText);
+      if (fromKeychain.token) loaded = fromKeychain;
+    }
+  }
+  if (!loaded) loaded = loadClaudeToken(home, readFile, credentialText);
   const secrets = loaded.secrets;
   const finish = (row) => {
     assertNoSecrets(row, secrets, { label: "claude usage row" });

@@ -109,9 +109,14 @@ export function forEachPartialParsedJsonlLine(filePath, fileSize, onObj, maxByte
 
 /**
  * Stream JSONL lines from a file without loading the whole file into memory.
- * Return false from onLine to stop reading early.
+ * Return false from onLine to stop reading early. With `opts.keep`, lines are
+ * first screened from their leading bytes (see forEachKeptJsonlLineFromFile).
  */
-export function forEachJsonlLineFromFile(filePath, onLine) {
+export function forEachJsonlLineFromFile(filePath, onLine, opts) {
+  if (opts?.keep) {
+    forEachKeptJsonlLineFromFile(filePath, opts.keep, onLine, opts);
+    return;
+  }
   const deliver = wrapJsonlLineCallback(onLine);
   const fd = openSync(filePath, "r");
   try {
@@ -202,6 +207,86 @@ export function forEachJsonlLineFromFile(filePath, onLine) {
         pendingStart = 0;
         pendingLen = remainLen;
       }
+    }
+  } finally {
+    closeSync(fd);
+  }
+}
+/** First "\n" in buf[from, len), or -1 (bytes past `len` are stale and never count). */
+function newlineIn(buf, from, len) {
+  if (from >= len) return -1;
+  const nl = buf.indexOf(0x0a, from);
+  return nl === -1 || nl >= len ? -1 : nl;
+}
+
+/**
+ * Stream JSONL lines from a file, letting `keep(buf, start, end)` reject a line
+ * from its leading bytes before it is decoded. keep() sees the whole line when
+ * it is shorter than `prefixBytes`, otherwise at least its first `prefixBytes`
+ * bytes, and must answer the same for any prefix of that length or longer. A
+ * rejected line is skipped up to its newline without being buffered, decoded
+ * or parsed, so a file dominated by lines the caller never reads costs one
+ * byte scan instead of a UTF-8 decode plus JSON.parse per line.
+ * onLine(text) gets each kept non-empty line; return false to stop.
+ */
+function forEachKeptJsonlLineFromFile(filePath, keep, onLine, { prefixBytes = 512, chunkBytes = 1 << 20 } = {}) {
+  const fd = openSync(filePath, "r");
+  try {
+    let buf = Buffer.allocUnsafe(chunkBytes);
+    let len = 0;
+    let pos = 0;
+    let scanFrom = 0;
+    let skipping = false;
+    let decided = false;
+    let eof = false;
+    for (;;) {
+      while (pos < len) {
+        if (skipping) {
+          const nl = newlineIn(buf, pos, len);
+          if (nl === -1) { pos = len; break; }
+          pos = nl + 1;
+          skipping = false;
+          continue;
+        }
+        const nl = newlineIn(buf, Math.max(pos, scanFrom), len);
+        if (nl === -1) {
+          scanFrom = len;
+          if (!decided && len - pos >= prefixBytes) {
+            if (!keep(buf, pos, len)) {
+              skipping = true;
+              pos = len;
+              scanFrom = 0;
+            } else {
+              decided = true;
+            }
+          }
+          break;
+        }
+        if (nl > pos && (decided || keep(buf, pos, nl))) {
+          if (onLine(buf.toString("utf8", pos, nl)) === false) return;
+        }
+        pos = nl + 1;
+        scanFrom = 0;
+        decided = false;
+      }
+      if (eof) {
+        if (!skipping && pos < len && (decided || keep(buf, pos, len))) onLine(buf.toString("utf8", pos, len));
+        return;
+      }
+      if (pos > 0) {
+        if (pos < len) buf.copy(buf, 0, pos, len);
+        len -= pos;
+        if (scanFrom) scanFrom -= pos;
+        pos = 0;
+      }
+      if (len === buf.length) {
+        const grown = Buffer.allocUnsafe(buf.length * 2);
+        buf.copy(grown, 0, 0, len);
+        buf = grown;
+      }
+      const n = readSync(fd, buf, len, buf.length - len, null);
+      if (n <= 0) eof = true;
+      else len += n;
     }
   } finally {
     closeSync(fd);

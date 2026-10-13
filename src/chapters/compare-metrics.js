@@ -1,6 +1,6 @@
 import { sumToolCounts } from "../parse/parse-utils.js";
 import {
-  estimateParsedStatsCost,
+  sessionFigures,
   shortModel,
   fmtMcpName,
   fmtTokens,
@@ -178,7 +178,7 @@ export function summarizeCompareSession(session) {
   const s = session.stats;
   const toolCounts = s.toolCounts || {};
   const totalToolCalls = sumToolCounts(toolCounts);
-  const totalCost = estimateParsedStatsCost(session.model, s);
+  const fig = sessionFigures(session);
   const chapters = buildSessionChapters(session);
   const quality = summarizeChapterQuality(chapters);
 
@@ -186,16 +186,16 @@ export function summarizeCompareSession(session) {
     id: session.sessionHash || (session.path ? sessionHash(session.path) : "") || session.sessionId?.slice(0, 8) || "session",
     source: session.source || "claude",
     model: session.model || "",
-    durationMs: session.durationMs || 0,
+    durationMs: fig.durationMs,
     turns: s.assistantTurns || 0,
     totalToolCalls,
     toolCounts,
-    inputTokens: s.totalInputTokens || 0,
-    outputTokens: s.totalOutputTokens || 0,
-    cacheHit: s.totalCacheHit || 0,
-    totalTokens: (s.totalInputTokens || 0) + (s.totalOutputTokens || 0),
+    inputTokens: fig.inputTokens,
+    outputTokens: fig.outputTokens,
+    cacheHit: fig.cacheReadTokens,
+    totalTokens: fig.totalTokens,
     errors: s.errors || 0,
-    cost: totalCost,
+    cost: fig.cost,
     tokensEstimated: !!s.tokensEstimated,
     timesEstimated: !!session.timesEstimated,
     quality,

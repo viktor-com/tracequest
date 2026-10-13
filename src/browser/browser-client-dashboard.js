@@ -8,7 +8,7 @@ export function buildBrowserClientScriptHead(data) {
 var ALL = _INIT_DATA.sessions;
 var SERVER_TOTAL = _INIT_DATA.total;
 var SERVER_STATS = _INIT_DATA.stats || {};
-var QF_STATS = JSON.parse(JSON.stringify(SERVER_STATS));
+var QF_STATS = JSON.parse(JSON.stringify(_INIT_DATA.facetStats || SERVER_STATS));
 var _liveSessions = _INIT_DATA.liveSessions || [];
 var _livePaths = new Set(_liveSessions.filter(function(s){return s.live === true}).map(function(s){return s.path}));
 `;
@@ -37,7 +37,10 @@ function renderDashboard() {
 
   // Use server-provided stats
   var totalSessions = SERVER_STATS.totalSessions || SERVER_TOTAL;
-  var totalInputTok = SERVER_STATS.totalInputTokens || 0;
+  // Each session's totalTokens is the token figure its row shows; summing
+  // input + output + cache reads would count cached input twice for sources
+  // whose input already includes it (Codex, OpenCode).
+  var totalTok = SERVER_STATS.totalTokens || 0;
   var totalOutputTok = SERVER_STATS.totalOutputTokens || 0;
   var totalCacheRead = SERVER_STATS.totalCacheReadTokens || 0;
   var totalDuration = SERVER_STATS.totalDurationMs || 0;
@@ -49,8 +52,8 @@ function renderDashboard() {
 
   var totalCost = SERVER_STATS.totalCost || 0;
 
-  // Cache hit rate
-  var totalInput = totalInputTok + totalCacheRead;
+  // Cache hit rate: cache reads over every input token (cached or not).
+  var totalInput = Math.max(0, totalTok - totalOutputTok);
   var cacheHitPct = totalInput > 0 ? ((totalCacheRead / totalInput) * 100) : 0;
 
   var growthData = {};
@@ -74,7 +77,7 @@ function renderDashboard() {
 
   // Format helpers
   var fmtCostVal = totalCost >= 1000 ? '$' + Math.round(totalCost).toLocaleString('en-US') : fmtCost(totalCost, { prefix: '$', zeroLabel: '$0' });
-  var totalTokFmt = fmtTokens(totalInputTok + totalOutputTok + totalCacheRead);
+  var totalTokFmt = fmtTokens(totalTok);
   var durFmt = fmtDuration(totalDuration);
 
   var collapseClass = dashboardCollapsed ? ' collapsed' : '';
@@ -101,15 +104,16 @@ function renderDashboard() {
   // and the run-page shell counter use. The chrome word is running, not live.
   var liveN = liveNow();
   if (liveN) html += dashStat('<span class="dash-live-n" style="color:var(--ok)">' + liveN + '</span>', 'running');
-  html += dashStat(totalSessions, 'runs');
+  function grouped(n) { return Number(n || 0).toLocaleString('en-US'); }
+  html += dashStat(grouped(totalSessions), 'runs');
   html += dashStat(fmtCostVal, 'cost', growthBadge('cost'));
   html += dashStat(totalTokFmt || '--', 'tokens', growthBadge('tokens'));
   html += dashStat(fmtPct(cacheHitPct, { hideZero: true }), 'cache', growthBadge('cache'));
   html += dashStat(durFmt || '--', 'duration', growthBadge('duration'));
-  html += dashStat(totalErrors, 'errors', growthBadge('errors', true));
-  html += dashStat(totalCommits, 'commits', growthBadge('commits'));
-  html += dashStat(totalFiles, 'files', growthBadge('files'));
-  html += dashStat(totalChapters, 'chapters', growthBadge('chapters'));
+  html += dashStat(grouped(totalErrors), 'errors', growthBadge('errors', true));
+  html += dashStat(grouped(totalCommits), 'commits', growthBadge('commits'));
+  html += dashStat(grouped(totalFiles), 'files', growthBadge('files'));
+  html += dashStat(grouped(totalChapters), 'chapters', growthBadge('chapters'));
   html += '</div>';
 
   if (topTools.length) {

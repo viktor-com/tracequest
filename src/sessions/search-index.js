@@ -26,10 +26,16 @@ import {
   statSync,
 } from "node:fs";
 import { join } from "node:path";
+import { mkdir, open, rename } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
 
 export const SEARCH_IDX_VERSION = 3;
+
+/** Sessions whose term lists the index keeps for direct removal (fact hsi3). */
+const MAX_REMEMBERED_DOCS = 256;
+/** Batches larger than this (a bulk re-index) do not remember term lists. */
+const REMEMBER_BATCH_MAX = 64;
 
 function searchIdxLog(...args) {
   if (process.env.TRACEQUEST_VERBOSE === "1") console.log(...args);
@@ -51,6 +57,14 @@ export class SearchIndex {
      * @type {number}
      */
     this._generation = 0;
+    /**
+     * Terms of each session upserted since load, so replacing an actively
+     * written session removes its old postings directly instead of scanning
+     * the whole vocabulary (fact hsi3). Bounded: past the cap, removal falls
+     * back to the scan.
+     * @type {Map<string, string[]>}
+     */
+    this._docTerms = new Map();
   }
 
   get docCount() {
@@ -72,13 +86,41 @@ export class SearchIndex {
    * @param {Map<string,number>} termFreqs
    */
   upsert(path, termFreqs) {
-    this._removePostings(path);
+    this.upsertMany([[path, termFreqs]]);
+  }
+
+  /**
+   * Insert or replace the term-frequency maps of several sessions. Old
+   * postings of a session whose terms are remembered (upserted since load) are
+   * removed directly; every other replaced session's are removed in ONE pass
+   * over the vocabulary, so re-indexing thousands of sessions costs one scan
+   * rather than one per session (fact hsi3).
+   *
+   * @param {Iterable<[string, Map<string,number>|null]>} entries  [path, termFreqs]; the last entry for a path wins
+   */
+  upsertMany(entries) {
+    const byPath = new Map(entries);
+    if (!byPath.size) return;
+    const scan = new Set();
+    for (const path of byPath.keys()) {
+      if (!this._docLen.has(path)) continue;
+      if (!this._removeKnownPostings(path)) scan.add(path);
+    }
+    this._removePostingsOf(scan);
     this._generation++;
+    const remember = byPath.size <= REMEMBER_BATCH_MAX;
+    for (const [path, termFreqs] of byPath) this._insertPostings(path, termFreqs, remember);
+  }
+
+  _insertPostings(path, termFreqs, remember) {
     if (!termFreqs || !termFreqs.size) {
       this._docLen.set(path, 0);
+      if (remember) this._rememberTerms(path, []);
+      else this._docTerms.delete(path);
       return;
     }
     let docLen = 0;
+    const terms = remember ? [] : null;
     for (const [term, tf] of termFreqs) {
       let posting = this._postings.get(term);
       if (!posting) {
@@ -87,27 +129,72 @@ export class SearchIndex {
       }
       posting.set(path, tf);
       docLen += tf;
+      if (terms) terms.push(term);
     }
     this._docLen.set(path, docLen);
+    if (remember) this._rememberTerms(path, terms);
+    else this._docTerms.delete(path);
+  }
+
+  _rememberTerms(path, terms) {
+    if (!this._docTerms.has(path) && this._docTerms.size >= MAX_REMEMBERED_DOCS) this._docTerms.clear();
+    this._docTerms.set(path, terms);
   }
 
   /**
-   * Remove all postings for a session path (prune from disk or mtime-changed).
+   * Remove a session from the index.
    * @param {string} path
    */
   remove(path) {
-    this._removePostings(path);
-    this._docLen.delete(path);
+    this.removeMany([path]);
+  }
+
+  /**
+   * Remove several sessions in at most one pass over the vocabulary.
+   * @param {Iterable<string>} paths
+   */
+  removeMany(paths) {
+    const scan = new Set();
+    const gone = [];
+    for (const path of paths) {
+      if (!this._docLen.has(path)) continue;
+      gone.push(path);
+      if (!this._removeKnownPostings(path)) scan.add(path);
+    }
+    this._removePostingsOf(scan);
+    for (const path of gone) this._docLen.delete(path);
     this._generation++;
   }
 
-  _removePostings(path) {
-    if (!this._docLen.has(path)) return;
-    // We don't have a reverse index, so scan postings for this path.
-    // In practice the posting lists are small relative to vocab size and this
-    // only runs on stale sessions (mtime-changed), not on every access.
-    for (const [term, posting] of this._postings) {
+  /** Remove the postings of a session whose terms are remembered; false when they are not. */
+  _removeKnownPostings(path) {
+    const known = this._docTerms.get(path);
+    if (!known) return false;
+    this._docTerms.delete(path);
+    for (const term of known) {
+      const posting = this._postings.get(term);
+      if (!posting) continue;
       posting.delete(path);
+      if (!posting.size) this._postings.delete(term);
+    }
+    return true;
+  }
+
+  /**
+   * Drop the postings of `paths` (sessions present in the index, terms not
+   * remembered). There is no full reverse index, so this scans the vocabulary
+   * once for the whole set: each posting list is walked or probed, whichever
+   * is smaller.
+   * @param {Set<string>} paths
+   */
+  _removePostingsOf(paths) {
+    if (!paths.size) return;
+    for (const [term, posting] of this._postings) {
+      if (posting.size <= paths.size) {
+        for (const path of posting.keys()) if (paths.has(path)) posting.delete(path);
+      } else {
+        for (const path of paths) posting.delete(path);
+      }
       if (!posting.size) this._postings.delete(term);
     }
   }
@@ -137,14 +224,16 @@ export class SearchIndex {
    * @param {Set<string>} validPaths
    */
   pruneRemovedSessions(validPaths) {
+    const gone = [];
     for (const path of this._docLen.keys()) {
-      if (!validPaths.has(path)) this.remove(path);
+      if (!validPaths.has(path)) gone.push(path);
     }
+    if (gone.length) this.removeMany(gone);
     // Drop empty posting lists (may be left over from removes above)
     for (const [term, posting] of this._postings) {
       if (!posting.size) this._postings.delete(term);
     }
-    // _generation already bumped by each remove() call above.
+    // _generation already bumped by removeMany() above.
   }
 
   /**
@@ -178,6 +267,53 @@ export class SearchIndex {
       paths: pathArr,
       docLen,
     });
+  }
+
+  /**
+   * serialize() as a sequence of string pieces produced in slices of at most
+   * ~`sliceMs` of event-loop time, yielding between slices (fact sidx2): a
+   * multi-hundred-MB index never blocks request serving while it is written.
+   * Resolves to the pieces (their concatenation equals serialize()), or null
+   * when the index changed while they were being produced.
+   * @returns {Promise<string[]|null>}
+   */
+  async serializePiecesAsync(sliceMs = 15) {
+    const gen = this._generation;
+    let sliceStart = Date.now();
+    const pause = async () => {
+      if (Date.now() - sliceStart < sliceMs) return true;
+      await new Promise((resolve) => setImmediate(resolve));
+      sliceStart = Date.now();
+      return this._generation === gen;
+    };
+    const vocab = [...this._postings.keys()].sort();
+    if (!(await pause())) return null;
+    const pathArr = [...this._docLen.keys()];
+    const pathIdx = new Map();
+    for (let i = 0; i < pathArr.length; i++) pathIdx.set(pathArr[i], i);
+    if (!(await pause())) return null;
+    const pieces = [`{"_sv":${JSON.stringify(SEARCH_IDX_VERSION)},"vocab":`, JSON.stringify(vocab), ',"postings":['];
+    if (!(await pause())) return null;
+    let batch = [];
+    for (let vi = 0; vi < vocab.length; vi++) {
+      const posting = this._postings.get(vocab[vi]);
+      const entries = [];
+      if (posting) {
+        for (const [path, tf] of posting) {
+          const pi = pathIdx.get(path);
+          if (pi !== undefined) entries.push(pi, tf);
+        }
+      }
+      batch.push(JSON.stringify(entries));
+      if ((vi & 255) === 255) {
+        pieces.push((vi > 255 ? "," : "") + batch.join(","));
+        batch = [];
+        if (!(await pause())) return null;
+      }
+    }
+    if (batch.length) pieces.push((vocab.length > batch.length ? "," : "") + batch.join(","));
+    pieces.push('],"paths":', JSON.stringify(pathArr), ',"docLen":', JSON.stringify(pathArr.map((p) => this._docLen.get(p))), "}");
+    return (await pause()) ? pieces : null;
   }
 
   /**
@@ -225,6 +361,8 @@ export class SearchIndex {
 let _searchIdx = null;
 let _searchIdxWriteTimer = null;
 const SEARCH_IDX_WRITE_DELAY_MS = 30_000;
+/** Indexes of at most this many sessions are written synchronously when the debounce fires. */
+const SYNC_WRITE_MAX_DOCS = 500;
 
 function searchIdxCacheDir() {
   return process.env.TRACEQUEST_CACHE_DIR || join(homedir(), ".cache", "tracequest");
@@ -279,15 +417,51 @@ function writeSearchIdxToDisk() {
   searchIdxLog(`search.idx: wrote ${_searchIdx.docCount} sessions in ${Date.now() - tWrite}ms (${Math.round(serialized.length / 1024)}KB)`);
 }
 
+/**
+ * The deferred write: serialized in slices that yield the event loop and
+ * written asynchronously (fact sidx2). An index that changes meanwhile is
+ * written by the next scheduled write instead.
+ */
+async function writeSearchIdxToDiskAsync() {
+  if (!_searchIdx) return;
+  const idx = _searchIdx;
+  const tWrite = Date.now();
+  const pieces = await idx.serializePiecesAsync();
+  if (!pieces || idx !== _searchIdx) {
+    scheduleSearchIdxWrite();
+    return;
+  }
+  const dir = searchIdxCacheDir();
+  await mkdir(dir, { recursive: true });
+  const p = searchIdxPath();
+  const tmp = `${p}.${process.pid}.tmp`;
+  const fh = await open(tmp, "w");
+  try {
+    for (const piece of pieces) await fh.write(piece);
+  } finally {
+    await fh.close();
+  }
+  await rename(tmp, p);
+  searchIdxLog(`search.idx: wrote ${idx.docCount} sessions in ${Date.now() - tWrite}ms (sliced)`);
+}
+
 export function scheduleSearchIdxWrite() {
   if (_searchIdxWriteTimer) clearTimeout(_searchIdxWriteTimer);
   _searchIdxWriteTimer = setTimeout(() => {
     _searchIdxWriteTimer = null;
-    try {
-      writeSearchIdxToDisk();
-    } catch (err) {
-      console.warn("deferred search.idx write failed:", err.message);
+    // A small index serializes in a few ms: write it at once. A corpus-sized
+    // one (hundreds of ms to serialize) is written in yielding slices.
+    if (!_searchIdx || _searchIdx.docCount <= SYNC_WRITE_MAX_DOCS) {
+      try {
+        writeSearchIdxToDisk();
+      } catch (err) {
+        console.warn("deferred search.idx write failed:", err.message);
+      }
+      return;
     }
+    writeSearchIdxToDiskAsync().catch((err) => {
+      console.warn("deferred search.idx write failed:", err.message);
+    });
   }, SEARCH_IDX_WRITE_DELAY_MS);
   if (_searchIdxWriteTimer.unref) _searchIdxWriteTimer.unref();
 }

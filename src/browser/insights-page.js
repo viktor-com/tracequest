@@ -166,7 +166,7 @@ function num(n) {
 
 function hours(ms) {
   const h = ms / 3600000;
-  if (h >= 10) return `${Math.round(h)} h`;
+  if (h >= 10) return `${num(Math.round(h))} h`;
   if (h >= 1) return `${h.toFixed(1)} h`;
   return `${Math.round(ms / 60000)} min`;
 }
@@ -327,6 +327,7 @@ export function insightsPage(data) {
   const rangeChips = [0, ...INSIGHTS_RANGES].map((d) => `<a class="ins-chip" href="${esc(scopeHref(q, { days: d }))}" aria-current="${q.days === d}">${d ? `last ${d} days` : "all time"}</a>`).join("\n");
   const notes = [];
   if (data.exprError) notes.push(`Filter ignored: ${data.exprError}`);
+  if (data.exprWarning) notes.push(data.exprWarning);
   if (t.pending > 0) notes.push(`${num(t.pending)} of ${num(t.sessions)} sessions are not analysed yet and are left out. Run: tracequest insights --refresh`);
 
   return `<!DOCTYPE html>

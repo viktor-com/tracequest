@@ -183,6 +183,17 @@ function quietStat(path, deps) {
   }
 }
 
+/** True when `dir` is a directory (missing dirs silent). */
+function isDirQuiet(dir, deps) {
+  const stat = pick(deps, "statSync", statSync);
+  try {
+    const st = stat(dir);
+    return typeof st?.isDirectory !== "function" || st.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 function quietReaddir(dir, deps, withTypes = false) {
   const readdir = pick(deps, "readdirSync", readdirSync);
   try {
@@ -227,7 +238,7 @@ function claudeCandidates(home, cwd, deps) {
   const out = [];
   const seen = new Set();
   for (const spelling of cwdSpellings(cwd, deps)) {
-    jsonlCandidatesIn(claudeProjectDir(home, spelling), deps, out, seen);
+    jsonlCandidatesIn(claudeProjectDir(home, spelling, (dir) => isDirQuiet(dir, deps)), deps, out, seen);
   }
   return out;
 }
@@ -370,7 +381,8 @@ export function expectedSessionPaths({ agent, cwd, sessionId, home = homedir() }
   switch (agent) {
     case "claude":
       for (const spelling of cwdSpellings(cwd, deps)) {
-        out.add(join(claudeProjectDir(home, spelling), `${sessionId}.jsonl`));
+        // Where Claude Code WILL write: always the dir it names, never the legacy one.
+        out.add(join(claudeProjectDir(home, spelling, () => true), `${sessionId}.jsonl`));
       }
       break;
     case "grok":

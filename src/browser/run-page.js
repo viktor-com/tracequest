@@ -67,6 +67,7 @@
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
 import { CHAT_SHELL_CSS, CHAT_PAGE_CSS } from "./chat-page-css.js";
 import { ansiPaletteCss } from "../render/ansi-html.js";
+import { RUN_UNLINKED_RUNNING_MS } from "../sessions/run-generating-status.js";
 import { esc } from "../server/server-html-helpers.js";
 import {
   computeGrade,
@@ -122,6 +123,13 @@ export const RUN_POLL_MS = 600;
 
 /** Unified-session poll cadence in ms for the chat transcript. */
 export const SESSION_POLL_MS = 1000;
+
+/**
+ * Poll cadence in ms of a watched session (/run?session=) that is not
+ * running. A change to its recording still polls at once: the data-update
+ * SSE calls window._refreshData.
+ */
+export const IDLE_SESSION_POLL_MS = 5000;
 
 /** Agent-rail poll cadence in ms (runs; sessions refresh every 3rd tick). */
 export const RAIL_POLL_MS = 3000;
@@ -1515,7 +1523,9 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     return items;
   }
   function renderBlocks(blocks) {
-    var items = renderItems(blocks);
+    return itemsHtml(renderItems(blocks));
+  }
+  function itemsHtml(items) {
     var html = "";
     for (var r = 0; r < items.length; r++) {
       var it = items[r];
@@ -2291,7 +2301,8 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     lastBlocks = lastSession ? buildBlocks(lastSession, lastState) : [];
     var items = renderItems(lastBlocks);
     lastItems = items;
-    var threadHtml = renderBlocks(lastBlocks);
+    // The thread's HTML from the items just built, not a second render pass.
+    var threadHtml = itemsHtml(items);
     var stick = followTail || isAtBottom();
     if (threadHtml !== lastThreadHtml) {
       restoreThreadFromHistory();
@@ -2395,9 +2406,11 @@ export function runPage({ run } = {}) {
   const exited = status === "exited";
   const identityStatus = runIdentityStatus(run);
   const generating = identityStatus === "running";
+  // An unlinked run is "pending" only while it may still be starting up; an
+  // orphaned one (idle, fact hlorph) is not running and waits for nothing.
   const chatState = exited
     ? "exited"
-    : (run.sessionPath ? (generating ? "running" : "idle") : "pending");
+    : (generating ? (run.sessionPath ? "running" : "pending") : "idle");
   const composerState = exited ? "exited" : (generating ? "running" : "idle");
   const composerText = exited ? "Agent exited" : (generating ? "Running" : "Idle");
   return `<!DOCTYPE html>
@@ -2562,6 +2575,16 @@ ${shellClientScript({ current: { type: "run", id }, defaultCwd: cwd || "" })}
   var canResume = ${JSON.stringify(canResume)};
   var resumedFromHash = ${JSON.stringify(resumedFrom)};
   var runPromptSnippet = ${JSON.stringify(run.prompt || null)};
+  var runStartedMs = Date.parse(${JSON.stringify(startedAt || "")});
+  var RUN_UNLINKED_RUNNING_MS = ${RUN_UNLINKED_RUNNING_MS};
+  /* A pane that has linked no recording RUN_UNLINKED_RUNNING_MS after it
+     started is idle, not starting up: the rule GET /api/runs applies (fact
+     hlorph), applied here to the run's own polls, which report such a pane
+     as running. */
+  var runLinked = ${JSON.stringify(Boolean(run.sessionPath))};
+  function unlinkedIdle(linked) {
+    return !linked && Number.isFinite(runStartedMs) && Date.now() - runStartedMs > RUN_UNLINKED_RUNNING_MS;
+  }
   var POLL_MS = ${RUN_POLL_MS};
   var SESSION_POLL_MS = ${SESSION_POLL_MS};
   var screen = document.getElementById("runScreen");
@@ -2811,6 +2834,7 @@ ${CHAT_TRANSCRIPT_JS}
         if (stopped || snapStopped) return;
         screen.innerHTML = data.html;
         if (data.status === "exited") { markExited(); return; }
+        if (data.status === "running" && unlinkedIdle(runLinked)) data.status = "idle";
         setStatus(data.status === "idle" ? "idle" : "running");
       }
     } catch (e) {
@@ -2828,6 +2852,8 @@ ${CHAT_TRANSCRIPT_JS}
   }
   function applySession(data) {
     var word = pollGeneratingStatus(data);
+    runLinked = data.link !== "pending";
+    if (word === "running" && unlinkedIdle(runLinked)) word = "idle";
     if (word === "running") followTail = followTail || isAtBottom();
     lastState = data.link === "pending" && word === "running"
       ? "pending"
@@ -3490,7 +3516,7 @@ ${ANALYTICS_PANEL_JS}
  * capability means absent composer: honest absence. `agent` names the
  * mapped agent on the composer chip.
  */
-export function liveSessionPage({ session } = {}) {
+export function liveSessionPage({ session, readOnly = false } = {}) {
   const { hash, path, source, live } = session;
   const project = session.project || "";
   const run = session.run || null;
@@ -3597,13 +3623,15 @@ ${APP_TOP_HTML}
       </form>` : ""}
       </div>
       <form class="composer-card live-tail-card" id="liveTailForm" data-empty="true" data-mode="live-tail"${continuable ? ' data-continuable="true"' : ""}${liveTailAttrs}>
+${readOnly ? `
+        <input class="run-input" id="liveTailInput" type="text" disabled placeholder="Read-only hub — steer this session in its own terminal" aria-label="Read-only hub: steer this session in its own terminal">` : `
         <input class="run-input" id="liveTailInput" type="text" placeholder="Send a follow-up" autocomplete="off" spellcheck="false" aria-label="Send a follow-up">
         <div class="composer-row">
           <button class="run-send-btn" id="liveTailStop" type="button" aria-label="Stop" title="Stop — this session is driven outside tracequest; interrupt it in its own terminal">
             <svg class="icon-send" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 12.5v-9M4.5 7 8 3.5 11.5 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <svg class="icon-stop" width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="3.5" y="3.5" width="9" height="9" rx="1.6" fill="currentColor"/></svg>
           </button>
-        </div>
+        </div>`}
       </form>
       <div class="run-input-error" id="continueError" role="alert" hidden></div>
     </div>
@@ -3624,6 +3652,7 @@ ${shellClientScript({ current: { type: "session", id: hash }, defaultCwd: "" })}
 (function () {
   var sessionHandle = ${JSON.stringify(hash)};
   var SESSION_POLL_MS = ${SESSION_POLL_MS};
+  var IDLE_SESSION_POLL_MS = ${IDLE_SESSION_POLL_MS};
   var statusEl = document.getElementById("runStatus");
   var banner = document.getElementById("runBanner");
   var composerStatus = document.getElementById("composerStatus");
@@ -3761,14 +3790,18 @@ ${CHAT_TRANSCRIPT_JS}
     document.body.setAttribute("data-run-state", "gone");
   }
 
-  /* ---- session loop (~1s, etag flow — never stops while the page lives) ---- */
+  /* ---- session loop (etag flow — never stops while the page lives):
+     ~1s while the session is running, IDLE_SESSION_POLL_MS while it is
+     not; a data-update (window._refreshData) polls at once either way ---- */
   function scheduleSession() {
     if (stopped) return;
     if (document.hidden) { setChatPollingFlag(false); return; }
     setChatPollingFlag(true);
-    sessTimer = setTimeout(pollSession, SESSION_POLL_MS);
+    sessTimer = setTimeout(pollSession, apiLive || lastState === "running" ? SESSION_POLL_MS : IDLE_SESSION_POLL_MS);
   }
   function applySession(data) {
+    var wasLive = apiLive;
+    var grew = false;
     apiLive = data.state === "running";
     if (!data.unchanged && data.session) {
       if (data.etag && data.etag !== lastEtag) {
@@ -3778,11 +3811,35 @@ ${CHAT_TRANSCRIPT_JS}
       lastSession = data.session;
       lastEtag = data.etag;
       if (lastSession.cwd) runCwd = lastSession.cwd;
+      grew = true;
     }
+    // The transcript and its chrome are a function of the session and the
+    // state alone: an unchanged answer in the same state has nothing to
+    // repaint, and rebuilding a long thread on every poll stalls scrolling.
+    if (!grew && apiLive === wasLive && (deriveWatchLive() ? "running" : "idle") === lastState) return;
     setWatchState(deriveWatchLive() ? "running" : "idle");
     rerender();
   }
+  // One session request at a time: a data-update arriving while a poll is
+  // in flight asks for one more poll after it (with the etag it answered)
+  // instead of starting a second poll loop beside the first.
+  var sessInFlight = false;
+  var sessAgain = false;
   async function pollSession() {
+    if (sessInFlight) { sessAgain = true; return; }
+    sessInFlight = true;
+    try {
+      await pollSessionOnce();
+    } finally {
+      sessInFlight = false;
+    }
+    if (sessAgain && !stopped) {
+      sessAgain = false;
+      if (sessTimer) { clearTimeout(sessTimer); sessTimer = null; }
+      pollSession();
+    }
+  }
+  async function pollSessionOnce() {
     sessTimer = null;
     if (stopped) return;
     try {

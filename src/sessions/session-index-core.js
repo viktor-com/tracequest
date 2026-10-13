@@ -9,8 +9,9 @@ import {
 import { indexOpenCode } from "./session-index-opencode.js";
 import { discoveryRoots, discoverSessions } from "./session-discovery.js";
 import { resolveHostsRoot, stampImportedHost } from "./session-discovery-paths.js";
-import { runSidecar } from "./index-writers.js";
+import { runSidecar, runSidecarAsync, sidecarAvailable } from "./index-writers.js";
 import { sortSessionsByMtimeDesc } from "./session-list.js";
+import { rememberSessionPaths } from "./session-hash.js";
 
 /** Module-scope dispatch table (hot path: workers call indexSession per stale session). */
 const INDEX_SESSION_BY_SOURCE = new Map([
@@ -67,18 +68,51 @@ function parseSidecarScanStdout(stdout) {
  * Discover sessions from sidecar scan or JS filesystem walk.
  * Always returns a list sorted by mtime descending (newest first).
  */
-export function findSessions(projectFilter) {
+function sidecarScanArgs(projectFilter) {
   const args = ["scan", "--roots", JSON.stringify(discoveryRoots())];
   if (projectFilter) args.push("--filter", projectFilter);
+  return args;
+}
 
-  let sessions = runSidecar("scan", args, (result) => parseSidecarScanStdout(result.stdout));
+function finishFoundSessions(sessions, projectFilter) {
   if (!sessions) {
     sessions = [];
     discoverSessions(projectFilter, sessions);
   }
   const hostsRoot = resolveHostsRoot();
   for (const session of sessions) stampImportedHost(session, hostsRoot);
+  rememberSessionPaths(sessions);
   return sortSessionsByMtimeDesc(sessions);
+}
+
+export function findSessions(projectFilter) {
+  const sessions = runSidecar("scan", sidecarScanArgs(projectFilter), (result) => parseSidecarScanStdout(result.stdout));
+  return finishFoundSessions(sessions, projectFilter);
+}
+
+/**
+ * findSessions for the server (fact hsa1): the sidecar scan runs as an
+ * asynchronous child, so the event loop keeps answering while it walks.
+ */
+export async function findSessionsAsync(projectFilter) {
+  const sessions = await runSidecarAsync("scan", sidecarScanArgs(projectFilter), (result) => parseSidecarScanStdout(result.stdout));
+  return finishFoundSessions(sessions, projectFilter);
+}
+
+/**
+ * Sessions under just these discovery roots, via one asynchronous sidecar scan
+ * (fact hsi1): the incremental refresh rescans only the roots that gained or
+ * lost a file. Unsorted; null when the sidecar is unavailable or failed, so the
+ * caller falls back to a full scan instead of guessing.
+ */
+export async function findSessionsInRootsAsync(roots) {
+  if (!sidecarAvailable()) return null;
+  if (!roots.length) return [];
+  const sessions = await runSidecarAsync("scan", ["scan", "--roots", JSON.stringify(roots)], (result) => parseSidecarScanStdout(result.stdout));
+  if (!sessions) return null;
+  const hostsRoot = resolveHostsRoot();
+  for (const session of sessions) stampImportedHost(session, hostsRoot);
+  return sessions;
 }
 
 /**

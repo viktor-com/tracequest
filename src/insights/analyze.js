@@ -20,16 +20,14 @@ import {
   sleepSeconds,
 } from "./classify.js";
 import { redactText } from "./redact.js";
+// The stall and idle bounds a session's indexed duration uses too (fact durac).
+import { MAX_MODEL_WAIT_MS, MAX_STALL_MS, STALL_MS } from "../sessions/active-time.js";
 
 /** Bump when the record shape or any classifier changes: invalidates the cache. */
 export const INSIGHTS_VERSION = 2;
 
-/** A gap this long with no event is a stall (agent waiting) or idle (human away). */
-export const STALL_MS = 5 * 60 * 1000;
-/** Longer than this is never one command running: the session was left and resumed. */
-export const MAX_STALL_MS = 6 * 60 * 60 * 1000;
-/** A model turn slower than this is a rate-limit pause or a suspended machine. */
-export const MAX_MODEL_WAIT_MS = 30 * 60 * 1000;
+export { MAX_MODEL_WAIT_MS, MAX_STALL_MS, STALL_MS };
+
 /** Two CI polls further apart than this are separate waits. */
 export const CI_POLL_GAP_MS = 30 * 60 * 1000;
 /** A test command that keeps the agent waiting this long counts as a hang. */
@@ -87,6 +85,7 @@ export function analyzeSession(session) {
   let longestStall = null;
   let prevTs = NaN;
   let firstTs = NaN;
+  let timedEvents = 0;
   let prevType = "";
   let lastCiAt = NaN;
 
@@ -115,6 +114,7 @@ export function analyzeSession(session) {
     }
     prevType = e.type;
     if (Number.isFinite(ts)) {
+      timedEvents += 1;
       if (!Number.isFinite(firstTs)) firstTs = ts;
       // Harnesses that merge parallel work log events out of order; measuring
       // gaps from the latest time seen keeps them from being counted twice.
@@ -207,6 +207,11 @@ export function analyzeSession(session) {
     ? end - start
     : Number(session?.durationMs) || 0;
 
+  // Agent time is only what recorded events show (fact insac): session bounds
+  // without timed events (Cursor, Cursor cloud) say when a session was created
+  // and last touched, not how long anything ran.
+  const eventSpanMs = timedEvents >= 2 && prevTs > firstTs ? prevTs - firstTs : 0;
+
   let area = null;
   let areaHits = 0;
   for (const [name, hits] of areas) {
@@ -226,7 +231,8 @@ export function analyzeSession(session) {
     cwd,
     start: Number.isFinite(start) ? start : null,
     durationMs,
-    activeMs: Math.max(0, durationMs - idleMs),
+    activeMs: Math.max(0, Math.min(eventSpanMs, durationMs) - idleMs),
+    timedEvents,
     idleMs,
     calls: calls.length,
     errors,

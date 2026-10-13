@@ -1,9 +1,10 @@
-import { existsSync } from "node:fs";
-import { watchDir, watchTree, watchFile } from "./fs-watch.js";
+import { existsSync, statSync } from "node:fs";
+import { isLiveWatchHandle, watchDir, watchTree, watchFile } from "./fs-watch.js";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { clearLiveSessionsCache } from "../sessions/live-sessions.js";
+import { _resetSessionChangesForTests, noteDataChange, noteWatchedDataRoot, sessionChangeJournalActive } from "../sessions/session-changes.js";
 import {
   resolveCursorCloudRoot,
   resolveHostsRoot,
@@ -116,10 +117,43 @@ export function _resetDataUpdateListenersForTests() {
   _dataUpdateListeners.clear();
 }
 
+let _dataChangeSeq = 0;
+
+/**
+ * Count of relevant data changes seen so far, bumped immediately on every
+ * change (before the data-update debounce). A refresh that observes a bump
+ * while it ran must not be stored as current.
+ */
+export function dataChangeSeq() {
+  return _dataChangeSeq;
+}
+
+/**
+ * Whether every data change is journaled by a live data-root watcher (fact
+ * hsi1): only then may a session list stay served until the next data-update
+ * tick without re-checking the disk (fact hlinc).
+ */
+export function dataWatching() {
+  return sessionChangeJournalActive();
+}
+
+let _dataUpdateGen = 0;
+
+/**
+ * Count of debounced data-update ticks broadcast so far (fact hlinc). While
+ * the data roots are watched, a session list built in one tick stays the
+ * served list until the next tick, the same cadence pages are told to refresh.
+ */
+export function dataUpdateGeneration() {
+  return _dataUpdateGen;
+}
+
 export function triggerDataUpdate() {
+  _dataChangeSeq++;
   if (_dataTimer) return;
   _dataTimer = setTimeout(() => {
     _dataTimer = null;
+    _dataUpdateGen++;
     clearLiveSessionsCache();
     for (const fn of _dataUpdateListeners) {
       try {
@@ -165,6 +199,7 @@ export function _resetWatchersStartedForTests() {
   }
   _activeWatchers.length = 0;
   _watchersStarted = false;
+  _resetSessionChangesForTests();
 }
 
 function sourcePath(srcDir) {
@@ -193,21 +228,55 @@ function watchSrcHotReload(srcDir) {
   }
 }
 
+/**
+ * Opening a WAL-mode SQLite database (every opencode.db scan does) creates and
+ * then removes its -shm and an empty -wal. Those events carry no session data,
+ * and treating them as changes made every refresh schedule the next one (fact
+ * hsi4). A -wal holding frames is a real write and still counts.
+ */
+export function isSqliteReaderNoise(path) {
+  if (path.endsWith(".db-shm")) return true;
+  if (!path.endsWith(".db-wal")) return false;
+  try {
+    return statSync(path).size === 0;
+  } catch {
+    return true;
+  }
+}
+
 function watchDataRoot(root) {
-  trackWatcher(
-    watchTree(root, (filename) => {
-      if (shouldTriggerDataUpdate(filename)) triggerDataUpdate();
-    }, { label: `data root ${root}` })
-  );
+  const handle = watchTree(root, (filename) => {
+    if (filename != null && isSqliteReaderNoise(join(root, String(filename)))) return;
+    // Every event is journaled, relevant or not, so the incremental refresh
+    // also sees deleted and moved-in directories (fact hsi1).
+    noteDataChange(root, filename);
+    if (shouldTriggerDataUpdate(filename)) triggerDataUpdate();
+  }, { label: `data root ${root}` });
+  if (isLiveWatchHandle(handle)) noteWatchedDataRoot(root);
+  trackWatcher(handle);
 }
 
 function watchOpenCodeDb(dbPath) {
   // watchFile (not watchTree): SQLite is replaced by rename, which kills a plain
   // inode-bound watcher. The facade re-arms.
-  trackWatcher(watchFile(dbPath, () => triggerDataUpdate(), { label: "opencode.db" }));
+  trackWatcher(watchFile(dbPath, () => {
+    noteDataChange(dbPath, "");
+    triggerDataUpdate();
+  }, { label: "opencode.db" }));
 }
 
 let _watchersStarted = false;
+
+let _srcHotReload = true;
+
+/**
+ * A hub never watches its own src/ (fact hnr5): source hot-reload is a
+ * developer convenience that reloads every open page, and a hub's pages must
+ * never reload on their own, not even when its checkout is updated.
+ */
+export function setSrcHotReload(enabled) {
+  _srcHotReload = Boolean(enabled);
+}
 
 /** Idempotent; no-op when TRACEQUEST_SKIP_LR_WATCH=1. */
 export function startLiveReloadWatchers(opts) {
@@ -215,7 +284,7 @@ export function startLiveReloadWatchers(opts) {
   _watchersStarted = true;
 
   const { srcDir, dataRoots, openCodeDbPath } = opts;
-  watchSrcHotReload(srcDir);
+  if (_srcHotReload) watchSrcHotReload(srcDir);
 
   for (const root of dataRoots) {
     watchDataRoot(root);

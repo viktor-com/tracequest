@@ -2,10 +2,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   codexIndexedLineKind,
+  codexProvenanceModel,
+  codexSubThreadItem,
+  codexSubThreadItemText,
+  codexThreadSettingsModel,
   isCodexDisplayableUserText,
   isCodexIndexSkippableLine,
   isCodexIndexedJsonlLine,
   normalizeCodexUserPromptText,
+  resolveCodexModel,
   visitCodexEventMsgPayload,
 } from "../parse/codex-event-msg.js";
 import {
@@ -214,6 +219,11 @@ export function peekCodex(filePath, fileSize) {
   try {
     let firstPrompt = null;
     let model = null;
+    let turnModel = null;
+    let settingsModel = null;
+    let provenanceModel = null;
+    let provider = null;
+    let sessionId = null;
     const tools = new Set();
     const tf = makeTfState();
 
@@ -222,11 +232,20 @@ export function peekCodex(filePath, fileSize) {
       if (!isCodexIndexedJsonlLine(rawLine)) return;
       const line = parseJsonlLine(rawLine);
       if (!line) return;
+      // Model precedence of facts cdxmodel and cdxprov.
       if (line.type === "session_meta") {
-        model = line.payload?.model_provider || "codex";
+        if (!sessionId) sessionId = line.payload?.id || null;
+        provider = line.payload?.model_provider || null;
+        if (!provenanceModel) provenanceModel = codexProvenanceModel(line.payload);
+        model = resolveCodexModel({ turnModel, settingsModel, provenanceModel, provider }) || "codex";
       }
       if (line.type === "turn_context") {
-        if (!model) model = line.payload?.model || "codex";
+        if (line.payload?.model && !turnModel) turnModel = line.payload.model;
+        model = resolveCodexModel({ turnModel, settingsModel, provenanceModel, provider }) || "codex";
+      }
+      if (line.type === "event_msg" && !settingsModel) {
+        settingsModel = codexThreadSettingsModel(line.payload);
+        if (settingsModel) model = resolveCodexModel({ turnModel, settingsModel, provenanceModel, provider });
       }
       const kind = codexIndexedLineKind(line);
       if (kind === "assistant" && line.type === "response_item") {
@@ -278,6 +297,19 @@ export function peekCodex(filePath, fileSize) {
           onPatchApplyEnd: () => tools.add("Edit"),
           onExecCommandEnd: () => tools.add("Bash"),
           onWebSearchEnd: () => tools.add("WebSearch"),
+          // A review sub-thread's prompt and commands (fact cdxsub).
+          onItemCompleted(p) {
+            const item = codexSubThreadItem(p, sessionId);
+            if (item?.type === "CommandExecution") tools.add("Bash");
+            if (item?.type === "UserMessage") {
+              const t = codexSubThreadItemText(item);
+              if (isCodexDisplayableUserText(t)) {
+                const clean = normalizeCodexUserPromptText(t);
+                if (!firstPrompt) firstPrompt = truncateFirstPrompt(clean);
+                accumulate(tf, clean);
+              }
+            }
+          },
         });
       }
     });

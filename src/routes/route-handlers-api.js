@@ -1,5 +1,6 @@
 import { send } from "../server/server-http.js";
 import { getInitialFilter, hotModules } from "../server/server-state.js";
+import { dataWatching, registerDataUpdateListener } from "../server/server-live-reload.js";
 import {
   buildLiveSessionList,
   computeStats,
@@ -7,7 +8,9 @@ import {
   sessionToApiObject,
 } from "../server/server-helpers.js";
 import { applyExprToApiObjects, FilterParseError } from "../filter/filter.js";
-import { detectLiveSessions, liveSessionsCacheTime, stampLive } from "../sessions/live-sessions.js";
+import { detectLiveSessions, liveSessionsCacheTime } from "../sessions/live-sessions.js";
+import { sessionRows, sessionRowsStats, stampRowsLive } from "./session-rows.js";
+import { warmLiveSessions } from "../sessions/live-sessions-async.js";
 import { sessionHash } from "../sessions/session-hash.js";
 import { liveSessionActivity } from "./route-handlers-launch.js";
 import {
@@ -17,9 +20,26 @@ import {
 import {
   peekApiResponseBody,
   resolveSessionsAndIndex,
+  resolveSessionsAndIndexAsync,
   routeCacheKeyWithIndexMtime,
   storeApiResponseBody,
 } from "./route-cache.js";
+
+/**
+ * A data-update tick invalidates the session list and the live memo. While
+ * the data roots are watched, the server applies the change when it happens
+ * — the incremental refresh and one off-thread live probe — the way an index
+ * is maintained on write, instead of making the next page or API request
+ * wait for it; a request that arrives meanwhile shares the work in flight
+ * (fact hleager).
+ */
+registerDataUpdateListener(() => {
+  if (!dataWatching()) return;
+  hotModules()
+    .then((deps) => resolveSessionsAndIndexAsync(null, deps))
+    .then(({ sessions }) => warmLiveSessions(sessions))
+    .catch((err) => console.error("data-update refresh failed:", err?.message || err));
+});
 
 export function getSessionsAndIndex(url, deps) {
   const filter = url.searchParams.get("filter") || getInitialFilter() || null;
@@ -37,12 +57,11 @@ export async function handleApiSessions(_req, res, url, _deps = null) {
   const exprParam = url.searchParams.get("expr") || "";
   beginIndexDiskMtimeCoalesce();
   let cacheKey;
-  let indexMtimeMs;
   let sessions;
   let index;
   let allSessions;
   try {
-    ({ cacheKey, indexMtimeMs } = routeCacheKeyWithIndexMtime(filter));
+    ({ cacheKey } = routeCacheKeyWithIndexMtime(filter));
     const liveTime = liveSessionsCacheTime();
     const liveMemoFresh = liveTime > 0 && Date.now() - liveTime < 5000;
     if (liveMemoFresh) {
@@ -53,14 +72,14 @@ export async function handleApiSessions(_req, res, url, _deps = null) {
         return;
       }
     }
-
-    ({ sessions, index, allSessions } = resolveSessionsAndIndex(filter, deps, { indexMtimeMs }));
   } finally {
     endIndexDiskMtimeCoalesce();
   }
+  ({ sessions, index, allSessions } = await resolveSessionsAndIndexAsync(filter, deps));
   const peekSession = deps.peekSession ?? (await hotModules()).peekSession;
 
   const sessionsForLive = allSessions ?? sessions;
+  await warmLiveSessions(sessionsForLive);
   const livePaths = detectLiveSessions(sessionsForLive);
   const liveSet = new Set(livePaths);
   const liveSessions = buildLiveSessionList(sessionsForLive, livePaths, index, peekSession);
@@ -72,15 +91,12 @@ export async function handleApiSessions(_req, res, url, _deps = null) {
     ls.activity = liveSessionActivity(ls.path, ls.source, deps);
   }
 
-  let allObjects = sessions.map(s => {
-    const meta = getSessionMeta(index, s, peekSession);
-    const obj = sessionToApiObject(s, meta);
-    stampLive(obj, liveSet);
-    return obj;
-  });
-
+  // Rows are built once per snapshot (fact hlmemo); the live bit is per request.
+  const rows = sessionRows(sessions, index, peekSession);
+  stampRowsLive(rows.objects, liveSet);
+  let allObjects;
   try {
-    allObjects = applyExprToApiObjects(allObjects, exprParam, sort);
+    allObjects = applyExprToApiObjects(rows.objects.slice(), exprParam, sort);
   } catch (err) {
     if (err instanceof FilterParseError) {
       send(res, 400, JSON.stringify({ error: err.message }), "application/json; charset=utf-8");
@@ -92,7 +108,7 @@ export async function handleApiSessions(_req, res, url, _deps = null) {
   const total = allObjects.length;
   const maxPage = Math.max(1, Math.ceil(total / pageSize));
   const clampedPage = Math.min(page, maxPage);
-  const stats = computeStats(allObjects);
+  const stats = exprParam.trim() ? computeStats(allObjects) : sessionRowsStats(rows);
   const start = (clampedPage - 1) * pageSize;
   const end = Math.min(start + pageSize, total);
   const pageLen = end - start;
@@ -180,6 +196,39 @@ export function getSearchCatalog(deps, opts = {}) {
   }
 }
 
+/**
+ * getSearchCatalog for request handlers: resolves sessions and index without
+ * blocking the event loop (fact hsa1). Same cache and result shape.
+ */
+export async function getSearchCatalogAsync(deps, opts = {}) {
+  if (!deps || typeof deps.findSessions !== "function" || typeof deps.buildIndex !== "function") {
+    return null;
+  }
+  const filter = opts.filter !== undefined ? opts.filter : (getInitialFilter() || null);
+  if (opts.sessions && opts.index) return buildSearchCatalog(opts.sessions, opts.index);
+  const responseSubKey = "search:catalog:";
+  let cacheKey;
+  beginIndexDiskMtimeCoalesce();
+  try {
+    ({ cacheKey } = routeCacheKeyWithIndexMtime(filter));
+    const cachedBody = peekApiResponseBody(cacheKey, responseSubKey);
+    if (cachedBody !== undefined) {
+      try {
+        const data = JSON.parse(cachedBody);
+        if (Array.isArray(data.sessions)) return data.sessions;
+      } catch {
+        // rebuild below
+      }
+    }
+  } finally {
+    endIndexDiskMtimeCoalesce();
+  }
+  const { sessions, index } = await resolveSessionsAndIndexAsync(filter, deps);
+  const catalog = buildSearchCatalog(sessions, index);
+  storeApiResponseBody(cacheKey, responseSubKey, JSON.stringify({ sessions: catalog }));
+  return catalog;
+}
+
 export async function handleApiSearch(_req, res, url, _deps = null) {
   const deps = _deps || await hotModules();
   if (parseApiSearchCatalog(url.searchParams.get("catalog"))) {
@@ -199,22 +248,20 @@ export async function handleApiSearch(_req, res, url, _deps = null) {
   const snippets = parseApiSearchSnippets(url.searchParams.get("snippets"));
   beginIndexDiskMtimeCoalesce();
   let cacheKey;
-  let indexMtimeMs;
   let sessions;
   let index;
   const responseSubKey = `search:${q}:${exprTrimmed}:${limit}:${snippets ? 1 : 0}`;
   try {
-    ({ cacheKey, indexMtimeMs } = routeCacheKeyWithIndexMtime(filter));
+    ({ cacheKey } = routeCacheKeyWithIndexMtime(filter));
     const cachedBody = peekApiResponseBody(cacheKey, responseSubKey);
     if (cachedBody !== undefined) {
       send(res, 200, cachedBody, "application/json; charset=utf-8");
       return;
     }
-
-    ({ sessions, index } = resolveSessionsAndIndex(filter, deps, { indexMtimeMs }));
   } finally {
     endIndexDiskMtimeCoalesce();
   }
+  ({ sessions, index } = await resolveSessionsAndIndexAsync(filter, deps));
   const peekSession = deps.peekSession ?? (await hotModules()).peekSession;
   const searchSessionsFn = deps.searchSessions ?? (await hotModules()).searchSessions;
 
@@ -250,22 +297,20 @@ export async function handleApiSearchCatalog(_req, res, url, deps) {
   const exprTrimmed = exprParam.trim();
   beginIndexDiskMtimeCoalesce();
   let cacheKey;
-  let indexMtimeMs;
   let sessions;
   let index;
   const responseSubKey = `search:catalog:${exprTrimmed}`;
   try {
-    ({ cacheKey, indexMtimeMs } = routeCacheKeyWithIndexMtime(filter));
+    ({ cacheKey } = routeCacheKeyWithIndexMtime(filter));
     const cachedBody = peekApiResponseBody(cacheKey, responseSubKey);
     if (cachedBody !== undefined) {
       send(res, 200, cachedBody, "application/json; charset=utf-8");
       return;
     }
-
-    ({ sessions, index } = resolveSessionsAndIndex(filter, deps, { indexMtimeMs }));
   } finally {
     endIndexDiskMtimeCoalesce();
   }
+  ({ sessions, index } = await resolveSessionsAndIndexAsync(filter, deps));
 
   let scopedSessions = sessions;
   if (exprTrimmed) {

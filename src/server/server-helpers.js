@@ -1,10 +1,11 @@
 import { send } from "./server-http.js";
 import { discoverAgentSidecarPaths, loadAgentHistoryForSession } from "./agent-history.js";
 import { isSessionPath, normalizeProjectFolder } from "./server-session-path.js";
-import { attachSessionHash, resolveSessionHandle, sessionHash } from "../sessions/session-hash.js";
+import { attachSessionHash, rememberedSessionPathForHash, resolveSessionHandle, sessionHash } from "../sessions/session-hash.js";
 import { sessionMtimeMs } from "../sessions/session-list.js";
 import { computeGrade, estimateCost, shortModel } from "../filter/filter-formats.js";
 import { stampLive } from "../sessions/live-sessions.js";
+import { measuredDurationMs } from "../sessions/session-duration.js";
 
 /** Index meta for a session row, with optional peek fallback (API + SSR). */
 export function getSessionMeta(index, session, peekSession) {
@@ -27,6 +28,7 @@ export function computeStats(apiObjects) {
   const projectCounts = {};
   const sourceCounts = {};
   const modelCounts = {};
+  const hostCounts = {};
   const gradeDist = { A: 0, B: 0, C: 0, D: 0, F: 0 };
   let errorSessionCount = 0;
   for (const s of apiObjects) {
@@ -48,6 +50,9 @@ export function computeStats(apiObjects) {
     }
     projectCounts[s.project] = (projectCounts[s.project] || 0) + 1;
     sourceCounts[s.source] = (sourceCounts[s.source] || 0) + 1;
+    // Machines as a facet (fact hlhfacet): "local" is the hub's own sessions.
+    const host = s.host || "local";
+    hostCounts[host] = (hostCounts[host] || 0) + 1;
     if (s.model) {
       const sm = shortModel(s.model);
       modelCounts[sm] = (modelCounts[sm] || 0) + 1;
@@ -57,7 +62,7 @@ export function computeStats(apiObjects) {
     totalSessions, totalTokens, totalInputTokens, totalOutputTokens,
     totalCacheReadTokens, totalDurationMs, totalErrors, totalCommits,
     totalFiles, totalChapters, totalCost, toolAgg, projectCounts,
-    sourceCounts, modelCounts, gradeDist, errorSessionCount,
+    sourceCounts, modelCounts, hostCounts, gradeDist, errorSessionCount,
   };
 }
 
@@ -78,10 +83,11 @@ export function buildLiveSessionList(sessions, livePaths, index, peekSession) {
 
 export function sessionToApiObject(s, meta) {
   const hash = sessionHash(s.path);
+  const source = s.source || "claude";
   const obj = {
     path: s.path,
     sessionHash: hash,
-    source: s.source || "claude",
+    source,
     projectRaw: s.project,
     project: normalizeProjectFolder(s.project),
     id: hash,
@@ -96,7 +102,8 @@ export function sessionToApiObject(s, meta) {
     inputTokens: meta.inputTokens || 0,
     outputTokens: meta.outputTokens || 0,
     cacheReadTokens: meta.cacheReadTokens || 0,
-    durationMs: meta.durationMs || 0,
+    // An index bound (file times, session_meta) is not a duration (fact durut).
+    durationMs: measuredDurationMs(source, meta.durationMs),
     errors: meta.errors || 0,
     files: meta.files || 0,
     commits: meta.commits || 0,
@@ -109,6 +116,8 @@ export function resolveSessionPathForRequest(handle, res, findSessions = null) {
   if (!handle) { send(res, 400, "Missing path"); return null; }
   if (isSessionPath(handle)) return handle;
   if (findSessions) {
+    const remembered = rememberedSessionPathForHash(handle);
+    if (remembered) return remembered;
     const resolved = resolveSessionHandle(handle, findSessions(null));
     if (resolved.status === "ok") return resolved.session.path;
     if (resolved.status === "ambiguous") {
@@ -120,8 +129,34 @@ export function resolveSessionPathForRequest(handle, res, findSessions = null) {
       return null;
     }
   }
+  // A bare handle with no path separator names no file: it is an unknown
+  // session, not a forbidden path (fact hub404).
+  if (!/[\\/]/.test(handle)) {
+    send(res, 404, `Session not found: ${handle}`);
+    return null;
+  }
   send(res, 403, "Forbidden: path is not a session file");
   return null;
+}
+
+/**
+ * Complete a session parsed from the recording at `p` for the pages that show
+ * it: its path and hash stamped, and the agent-sidecar history attached. Runs
+ * in fetchSession and in the session workers (fact hps1).
+ */
+export function completeParsedSession(session, p) {
+  if (!session) return session;
+  if (!session.path) session.path = p;
+  attachSessionHash(session);
+  const sidecars = discoverAgentSidecarPaths(p);
+  if (sidecars.length) {
+    const agentHistory = loadAgentHistoryForSession(p, sidecars);
+    if (agentHistory) {
+      session.agentHistory = agentHistory;
+      session.agentSidecarCount = sidecars.length;
+    }
+  }
+  return session;
 }
 
 export async function fetchSession(url, parseSession, res, pathParam = "path", sourceParam = "source", findSessions = null) {
@@ -130,19 +165,7 @@ export async function fetchSession(url, parseSession, res, pathParam = "path", s
   const p = resolveSessionPathForRequest(handle, res, findSessions);
   if (!p) return null;
   try {
-    const session = await parseSession(p, source);
-    if (!session) return session;
-    if (!session.path) session.path = p;
-    attachSessionHash(session);
-    const sidecars = discoverAgentSidecarPaths(p);
-    if (sidecars.length) {
-      const agentHistory = loadAgentHistoryForSession(p, sidecars);
-      if (agentHistory) {
-        session.agentHistory = agentHistory;
-        session.agentSidecarCount = sidecars.length;
-      }
-    }
-    return session;
+    return completeParsedSession(await parseSession(p, source), p);
   } catch (err) {
     const detail = err && err.message ? err.message : String(err);
     console.error("fetchSession parse error:", p, detail);

@@ -78,6 +78,7 @@ export const UI_CHAPTERS_JS = `
       searchQuery = this.value;
       applyFilters();
     });
+    searchInput._tqOn = true;
     // Bind after render(): the eval-time install in interactions-nav runs
     // before this input exists on a standalone export page.
     if (!document.getElementById('workspaceSearch')) {
@@ -126,6 +127,31 @@ export const UI_CHAPTERS_JS = `
     updateUrl();
   }
 
+  // Expanding or collapsing one chapter touches only that chapter's card: the
+  // rest of the page (charts, other chapters) does not depend on it, so a long
+  // session does not rebuild every section on each click.
+  function toggleChapterInPlace(ch, idx, el) {
+    const key = 'ch' + idx;
+    const detail = el.querySelector('.chapter-detail');
+    if (typeof hideChapterTooltip === 'function') hideChapterTooltip();
+    if (expandedSet.has(key)) {
+      expandedSet.delete(key);
+      clearChapterHash();
+      el.classList.remove('expanded');
+      if (detail) detail.textContent = '';
+    } else {
+      expandedSet.add(key);
+      setChapterHash(idx);
+      el.classList.add('expanded');
+      if (detail) {
+        detail.textContent = '';
+        buildChapterDetail(ch, idx, detail);
+      }
+      attachExpandToggles();
+    }
+    if (typeof updateMiniMapViewport === 'function') updateMiniMapViewport();
+  }
+
   function renderChapters() {
     const chapters = getChapters();
     const wrap = h('div', { className: 'chapters' });
@@ -141,16 +167,9 @@ export const UI_CHAPTERS_JS = `
       const el = h('div', {
         id: 'chapter-' + idx,
         className: 'chapter' + (expanded ? ' expanded' : ''),
-        onClick: () => {
-          if (expanded) {
-            expandedSet.delete('ch' + idx);
-            clearChapterHash();
-          } else {
-            expandedSet.add('ch' + idx);
-            setChapterHash(idx);
-          }
-          render();
-        }
+        // A live update keeps this element for a newer parse (fact hnr6):
+        // resolve the chapter when clicked, not when rendered.
+        onClick: () => toggleChapterInPlace(getChapters()[idx] || ch, idx, el)
       });
 
       const toolChips = h('div', { className: 'chapter-tools' });

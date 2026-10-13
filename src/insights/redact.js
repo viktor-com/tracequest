@@ -14,8 +14,99 @@ export const REDACTED = "[REDACTED]";
 let _compiled = null;
 
 function compiledRules() {
-  if (!_compiled) _compiled = compileRules(loadSecretRules());
+  if (!_compiled) {
+    // Keyword prefilter is applied once per call against one lowercase copy
+    // (see activeRules), so the copies handed to scanText carry no keywords
+    // and scanText never lowercases the whole text again for every rule.
+    _compiled = compileRules(loadSecretRules()).map((rule) => ({ rule, keywords: rule.keywords, scan: { ...rule, keywords: [] } }));
+  }
   return _compiled;
+}
+
+/** The rules whose keyword prefilter passes on `text` — scanText's own check, done with one lowercase. */
+function activeRules(text) {
+  const lower = text.toLowerCase();
+  const out = [];
+  for (const { keywords, scan } of compiledRules()) {
+    if (!keywords.length || keywords.some((kw) => lower.includes(kw))) out.push(scan);
+  }
+  return out;
+}
+
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Replace every occurrence of each secret with REDACTED, exactly as
+ * `for (s of secrets) out = out.split(s).join(REDACTED)` would with secrets
+ * sorted longest first, but with one scan of the text (a lookahead regex
+ * that stops wherever any secret starts, overlaps included) and one copy,
+ * instead of a full scan and copy per secret. A later secret can only match
+ * where no earlier one was replaced: secrets never contain "[" or "]" and are
+ * longer than the replacement, so a match can neither straddle nor sit
+ * inside a "[REDACTED]".
+ */
+function replaceSecrets(text, secrets) {
+  if (secrets.some((s) => s.length <= REDACTED.length || /[[\]]/.test(s))) {
+    for (const secret of secrets) text = text.split(secret).join(REDACTED);
+    return text;
+  }
+  const at = secrets.map(() => []);
+  const re = new RegExp(`(?=${secrets.map(escapeRegExp).join("|")})`, "g");
+  for (let m = re.exec(text); m; m = re.exec(text)) {
+    const i = m.index;
+    for (let k = 0; k < secrets.length; k++) if (text.startsWith(secrets[k], i)) at[k].push(i);
+    re.lastIndex = i + 1;
+  }
+  let starts = [];
+  let ends = [];
+  for (let k = 0; k < secrets.length; k++) {
+    const len = secrets[k].length;
+    const found = [];
+    let pos = 0;
+    for (const i of at[k]) {
+      if (i < pos) continue;
+      const end = i + len;
+      // Last claimed interval starting before `end`: claims are disjoint and
+      // sorted, so it is the only one that can overlap [i, end).
+      let lo = 0;
+      let hi = starts.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (starts[mid] < end) lo = mid + 1;
+        else hi = mid;
+      }
+      if (lo > 0 && ends[lo - 1] > i) continue;
+      found.push(i, end);
+      pos = end;
+    }
+    if (!found.length) continue;
+    const ns = [];
+    const ne = [];
+    let a = 0;
+    let b = 0;
+    while (a < starts.length || b < found.length) {
+      if (b >= found.length || (a < starts.length && starts[a] < found[b])) {
+        ns.push(starts[a]);
+        ne.push(ends[a]);
+        a++;
+      } else {
+        ns.push(found[b]);
+        ne.push(found[b + 1]);
+        b += 2;
+      }
+    }
+    starts = ns;
+    ends = ne;
+  }
+  if (!starts.length) return text;
+  const parts = [];
+  let last = 0;
+  for (let k = 0; k < starts.length; k++) {
+    parts.push(text.slice(last, starts[k]), REDACTED);
+    last = ends[k];
+  }
+  parts.push(text.slice(last));
+  return parts.join("");
 }
 
 const EXTRA_PATTERNS = [
@@ -38,11 +129,11 @@ export function redactText(text) {
   if (typeof text !== "string" || !text) return text;
   let out = redactPemBlocks(text);
   const findings = [];
-  scanText(out, compiledRules(), { eventIndex: 0, field: "text" }, findings, new Set());
+  scanText(out, activeRules(out), { eventIndex: 0, field: "text" }, findings, new Set());
   if (findings.length) {
     const secrets = [...new Set(findings.map((f) => f.secret).filter(Boolean))];
     secrets.sort((a, b) => b.length - a.length);
-    for (const secret of secrets) out = out.split(secret).join(REDACTED);
+    out = replaceSecrets(out, secrets);
   }
   for (const [re, replacement] of EXTRA_PATTERNS) out = out.replace(re, replacement);
   return out;

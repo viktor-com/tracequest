@@ -1,4 +1,5 @@
 import { accumulateTermFreqs, TOKENIZER_INPUT_CAP } from "./search-tokenizer.js";
+import { createActiveSpan, workedMsOfSpan } from "./active-time.js";
 
 /** Push one deduped chunk into incremental index term-frequency state (JSONL/Grok scan state). */
 export function pushIndexSearchChunk(state, chunk) {
@@ -50,8 +51,10 @@ export function createIndexState() {
     errors: z.errors,
     files: new Set(),
     commits: z.commits,
-    firstTs: null,
-    lastTs: null,
+    /** Worked time over the timestamped records an indexer feeds it (fact durac). */
+    activeSpan: createActiveSpan(),
+    /** Set by indexers whose duration ends at the last message record (fact durcl). */
+    durationEndsAtMessage: false,
     fallbackTexts: new Set(),
     /** @type {Map<string,number>} term → frequency (fact d7k) */
     _termFreqs: new Map(),
@@ -61,9 +64,7 @@ export function createIndexState() {
 }
 
 function durationMsFromState(state) {
-  return state.firstTs && state.lastTs
-    ? new Date(state.lastTs).getTime() - new Date(state.firstTs).getTime()
-    : 0;
+  return workedMsOfSpan(state.activeSpan, state.durationEndsAtMessage);
 }
 
 /** Build stored index meta; omitted keys use {@link emptyIndexMeta} defaults. */

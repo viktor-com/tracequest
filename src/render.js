@@ -6,6 +6,7 @@ import { esc } from "./server/server-html-helpers.js";
 import { CSS } from "./render/render-css.js";
 import { RENDER_JS } from "./render/render-assemble.js";
 import { sessionHash } from "./sessions/session-hash.js";
+import { viewerSessionData } from "./render/render-viewer-data.js";
 
 const _renderCache = new Map();
 const MAX_RENDER_CACHE = 5;
@@ -38,7 +39,9 @@ function renderCacheKey(session) {
   const n = session.events?.length || 0;
   const lastTs = n ? (session.events[n - 1].timestamp || "") : "";
   const end = session.endTime || session.startTime || "";
-  return `${id}:${n}:${lastTs}:${end}`;
+  const sum = session.summary;
+  const summaryKey = sum ? `:${sum.durationMs}:${sum.totalTokens}:${sum.inputTokens}:${sum.outputTokens}:${sum.cacheReadTokens}:${sum.model}` : "";
+  return `${id}:${n}:${lastTs}:${end}${summaryKey}`;
 }
 
 export function renderHTML(session) {
@@ -51,13 +54,11 @@ export function renderHTML(session) {
     return cached;
   }
 
-  // agentHistory is server-side metadata from subagent sidecars; not rendered in the viewer.
-  const { agentHistory: _agentHistory, agentSidecarCount: _agentSidecarCount, ...sessionForViewer } =
-    session;
-  if (!sessionForViewer.sessionHash && sessionForViewer.path) {
-    sessionForViewer.sessionHash = sessionHash(sessionForViewer.path);
-  }
-  const data = JSON.stringify(sessionForViewer).replace(/<\//g, "<\\/");
+  const sessionForViewer = viewerSessionData(session);
+  // "<\/" keeps "</script>" from closing the element and "\u003c!--" keeps an HTML
+  // comment opener in session text from switching the script parser into its
+  // escaped states (where a later "<script" would swallow the real "</script>").
+  const data = JSON.stringify(sessionForViewer).replace(/<\//g, "<\\/").replace(/<!--/g, "\\u003c!--");
   const displayId = sessionForViewer.sessionHash || session.sessionId?.slice(0, 8) || "session";
   const html =
     RENDER_SHELL_HEAD +

@@ -189,11 +189,30 @@ body.cmdk-open { overflow: hidden; }
 }
 `;
 
-export const COMMAND_PALETTE_HTML = `<div class="tq-search" id="workspaceSearchWrap">
+/** The header search bar; the palette script mounts it in the app bar. */
+export const WORKSPACE_SEARCH_HTML = `<div class="tq-search" id="workspaceSearchWrap">
   <input class="tq-search-input" id="workspaceSearch" type="search" role="combobox" aria-label="Search sessions" aria-autocomplete="list" aria-controls="workspaceSearchList" aria-expanded="false" placeholder="Search runs" autocomplete="off" autocorrect="off" spellcheck="false" data-hotkey="s,/" aria-keyshortcuts="s /">
   <span class="tq-search-kbd" aria-hidden="true"><kbd>S</kbd><kbd>/</kbd></span>
   <div class="tq-search-list" id="workspaceSearchList" role="listbox" aria-label="Search results" hidden></div>
-</div>
+</div>`;
+
+/**
+ * A page with the app bar (appTopHtml) and the palette markup, its header
+ * search bar already in the app bar, before the palette trigger, as the
+ * palette script mounts it (fact hlstrip): the bar is in the first paint
+ * instead of growing the app bar when the script runs. Other pages are
+ * returned unchanged.
+ */
+export function mountSearchInAppTop(html) {
+  if (typeof html !== "string") return html;
+  const trigger = html.indexOf('<button class="cmdk-trigger" id="cmdkTrigger"');
+  const at = html.indexOf(WORKSPACE_SEARCH_HTML);
+  if (trigger === -1 || at === -1 || at < trigger) return html;
+  const mounted = WORKSPACE_SEARCH_HTML.replace('<div class="tq-search" id="workspaceSearchWrap">', '<div class="tq-search in-app-top" id="workspaceSearchWrap">');
+  return html.slice(0, trigger) + mounted + "\n    " + html.slice(trigger, at) + html.slice(at + WORKSPACE_SEARCH_HTML.length);
+}
+
+export const COMMAND_PALETTE_HTML = `${WORKSPACE_SEARCH_HTML}
 <nav id="tqHotkeyNav" hidden aria-hidden="true">
   <button type="button" id="tqHotkeyGoC" tabindex="-1" data-hotkey="g c">Chat</button>
   <button type="button" id="tqHotkeyGoR" tabindex="-1" data-hotkey="g r">Runs</button>
@@ -210,7 +229,7 @@ export const COMMAND_PALETTE_HTML = `<div class="tq-search" id="workspaceSearchW
       <span class="cmdk-context" id="cmdkContext"></span>
     </div>
     <div class="cmdk-input-wrap">
-      <input class="cmdk-input" id="cmdkInput" type="text" role="combobox" aria-expanded="true" aria-controls="cmdkList" aria-autocomplete="list" placeholder="Type a command or search..." autocomplete="off" autocorrect="off" spellcheck="false">
+      <input class="cmdk-input" id="cmdkInput" type="text" role="combobox" aria-expanded="false" aria-controls="cmdkList" aria-autocomplete="list" placeholder="Type a command or search..." autocomplete="off" autocorrect="off" spellcheck="false">
       <span class="cmdk-spinner" id="cmdkSpinner" hidden aria-hidden="true"></span>
     </div>
     <div class="cmdk-body">
@@ -441,58 +460,58 @@ export function catalogMatchSnippet(session, query) {
   return prompt || String((session && session.project) || "");
 }
 
-/** Compact interned-tools rows for in-page catalog (same identities as GET catalog=1). */
+/**
+ * Compact in-page catalog (same identities as GET catalog=1). Every string —
+ * prompt, project, model, source, tool name — is stored once in `t`; a row is
+ * [id, source, prompt, model, project, ...tools] with each field but the id an
+ * index into `t`. Many sessions share a prompt, a project or a model, so the
+ * page carries each of them once (fact hlcatpack).
+ */
 export function packSearchCatalog(sessions) {
   const list = Array.isArray(sessions) ? sessions : [];
-  const tools = [];
-  const toolIdx = new Map();
+  const strings = [""];
+  const at = new Map([["", 0]]);
+  const ref = (value) => {
+    const str = String(value || "");
+    let idx = at.get(str);
+    if (idx === undefined) {
+      idx = strings.length;
+      at.set(str, idx);
+      strings.push(str);
+    }
+    return idx;
+  };
   const rows = new Array(list.length);
   for (let i = 0; i < list.length; i++) {
     const s = list[i] || {};
-    const rawTools = Array.isArray(s.tools) ? s.tools : [];
-    const ids = new Array(rawTools.length);
-    for (let j = 0; j < rawTools.length; j++) {
-      const name = String(rawTools[j] || "");
-      let idx = toolIdx.get(name);
-      if (idx === undefined) {
-        idx = tools.length;
-        toolIdx.set(name, idx);
-        tools.push(name);
-      }
-      ids[j] = idx;
-    }
-    rows[i] = [
-      String(s.id || s.sessionHash || ""),
-      String(s.source || ""),
-      String(s.prompt || ""),
-      String(s.model || ""),
-      String(s.project || ""),
-      ids,
-    ];
+    const row = [String(s.id || s.sessionHash || ""), ref(s.source), ref(s.prompt), ref(s.model), ref(s.project)];
+    const tools = Array.isArray(s.tools) ? s.tools : [];
+    for (let j = 0; j < tools.length; j++) row.push(ref(tools[j]));
+    rows[i] = row;
   }
-  return { t: tools, s: rows };
+  return { t: strings, s: rows };
 }
 
 export function unpackSearchCatalog(packed) {
   if (!packed) return [];
   if (Array.isArray(packed)) return packed;
   if (Array.isArray(packed.sessions)) return packed.sessions;
-  const tools = packed.t;
+  const strings = packed.t;
   const rows = packed.s;
-  if (!Array.isArray(tools) || !Array.isArray(rows)) return [];
+  if (!Array.isArray(strings) || !Array.isArray(rows)) return [];
+  const str = (idx) => (typeof strings[idx] === "string" ? strings[idx] : "");
   const out = new Array(rows.length);
   for (let i = 0; i < rows.length; i++) {
-    const r = rows[i] || [];
-    const tids = Array.isArray(r[5]) ? r[5] : [];
-    const names = new Array(tids.length);
-    for (let j = 0; j < tids.length; j++) names[j] = tools[tids[j]] || "";
+    const r = Array.isArray(rows[i]) ? rows[i] : [];
+    const tools = new Array(Math.max(0, r.length - 5));
+    for (let j = 5; j < r.length; j++) tools[j - 5] = str(r[j]);
     out[i] = {
-      id: r[0] || "",
-      source: r[1] || "claude",
-      prompt: r[2] || "",
-      model: r[3] || "",
-      project: r[4] || "",
-      tools: names,
+      id: typeof r[0] === "string" ? r[0] : "",
+      source: str(r[1]) || "claude",
+      prompt: str(r[2]),
+      model: str(r[3]),
+      project: str(r[4]),
+      tools,
     };
   }
   return out;
@@ -512,15 +531,17 @@ export function searchCatalogEmbedScript(catalog) {
   return `<script type="application/json" id="tq-cmdk-catalog">${jsonForScript(packed)}</script>`;
 }
 
-/** Insert the identity catalog so palette JS can rank on the first key without catalog HTTP. */
+/**
+ * Insert the identity catalog so palette JS can rank on the first key without
+ * catalog HTTP. It goes last in the body, after the page's content and
+ * scripts: the browser renders the page before it reaches megabytes of
+ * catalog text, and the palette reads it once the document is parsed (fact
+ * hlcatlast).
+ */
 export function injectSearchCatalog(html, catalog) {
   if (!html || html.includes('id="tq-cmdk-catalog"')) return html;
-  const tag = "\n" + searchCatalogEmbedScript(catalog) + "\n";
-  const bodyOpen = html.match(/<body[^>]*>/i);
-  if (bodyOpen) {
-    const at = html.indexOf(bodyOpen[0]) + bodyOpen[0].length;
-    return html.slice(0, at) + tag + html.slice(at);
-  }
+  // A string is an already built searchCatalogEmbedScript element.
+  const tag = "\n" + (typeof catalog === "string" ? catalog : searchCatalogEmbedScript(catalog)) + "\n";
   const at = html.lastIndexOf("</body>");
   return at >= 0 ? html.slice(0, at) + tag + html.slice(at) : html + tag;
 }
@@ -799,6 +820,8 @@ export function pageNavItems(ctx) {
       keywords: ["recent", "previous", "run"],
     });
   }
+  // A read-only hub has no chat home and launches nothing (fact hubro).
+  if (ctx.hub) return items.filter((it) => it.id !== "goto-chat" && it.id !== "goto-new-run");
   return items;
 }
 
@@ -1021,8 +1044,13 @@ ${COMMAND_PALETTE_CLIENT_JS}
 }
 
 /** Insert palette CSS/HTML/JS before </body> unless already mounted. */
+/** True when `html` already holds the palette overlay (injectCommandPalette then leaves it alone). */
+export function hasCommandPalette(html) {
+  return html.includes('<div class="cmdk-overlay" id="cmdkOverlay"');
+}
+
 export function injectCommandPalette(html) {
-  if (!html || html.includes('<div class="cmdk-overlay" id="cmdkOverlay"')) return html;
+  if (!html || hasCommandPalette(html)) return html;
   const snippet = commandPaletteServeInject();
   const at = html.lastIndexOf("</body>");
   return at >= 0 ? html.slice(0, at) + snippet + "\n" + html.slice(at) : html + snippet;
@@ -1169,8 +1197,12 @@ export const COMMAND_PALETTE_CLIENT_JS = `
   function paletteSearchUrl(q) {
     return "/api/search?q=" + encodeURIComponent(q) + "&limit=8&snippets=0";
   }
+  // The page's catalog (#tq-cmdk-catalog) is the last thing in its body, so
+  // it is not in the document yet when this script runs; it is read when the
+  // palette is first opened instead (fact hlcatlast).
+  var pageCatalogBroken = false;
   function seedCatalogFromPage() {
-    var el = document.getElementById("tq-cmdk-catalog");
+    var el = pageCatalogBroken ? null : document.getElementById("tq-cmdk-catalog");
     if (!el) return false;
     try {
       var packed = JSON.parse(el.textContent || "null");
@@ -1179,10 +1211,15 @@ export const COMMAND_PALETTE_CLIENT_JS = `
       catalogCache.sessions = sessions;
       catalogCache.at = Date.now();
       return true;
-    } catch (e) { return false; }
+    } catch (e) {
+      pageCatalogBroken = true;
+      try { console.error("tracequest: command palette page catalog is unreadable:", e); } catch (eLog) {}
+      return false;
+    }
   }
   var pageCatalogReady = seedCatalogFromPage();
   function fetchSearchCatalog() {
+    if (!pageCatalogReady) pageCatalogReady = seedCatalogFromPage();
     if (catalogCache.sessions && Date.now() - catalogCache.at < CATALOG_TTL_MS) {
       return Promise.resolve(catalogCache.sessions);
     }
@@ -1195,8 +1232,10 @@ export const COMMAND_PALETTE_CLIENT_JS = `
       catalogCache.at = Date.now();
       catalogCache.pending = null;
       return catalogCache.sessions;
-    }).catch(function () {
+    }).catch(function (err) {
       catalogCache.pending = null;
+      // Never silent: a broken catalog leaves only full-text hits.
+      try { console.error("tracequest: command palette catalog failed to load:", err); } catch (eLog) {}
       return catalogCache.sessions || [];
     });
     return catalogCache.pending;
@@ -1321,7 +1360,8 @@ export const COMMAND_PALETTE_CLIENT_JS = `
   function detectContext() {
     var path = location.pathname.replace(/\\/+$/, "") || "/";
     var q = new URLSearchParams(location.search);
-    var ctx = { page: "other", path: path };
+    var root = document.documentElement;
+    var ctx = { page: "other", path: path, hub: !!(root && root.hasAttribute && root.hasAttribute("data-tq-hub")) };
     if (path === "/sessions") ctx.page = "runs";
     else if (path === "/run" || path === "/") {
       if (q.get("id")) { ctx.page = "run"; ctx.runId = q.get("id"); }
@@ -1898,6 +1938,7 @@ export const COMMAND_PALETTE_CLIENT_JS = `
     overlay.hidden = false;
     overlay.setAttribute("data-cmdk-state", "open");
     document.body.classList.add("cmdk-open");
+    if (input.setAttribute) input.setAttribute("aria-expanded", "true");
     setInert(true);
     input.value = "";
     active = 0;
@@ -1912,6 +1953,7 @@ export const COMMAND_PALETTE_CLIENT_JS = `
     overlay.setAttribute("data-cmdk-state", "closed");
     overlay.setAttribute("data-cmdk-query", "");
     document.body.classList.remove("cmdk-open");
+    if (input.setAttribute) input.setAttribute("aria-expanded", "false");
     setBusy(false);
     setInert(false);
     input.value = "";
@@ -1951,6 +1993,7 @@ export const COMMAND_PALETTE_CLIENT_JS = `
   function consumeGoChord(key) {
     var k = String(key || "").toLowerCase();
     var ctx = detectContext();
+    if (ctx.hub && (k === "c" || k === "n")) return false;
     if (k === "c") { location.href = "/"; return true; }
     if (k === "r") { location.href = "/sessions"; return true; }
     if (k === "d") { location.href = compareHref(ctx); return true; }
@@ -2394,10 +2437,26 @@ export const COMMAND_PALETTE_CLIENT_JS = `
     jumpToChapterAnchor: jumpToChapterAnchor
   };
 
-  try { detectContext(); } catch (eBoot) {}
+  var bootCtx = null;
+  try { bootCtx = detectContext(); } catch (eBoot) {}
   if (!pageCatalogReady) {
-    if (typeof requestIdleCallback === "function") requestIdleCallback(function () { fetchSearchCatalog(); });
-    else setTimeout(function () { fetchSearchCatalog(); }, 1);
+    // A session view or a session's watch page (/run?session=) needs no
+    // inventory of every session to open: its palette loads the catalog when
+    // it is opened (openPalette), not while the page idles.
+    var loadOnOpen = Boolean(bootCtx && (bootCtx.page === "view" || bootCtx.page === "session"));
+    if (!loadOnOpen) {
+      // Decide between the page's own catalog and catalog=1 only once the
+      // document is parsed: the page catalog comes after this script. A page
+      // that carries one is not parsed while it loads; the palette reads it
+      // when it is first opened (fact hlcatlast).
+      var whenIdle = function () {
+        if (!pageCatalogBroken && document.getElementById("tq-cmdk-catalog")) return;
+        if (typeof requestIdleCallback === "function") requestIdleCallback(function () { fetchSearchCatalog(); });
+        else setTimeout(function () { fetchSearchCatalog(); }, 1);
+      };
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", whenIdle, { once: true });
+      else whenIdle();
+    }
   }
 })();
 `;

@@ -10,6 +10,7 @@ export {
   handleMarkdown,
   handleRaw,
   handleCompare,
+  handleApiViewSession,
 } from "./route-handlers-pages.js";
 
 export function handleLivereload(req, res) {

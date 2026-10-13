@@ -22,6 +22,8 @@ import { joinBundleParts } from "../render/join-bundle.js";
 import { includesLower, INDEX_OF_LOWER_JS, sumToolCounts } from "../parse/parse-utils.js";
 import { FORM_FIELD_GUARD_SRC } from "./is-form-field.js";
 import { OVERLAY_FOCUS_SRC } from "./overlay-focus.js";
+import { LIVE_MORPH_JS } from "../render/render-live-update.js";
+import { RUN_IDLE_PINNED_MS } from "../sessions/run-generating-status.js";
 
 // computeGrade/getModelRates free variables. Page items arrive from the
 // server with _gradeCache/_costCache already stamped (computeStats runs
@@ -179,7 +181,8 @@ function updatePageUrl() {
 
   var qs = params.toString();
   var newUrl = window.location.pathname + (qs ? '?' + qs : '');
-  history.replaceState(null, '', newUrl);
+  // Keep the entry's state: an open panel's entry stays the one it pushed (fact hlback).
+  history.replaceState(history.state === undefined ? null : history.state, '', newUrl);
 }
 
 function goToPage(page) {
@@ -276,6 +279,7 @@ var projectCounts = new Map();
 var sourceCounts = new Map();
 var toolCounts = new Map();
 var modelCounts = new Map();
+var hostCounts = new Map();
 (function() {
   var pc = SERVER_STATS.projectCounts || {};
   for (var k in pc) { if (pc.hasOwnProperty(k)) projectCounts.set(k, pc[k]); }
@@ -285,6 +289,8 @@ var modelCounts = new Map();
   for (var k in tc) { if (tc.hasOwnProperty(k)) toolCounts.set(k, tc[k]); }
   var mc = SERVER_STATS.modelCounts || {};
   for (var k in mc) { if (mc.hasOwnProperty(k)) modelCounts.set(k, mc[k]); }
+  var hc = SERVER_STATS.hostCounts || {};
+  for (var k in hc) { if (hc.hasOwnProperty(k)) hostCounts.set(k, hc[k]); }
 })();
 
 /* --- token parsing --- */
@@ -306,11 +312,11 @@ function setRefreshStatus(state, message, detail) {
   refreshStatusEl.hidden = !message;
 }
 
-function commitFilter() {
+function commitFilter(options) {
   currentFilterExpr = filterInput.value.trim() ? true : null;
   syncQfStateFromExpr();
   currentPage = 1;
-  fetchSessions(function() { render(); });
+  fetchSessions(function() { render(); }, options);
 }
 function clearAll() {
   filterInput.value = '';
@@ -318,6 +324,7 @@ function clearAll() {
   qfState.grade = null;
   qfState.model = null;
   qfState.source = null;
+  qfState.host = null;
   qfState.errorsOnly = false;
   qfState.age = null;
   currentPage = 1;
@@ -377,6 +384,7 @@ function getSuggestions(text) {
     else if (key === 'source') map = sourceCounts;
     else if (key === 'tool') map = toolCounts;
     else if (key === 'model') map = modelCounts;
+    else if (key === 'host') map = hostCounts;
     else if (key === 'size') return [
       { display: '>100', insert: prefix + '>100', count: null, color: KEY_COLORS.size },
       { display: '>500', insert: prefix + '>500', count: null, color: KEY_COLORS.size },
@@ -486,6 +494,12 @@ var filtered = [];
 var renderedCount = 0;
 var sentinel = document.createElement('div');
 sentinel.id = 'load-more';
+// render() builds the rows here, off-document; patchSessionList() then
+// patches #sessions toward them in place (fact hnr9).
+var sessionListStageEl = document.createElement('div');
+// The sentinel marks the end of the staged rows; #sessions keeps its own
+// copy, so a patch never takes anything out of the live list needlessly.
+var sessionListSentinel = sentinel.cloneNode(false);
 
 ${NORMALIZE_SORT_KEY_SRC}
 ${SORT_SESSION_LIST_SRC}
@@ -495,11 +509,26 @@ function sortSessions(arr) {
 var _preservePage = true; // true for initial load — reads page from URL
 var _fetching = false;
 var _fetchError = null;
+// True while the first render waits for /api/sessions: the URL's list state
+// is not the one the page embedded, so no other state's rows are shown.
+var _listPending = false;
 var _staleRefreshError = null;
+
+function setFilterInvalid(message) {
+  if (message) {
+    filterInput.setAttribute('aria-invalid', 'true');
+    filterInput.title = message;
+  } else if (filterInput.getAttribute('aria-invalid')) {
+    filterInput.removeAttribute('aria-invalid');
+    filterInput.title = '';
+  }
+}
 
 function fetchSessions(callback, options) {
   options = options || {};
   var preserveStaleOnError = options.preserveStaleOnError === true;
+  var typing = options.typing === true;
+  var httpStatus = 0;
   if (_fetchController) { try { _fetchController.abort(); } catch (_e) { /* already aborted */ } }
   _fetchController = new AbortController();
   var params = new URLSearchParams();
@@ -519,6 +548,7 @@ function fetchSessions(callback, options) {
         return r.text().then(function(body) {
           var msg = 'HTTP ' + r.status;
           if (body) msg += ': ' + body.slice(0, 120);
+          httpStatus = r.status;
           throw new Error(msg);
         });
       }
@@ -527,9 +557,11 @@ function fetchSessions(callback, options) {
     .then(function(data) {
       _fetching = false;
       if (typeof document !== 'undefined' && document.body) document.body.classList.remove('runs-loading');
+      _listPending = false;
       _fetchError = null;
       _staleRefreshError = null;
       setRefreshStatus(null, '');
+      setFilterInvalid(null);
       ALL = data.sessions;
       SERVER_TOTAL = data.total;
       if (data.stats) SERVER_STATS = data.stats;
@@ -542,7 +574,14 @@ function fetchSessions(callback, options) {
       _fetching = false;
       if (typeof document !== 'undefined' && document.body) document.body.classList.remove('runs-loading');
       if (err.name === 'AbortError') return;
+      _listPending = false;
       var message = err.message || String(err);
+      if (typing && httpStatus === 400) {
+        // A half-typed expression: keep the rows, flag the field (fact hltype).
+        setFilterInvalid(message);
+        setRefreshStatus('error', 'invalid filter', message);
+        return;
+      }
       if (preserveStaleOnError && ALL && ALL.length) {
         _fetchError = null;
         _staleRefreshError = message;
@@ -559,6 +598,7 @@ function fetchSessions(callback, options) {
 
 /* --- launched runs: ONE first-class row per run in the main session list --- */
 var _runs = [];
+// recording path -> the pinned run row that absorbs it; render() fills it.
 var _runsBySession = {};
 var _runsSig = null;
 
@@ -662,9 +702,12 @@ function paintContinueForm(focus) {
   if (focus) input.focus();
 }
 
-/** Re-attach the open continue composer after a full list re-render. */
+/** Re-attach the open continue composer when its row was re-created (an in-place patch keeps it). */
 function restoreContinueForm() {
   if (!_contDraft) return;
+  var btn = findContinueBtn(_contDraft.path);
+  var wrap = btn && btn.closest('.session-row-wrap');
+  if (wrap && wrap.querySelector('.session-continue-form')) return;
   paintContinueForm(document.activeElement === document.body || document.activeElement === null);
 }
 
@@ -734,21 +777,57 @@ function fetchRuns() {
   fetch('/api/runs')
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(data) {
-      if (!data || !Array.isArray(data.runs)) return;
-      var runs = data.runs;
-      var sig = runs.map(function(r) { return r.id + '|' + r.status + '|' + (r.sessionPath || '') + '|' + (r.activity || ''); }).join(';');
-      if (sig === _runsSig) return;
-      _runsSig = sig;
-      _runs = runs;
-      _runsBySession = {};
-      for (var i = 0; i < runs.length; i++) {
-        if (runs[i].sessionPath) _runsBySession[runs[i].sessionPath] = runs[i];
-      }
-      // Run set or activity changed (started/exited/linked/killed/new
-      // activity line): repaint so run rows stay truthful.
-      render();
+      applyRuns(data);
+      runsAnswered();
     })
-    .catch(function() { /* transient — next poll retries */ });
+    .catch(function() { runsAnswered(); /* transient — next poll retries */ });
+}
+
+function applyRuns(data) {
+  // Run set or activity changed (started/exited/linked/killed/new
+  // activity line): repaint so run rows stay truthful.
+  if (setRuns(data)) render();
+}
+
+/**
+ * An idle run is current, and stays pinned, while it started or its
+ * recording's last event (activeAt, from GET /api/runs' runActiveAt) is
+ * within this long (fact hlpin): a run just launched and waiting for a
+ * follow-up stays on top, one left for days does not.
+ */
+var RUN_IDLE_PINNED_MS = ${RUN_IDLE_PINNED_MS};
+
+/** Is this idle run current (fact hlpin)? The rule render() applies inline. */
+function runIdleCurrent(r, nowMs) {
+  if (r.status !== 'idle' || !r.sessionPath) return false;
+  var last = Math.max(Date.parse(r.startedAt) || 0, Date.parse(r.activeAt) || 0);
+  return nowMs - last < RUN_IDLE_PINNED_MS;
+}
+
+/** Take an /api/runs answer; true when it changed the runs. */
+function setRuns(data) {
+  if (!data || !Array.isArray(data.runs)) return false;
+  var runs = data.runs;
+  var activeAt = data.runActiveAt || {};
+  var nowMs = Date.now();
+  for (var a = 0; a < runs.length; a++) runs[a].activeAt = activeAt[runs[a].id] || null;
+  // An idle run that stops being current changes the pinned rows too.
+  var sig = runs.map(function(r) { return r.id + '|' + r.status + '|' + (r.sessionPath || '') + '|' + (r.activity || '') + '|' + (runIdleCurrent(r, nowMs) ? 1 : 0); }).join(';');
+  if (sig === _runsSig) return false;
+  _runsSig = sig;
+  _runs = runs;
+  return true;
+}
+
+/** The first /api/runs answer is in: the run rows pinned above the list are final. */
+var _runsAnswered = false;
+// The page embeds the /api/runs answer, so the first render already pins
+// its run rows and the first poll moves no row (fact hnr13).
+if (setRuns(_INIT_DATA)) _runsAnswered = true;
+function runsAnswered() {
+  if (_runsAnswered) return;
+  _runsAnswered = true;
+  if (typeof settleListPlace === 'function') settleListPlace();
 }
 setInterval(fetchRuns, 3000);
 
@@ -910,19 +989,178 @@ function externalLiveSessions() {
   return _liveSessions.filter(function(s) { return s.live === true && !_runsBySession[s.path]; });
 }
 
+/* --- in-place list patch (fact hnr9) ---
+   A live update re-renders the rows off-document, then #sessions is patched
+   toward them keyed by row identity: an unchanged row keeps its nodes, a
+   changed one is morphed node by node, only rows that changed place move.
+   A text selection, the focused row link or compare checkbox and the open
+   continue composer therefore survive every refresh. */
+${LIVE_MORPH_JS}
+
+function sessionListStage() { return sessionListStageEl; }
+
+/** A list child's identity across renders (null for stray text). */
+function sessionListKey(el) {
+  if (el.nodeType !== 1) return null;
+  if (el === sentinel || el === sessionListSentinel) return 'sentinel';
+  var run = el.getAttribute('data-run-id');
+  if (run) return 'run|' + run;
+  var live = el.getAttribute('data-live-session');
+  if (live) return 'live|' + live;
+  var id = el.getAttribute('data-session-id');
+  if (id) {
+    var cb = el.querySelector('.compare-cb');
+    return 'session|' + id + '|' + (el.getAttribute('data-session-source') || '') + '|' + (cb ? cb.getAttribute('data-path') : '');
+  }
+  return 'el|' + el.className;
+}
+
+/** Patch a kept row toward its fresh render; the open continue composer stays. */
+function patchSessionRow(live, fresh) {
+  liveSyncAttrs(live, fresh);
+  var kids = [];
+  var form = null;
+  for (var c = live.firstChild; c; c = c.nextSibling) {
+    if (c.nodeType === 1 && c.classList.contains('session-continue-form')) { if (!form) form = c; continue; }
+    kids.push(c);
+  }
+  var next = Array.prototype.slice.call(fresh.childNodes);
+  var same = kids.length === next.length;
+  for (var i = 0; same && i < kids.length; i++) same = liveCanMorph(kids[i], next[i]);
+  if (same) {
+    for (var j = 0; j < kids.length; j++) {
+      var a = kids[j];
+      var b = next[j];
+      if (a.nodeType === 3) { if (a.data !== b.data) a.data = b.data; }
+      else if (!a.isEqualNode(b)) liveMorph(a, b);
+    }
+    return;
+  }
+  for (var k = 0; k < kids.length; k++) live.removeChild(kids[k]);
+  for (var m = 0; m < next.length; m++) live.insertBefore(next[m], form);
+}
+
+/** Which entries of seq (live positions, -1 = new) stay put: a longest increasing run. */
+function stableListEntries(seq) {
+  var tails = [];
+  var tailAt = [];
+  var prev = [];
+  var keep = [];
+  for (var i = 0; i < seq.length; i++) {
+    keep.push(false);
+    var v = seq[i];
+    if (v < 0) continue;
+    var lo = 0;
+    var hi = tails.length;
+    while (lo < hi) {
+      var mid = (lo + hi) >> 1;
+      if (tails[mid] < v) lo = mid + 1;
+      else hi = mid;
+    }
+    tails[lo] = v;
+    tailAt[lo] = i;
+    prev[i] = lo > 0 ? tailAt[lo - 1] : -1;
+  }
+  for (var at = tailAt.length ? tailAt[tailAt.length - 1] : -1; at >= 0; at = prev[at]) keep[at] = true;
+  return keep;
+}
+
+function patchSessionList(stage) {
+  var list = sessionsEl;
+  var selection = liveSaveSelection(list);
+  var active = document.activeElement;
+  var hadFocus = !!(active && active !== list && list.contains(active));
+  var liveByKey = {};
+  var c;
+  var key;
+  for (c = list.firstChild; c; c = c.nextSibling) {
+    key = sessionListKey(c);
+    if (key !== null) (liveByKey[key] || (liveByKey[key] = [])).push(c);
+  }
+  var nodes = [];
+  var kept = new Set();
+  for (c = stage.firstChild; c; c = c.nextSibling) {
+    key = sessionListKey(c);
+    if (key === null) continue;
+    var bucket = liveByKey[key];
+    var old = bucket && bucket.length ? bucket.shift() : null;
+    if (old) {
+      if (!old.isEqualNode(c)) patchSessionRow(old, c);
+      kept.add(old);
+      nodes.push(old);
+    } else if (c === sentinel) {
+      patchSessionRow(sessionListSentinel, c);
+      nodes.push(sessionListSentinel);
+    } else {
+      nodes.push(c);
+    }
+  }
+  var stale = [];
+  for (c = list.firstChild; c; c = c.nextSibling) if (!kept.has(c)) stale.push(c);
+  for (var s = 0; s < stale.length; s++) list.removeChild(stale[s]);
+  var position = new Map();
+  var p = 0;
+  for (c = list.firstChild; c; c = c.nextSibling) position.set(c, p++);
+  var stable = stableListEntries(nodes.map(function(n) { return kept.has(n) ? position.get(n) : -1; }));
+  var ref = null;
+  for (var n = nodes.length - 1; n >= 0; n--) {
+    var node = nodes[n];
+    if (!stable[n] && (node.parentNode !== list || node.nextSibling !== ref)) list.insertBefore(node, ref);
+    ref = node;
+  }
+  stage.textContent = '';
+  var cbs = list.querySelectorAll('.compare-cb');
+  for (var b = 0; b < cbs.length; b++) {
+    var on = compareSet.has(cbs[b].getAttribute('data-path'));
+    if (cbs[b].checked !== on) cbs[b].checked = on;
+  }
+  if (hadFocus && active.isConnected && document.activeElement !== active) {
+    try { active.focus({ preventScroll: true }); } catch (e) { /* not focusable */ }
+  }
+  liveRestoreSelection(list, selection);
+}
+
 function render() {
+  // The URL's list state is still being fetched: show no other state's rows.
+  if (typeof _listPending !== 'undefined' && _listPending) return;
   // ANY live session is ONE object with one vocabulary: a run's recording
   // is absorbed into its run row, and an external live session is absorbed
   // into its own live row — both pinned at the top of the list (page 1)
   // with the same row treatment, each leading to its live chat.
-  var externalLive = currentPage === 1 ? externalLiveSessions() : [];
+  // Only what is current is pinned, and only on page 1 of the unfiltered
+  // list in its recent order (fact hlpin): a running run, or an idle one with
+  // its pane open and a recording, started or last active within
+  // RUN_IDLE_PINNED_MS (runIdleCurrent, inlined so render stands alone). An
+  // orphaned, exited or long-idle run is an ordinary row where the filter
+  // and sort put it, and with a filter or another sort the list is exactly
+  // what matches, in order.
+  var unfiltered = !(typeof filterInput !== 'undefined' && filterInput && filterInput.value.trim());
+  var recentOrder = typeof currentSort === 'undefined' || currentSort === 'recent';
+  var pinView = currentPage === 1 && unfiltered && recentOrder;
+  var pinNow = Date.now();
+  var pinnedRuns = pinView ? _runs.filter(function(r) {
+    if (runIsLive(r)) return true;
+    if (r.status !== 'idle' || !r.sessionPath) return false;
+    var last = Math.max(Date.parse(r.startedAt) || 0, Date.parse(r.activeAt) || 0);
+    return pinNow - last < ${RUN_IDLE_PINNED_MS};
+  }) : [];
+  // The recordings the pinned run rows absorb (a live one among them is the
+  // run's, not an external live row).
+  _runsBySession = {};
+  for (var pr = 0; pr < pinnedRuns.length; pr++) if (pinnedRuns[pr].sessionPath) _runsBySession[pinnedRuns[pr].sessionPath] = pinnedRuns[pr];
+  var externalLive = pinView ? externalLiveSessions() : [];
   var pinnedLivePaths = {};
   for (var pl = 0; pl < externalLive.length; pl++) pinnedLivePaths[externalLive[pl].path] = true;
+  // A pinned row absorbs its recording's row; nothing else is absorbed.
   filtered = ALL.filter(function(s) { return !_runsBySession[s.path] && !pinnedLivePaths[s.path]; });
   renderedCount = 0;
-  sessionsEl.innerHTML = '';
+  // Rows are built off-document and #sessions is patched toward them, so a
+  // live update never rebuilds the list (fact hnr9).
+  var stage = typeof sessionListStage === 'function' ? sessionListStage() : sessionsEl;
+  stage.innerHTML = '';
   if (_fetchError) {
-    sessionsEl.insertAdjacentHTML('afterbegin', '<div class="fetch-error" role="alert"><div class="ui-empty"><div class="ui-empty-title">Couldn\u2019t load runs</div><div class="ui-empty-body">Failed to load runs: ' + escH(_fetchError) + '</div><div class="ui-empty-actions"><button type="button" class="ui-btn ui-btn--primary" data-empty-action="retry">Try again</button></div></div></div>');
+    stage.insertAdjacentHTML('afterbegin', '<div class="fetch-error" role="alert"><div class="ui-empty"><div class="ui-empty-title">Couldn\u2019t load runs</div><div class="ui-empty-body">Failed to load runs: ' + escH(_fetchError) + '</div><div class="ui-empty-actions"><button type="button" class="ui-btn ui-btn--primary" data-empty-action="retry">Try again</button></div></div></div>');
+    if (stage !== sessionsEl) patchSessionList(stage);
     document.getElementById('count').textContent = '—';
     renderDashboard();
     buildQfBar();
@@ -930,15 +1168,13 @@ function render() {
     updatePageUrl();
     return;
   }
-  sessionsEl.appendChild(sentinel);
+  stage.appendChild(sentinel);
   var runsHtml = '';
-  if (currentPage === 1) {
-    for (var ri = 0; ri < _runs.length; ri++) runsHtml += runSessionRowHtml(_runs[ri]);
-    for (var li = 0; li < externalLive.length; li++) runsHtml += externalLiveRowHtml(externalLive[li]);
-  }
+  for (var ri = 0; ri < pinnedRuns.length; ri++) runsHtml += runSessionRowHtml(pinnedRuns[ri]);
+  for (var li = 0; li < externalLive.length; li++) runsHtml += externalLiveRowHtml(externalLive[li]);
   if (runsHtml) sentinel.insertAdjacentHTML('beforebegin', runsHtml);
   renderPageBatch();
-  document.getElementById('count').textContent = SERVER_TOTAL + ' run' + (SERVER_TOTAL !== 1 ? 's' : '');
+  document.getElementById('count').textContent = Number(SERVER_TOTAL).toLocaleString('en-US') + ' run' + (SERVER_TOTAL !== 1 ? 's' : '');
   // The same origin-agnostic running counter the chat pages' app bar shows.
   var appLiveEl = document.getElementById('appLive');
   if (appLiveEl) {
@@ -946,7 +1182,8 @@ function render() {
     appLiveEl.hidden = !liveN;
     appLiveEl.textContent = liveN + ' running';
   }
-  if (!filtered.length && !runsHtml) sessionsEl.insertAdjacentHTML('afterbegin', emptyStateHtml());
+  if (!filtered.length && !runsHtml) stage.insertAdjacentHTML('afterbegin', emptyStateHtml());
+  if (stage !== sessionsEl) patchSessionList(stage);
   renderDashboard();
   buildQfBar();
   renderPagination();
@@ -954,6 +1191,7 @@ function render() {
   restoreContinueForm();
   if (typeof markSelectedRow === 'function') markSelectedRow();
   if (typeof updatePeekNav === 'function') updatePeekNav();
+  if (typeof restoreListPlace === 'function') restoreListPlace();
 }
 
 
@@ -1046,7 +1284,9 @@ filterInput.addEventListener('input', function() {
   var text = filterInput.value;
   var sugs = getSuggestions(text);
   if (text.trim()) renderSuggestions(sugs);
-  else { closeSuggestions(); commitFilter(); }
+  else closeSuggestions();
+  // The list follows the expression as it is typed (fact hltype).
+  commitFilter({ typing: true });
 });
 
 filterInput.addEventListener('keydown', function(e) {
@@ -1126,6 +1366,14 @@ function onSessionsListEscape(e) {
   if (typeof overlayStackBusy === 'function' && overlayStackBusy()) return;
   if (document.getElementById('launchOverlay') && !document.getElementById('launchOverlay').hidden) return;
   if (document.getElementById('cmdkOverlay') && !document.getElementById('cmdkOverlay').hidden) return;
+  // An open Filters panel closes on Escape like the other toolbar menus.
+  var filtersToggleBtn = document.getElementById('filtersToggle');
+  if (filtersToggleBtn && filtersToggleBtn.getAttribute('aria-expanded') === 'true') {
+    e.preventDefault();
+    filtersToggleBtn.click();
+    filtersToggleBtn.focus();
+    return;
+  }
   // Peek owns Escape first (Linear overlay-then-clear); then unfocus the J/K cursor.
   if (_peekSession) {
     e.preventDefault();
@@ -1190,7 +1438,7 @@ filterInput.addEventListener('paste', function() {
 
 /* --- Quick Filter Bar --- */
 var qfBarEl = document.getElementById('qfBar');
-var qfState = { grade: null, model: null, source: null, errorsOnly: false, age: null };
+var qfState = { grade: null, model: null, source: null, host: null, errorsOnly: false, age: null };
 var filtersOpen = false;
 var AGE_OPTIONS = { '': 'All time', '<1d': 'Past 24 hours', '<7d': 'Past 7 days', '<30d': 'Past 30 days' };
 
@@ -1204,6 +1452,7 @@ function syncQfStateFromExpr() {
   qfState.grade = qfTermFromExpr(expr, 'grade');
   qfState.source = qfTermFromExpr(expr, 'source');
   qfState.model = qfTermFromExpr(expr, 'model');
+  qfState.host = qfTermFromExpr(expr, 'host');
   qfState.errorsOnly = qfTermFromExpr(expr, 'errors') === '>0';
   qfState.age = qfTermFromExpr(expr, 'age');
 }
@@ -1227,6 +1476,7 @@ function appliedChipsHtml() {
   if (qfState.source) chips += appliedChipHtml('Source', 'is', qfState.source, 'source');
   if (qfState.grade) chips += appliedChipHtml('Grade', 'is', qfState.grade, 'grade');
   if (qfState.model) chips += appliedChipHtml('Model', 'is', qfState.model, 'model');
+  if (qfState.host) chips += appliedChipHtml('Host', 'is', qfState.host, 'host');
   if (qfState.errorsOnly) chips += appliedChipHtml('Errors', '>', '0', 'errors');
   if (!chips) return '';
   return '<div class="applied-chips" id="appliedChips">' + chips
@@ -1338,6 +1588,24 @@ function buildQfBar() {
     html += '</div>';
   }
 
+  // Machines (fact hlhfacet): one chip per host, "local" for the hub's own.
+  var hostSet = QF_STATS.hostCounts || {};
+  var hostEntries = [];
+  for (var hk in hostSet) {
+    if (hostSet.hasOwnProperty(hk)) hostEntries.push([hk, hostSet[hk]]);
+  }
+  hostEntries.sort(function(a, b) { return b[1] - a[1]; });
+  if (hostEntries.length > 1) {
+    html += '<div class="qf-row">';
+    html += '<span class="qf-section">';
+    html += '<span class="qf-section-label">host</span>';
+    for (var hi = 0; hi < hostEntries.length; hi++) {
+      html += '<button class="qf-chip" data-host="' + escH(hostEntries[hi][0]) + '" aria-pressed="false">' + escH(hostEntries[hi][0]) + ' <span class="qf-chip-count">' + hostEntries[hi][1] + '</span></button>';
+    }
+    html += '</span>';
+    html += '</div>';
+  }
+
   var modelEntries = [];
   for (var mk in modelSet) {
     if (modelSet.hasOwnProperty(mk)) modelEntries.push([mk, modelSet[mk]]);
@@ -1411,6 +1679,15 @@ function attachQfListeners() {
     });
   });
 
+  qfBarEl.querySelectorAll('.qf-chip[data-host]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var host = btn.dataset.host;
+      qfState.host = qfState.host === host ? null : host;
+      setQfFilterTerm('host', qfState.host);
+      applyQfFilters();
+    });
+  });
+
   qfBarEl.querySelectorAll('.qf-chip[data-model]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var mod = btn.dataset.model;
@@ -1442,11 +1719,12 @@ function attachQfListeners() {
     qfState.grade = null;
     qfState.model = null;
     qfState.source = null;
+    qfState.host = null;
     qfState.errorsOnly = false;
     qfState.age = null;
     qfBarEl.querySelectorAll('.qf-active').forEach(function(el) { el.classList.remove('qf-active'); setQfPressed(el, false); });
     var cur = (filterInput.value || '').trim();
-    cur = cur.replace(/\\b(grade|source|model|errors|age):(?:"[^"]*"|\\S+)/gi, '').replace(/\\s+/g, ' ').trim();
+    cur = cur.replace(/\\b(grade|source|model|host|errors|age):(?:"[^"]*"|\\S+)/gi, '').replace(/\\s+/g, ' ').trim();
     if (filterInput.value !== cur) {
       filterInput.value = cur;
     }
@@ -1462,6 +1740,7 @@ function attachQfListeners() {
       else if (key === 'source') qfState.source = null;
       else if (key === 'grade') qfState.grade = null;
       else if (key === 'model') qfState.model = null;
+      else if (key === 'host') qfState.host = null;
       else if (key === 'errors') qfState.errorsOnly = false;
       setQfFilterTerm(key === 'errors' ? 'errors' : key, key === 'errors' ? null : qfState[key]);
       applyQfFilters();
@@ -1479,6 +1758,11 @@ function attachQfListeners() {
     b.classList.toggle('qf-active', active);
     setQfPressed(b, active);
   });
+  qfBarEl.querySelectorAll('.qf-chip[data-host]').forEach(function(b) {
+    var active = !!(qfState.host && b.dataset.host === qfState.host);
+    b.classList.toggle('qf-active', active);
+    setQfPressed(b, active);
+  });
   qfBarEl.querySelectorAll('.qf-chip[data-model]').forEach(function(b) {
     var active = !!(qfState.model && b.dataset.model === qfState.model);
     b.classList.toggle('qf-active', active);
@@ -1492,7 +1776,7 @@ function attachQfListeners() {
 }
 
 function qfHasAny() {
-  return qfState.grade || qfState.model || qfState.source || qfState.errorsOnly || qfState.age;
+  return qfState.grade || qfState.model || qfState.source || qfState.host || qfState.errorsOnly || qfState.age;
 }
 
 function setQfFilterTerm(key, value) {
@@ -1608,13 +1892,124 @@ function applyQfFilters() {
   }
   bindToolbarMenuOverlayKeys();
 })();
+/* --- Back or a reload puts the reader where they were (fact hnr12) ---
+   The list's history entry remembers the row at the top of the viewport and
+   its offset. On a Back or reload to the entry the list is scrolled so that
+   row is there again; run rows pinned above the list arrive after the first
+   paint, so the place is kept until they are in, unless the reader moves. */
+var _listPlace = (function() {
+  // Only a Back/Forward or a reload returns to a place; a link to the same
+  // URL keeps the entry's state but opens the list at its top.
+  var nav = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
+  var type = nav ? nav.type : (performance.navigation && performance.navigation.type === 2 ? 'back_forward' : performance.navigation && performance.navigation.type === 1 ? 'reload' : 'navigate');
+  if (type !== 'back_forward' && type !== 'reload') return null;
+  var st = history.state;
+  return st && st.tqListPlace && typeof st.tqListPlace === 'object' ? st.tqListPlace : null;
+})();
+var _listPlaceActive = !!_listPlace;
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+function listRowKey(row) {
+  var runId = row.getAttribute('data-run-id');
+  if (runId) return 'run:' + runId;
+  return (row.getAttribute('data-session-id') || '') + '|' + (row.getAttribute('data-session-source') || '');
+}
+
+/** { y, key, top }: the scroll position and the first row in view with its offset. */
+function listPlaceNow() {
+  var y = Math.round(window.scrollY || document.documentElement.scrollTop || 0);
+  var place = { y: y };
+  if (y > 0 && sessionsEl) {
+    var rows = sessionsEl.children;
+    for (var i = 0; i < rows.length; i++) {
+      if (!rows[i].classList.contains('session-row-wrap')) continue;
+      var rect = rows[i].getBoundingClientRect();
+      if (rect.bottom > 0) {
+        place.key = listRowKey(rows[i]);
+        place.top = Math.round(rect.top);
+        break;
+      }
+    }
+  }
+  return place;
+}
+
+/** History state for this entry: its own state plus the reader's place. */
+function stateWithListPlace(st) {
+  var next = {};
+  if (st && typeof st === 'object') for (var k in st) next[k] = st[k];
+  next.tqListPlace = listPlaceNow();
+  return next;
+}
+
+function saveListPlace() {
+  // While the place is being restored the old one is still the reader's.
+  if (_listPlaceActive) return;
+  var next = stateWithListPlace(history.state);
+  var had = history.state && history.state.tqListPlace;
+  if (had && JSON.stringify(had) === JSON.stringify(next.tqListPlace)) return;
+  try { history.replaceState(next, '', window.location.href); } catch (e) { /* throttled: the next save retries */ }
+}
+
+function restoreListPlace() {
+  if (!_listPlaceActive || !_listPlace) return;
+  var place = _listPlace;
+  if (place.key && sessionsEl) {
+    var rows = sessionsEl.children;
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].classList.contains('session-row-wrap') && listRowKey(rows[i]) === place.key) {
+        var dy = rows[i].getBoundingClientRect().top - place.top;
+        if (dy) window.scrollBy(0, dy);
+        return;
+      }
+    }
+  }
+  if (typeof place.y === 'number') window.scrollTo(0, place.y);
+}
+
+/** The rows are final (list and run rows in, page loaded): restore once more and stop. */
+function settleListPlace() {
+  if (!_listPlaceActive || _listPending || !_runsAnswered || document.readyState !== 'complete') return;
+  restoreListPlace();
+  _listPlaceActive = false;
+}
+
+(function bindListPlace() {
+  var timer = null;
+  window.addEventListener('scroll', function() {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function() { timer = null; saveListPlace(); }, 200);
+  }, { passive: true });
+  window.addEventListener('pagehide', saveListPlace);
+  // Following a link saves the place before the page is left.
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.closest && e.target.closest('a[href]')) saveListPlace();
+  }, true);
+  // The reader moving ends the restore: their new place wins.
+  var stop = function() { _listPlaceActive = false; };
+  ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function(type) {
+    window.addEventListener(type, stop, { capture: true, passive: true });
+  });
+  window.addEventListener('load', function() { restoreListPlace(); settleListPlace(); });
+  setTimeout(function() { _listPlaceActive = false; }, 5000);
+})();
+
 buildQfBar();
 if (filterInput.value.trim()) currentFilterExpr = true;
-// If any URL state was restored, fetch with those params instead of using inlined data
-if (currentSort !== 'recent' || filterInput.value.trim()) {
-  fetchSessions(function() { render(); restoreSessionFlyoutFromUrl(); });
-} else {
+// The page embeds the rows of the URL's list state (?page=, ?pageSize=,
+// ?sort=, ?expr=; a page past the end is the last one), the rows
+// /api/sessions answers for it, so the first paint shows them and the pager
+// names their range (facts hnr10, hnr11). A state the page did not embed
+// (legacy ?source= style params) is fetched before any row is shown.
+if ((_INIT_DATA.expr || '') === filterInput.value.trim()
+  && (_INIT_DATA.sort || 'recent') === currentSort
+  && (_INIT_DATA.pageSize || 50) === PAGE_SIZE) {
+  if (_INIT_DATA.page > 0) currentPage = _INIT_DATA.page;
+  if (_INIT_DATA.error) _fetchError = _INIT_DATA.error;
   render();
+} else {
+  _listPending = true;
+  fetchSessions(function() { render(); restoreSessionFlyoutFromUrl(); settleListPlace(); });
 }
 
 /* --- session analytics flyout --- */
@@ -1897,10 +2292,74 @@ function peekStep(dir) {
   if (next) openSessionFlyout(next);
 }
 
-function openSessionFlyout(s) {
+/** True when the current history entry is the one an opened panel pushed (fact hlback). */
+function peekEntryIsCurrent() {
+  var st = history.state;
+  return !!(st && st.tqPeek);
+}
+
+var _flyoutFrameEl = null;
+var _flyoutFrameSeq = 0;
+
+/** The panel frame; it is out of the document while the panel is closed. */
+function flyoutFrameEl() {
+  if (!_flyoutFrameEl) _flyoutFrameEl = document.getElementById('sessionFlyoutFrame');
+  return _flyoutFrameEl;
+}
+
+/**
+ * Put the panel frame back into its slot as a new frame under a name no
+ * history entry has seen. Back and Forward restore a frame's document from
+ * the entry by that name: with the frame out of the page while closed and a
+ * fresh name each opening, they never load an earlier session into it while
+ * the panel loads its own, a race that left the browser one entry behind the
+ * page, so Close then Back left the list (fact hlback).
+ */
+function attachFlyoutFrame(frame) {
+  var slot = frame._tqSlot;
+  var parent = frame.parentNode || (slot && slot.parent);
+  if (!parent || typeof parent.insertBefore !== 'function' || typeof parent.removeChild !== 'function') return;
+  var next = frame.parentNode ? frame.nextSibling : slot.next;
+  if (frame.parentNode) parent.removeChild(frame);
+  frame._tqSlot = null;
+  frame.name = 'tq-peek-' + Date.now().toString(36) + '-' + (++_flyoutFrameSeq);
+  parent.insertBefore(frame, next && next.parentNode === parent ? next : null);
+}
+
+/** Take the panel frame (and the session it shows) out of the page. */
+function detachFlyoutFrame(frame) {
+  var parent = frame.parentNode;
+  if (!parent || typeof parent.removeChild !== 'function') return;
+  frame._tqSlot = { parent: parent, next: frame.nextSibling };
+  if (typeof frame.removeAttribute === 'function') frame.removeAttribute('src');
+  parent.removeChild(frame);
+}
+
+/**
+ * Load a session into the panel frame without adding a history entry: once
+ * the frame holds a document, a src change would be a navigation the browser
+ * records, and Back would walk the frame instead of closing the panel.
+ */
+function loadFlyoutFrame(frame, url) {
+  frame._tqUrl = url;
+  var win = null;
+  try { win = frame.contentWindow; } catch (e0) { win = null; }
+  var loaded = false;
+  try { loaded = !!(win && win.location && win.location.href && win.location.href !== 'about:blank'); } catch (e1) { loaded = false; }
+  if (loaded) {
+    try {
+      win.location.replace(url);
+      return;
+    } catch (e2) { /* fall back to src */ }
+  }
+  frame.src = url;
+}
+
+function openSessionFlyout(s, opts) {
   if (!s || !s.id) return;
+  opts = opts || {};
   var flyout = document.getElementById('sessionFlyout');
-  var frame = document.getElementById('sessionFlyoutFrame');
+  var frame = flyoutFrameEl();
   var title = document.getElementById('sessionFlyoutTitle');
   var sub = document.getElementById('sessionFlyoutSub');
   var openLink = document.getElementById('sessionFlyoutOpen');
@@ -1911,7 +2370,7 @@ function openSessionFlyout(s) {
     flyout._tqPrevFocus = overlayPrevFocus(flyout);
     if (!flyout._tqPrevFocus) flyout._tqPrevFocus = document.activeElement;
   }
-  var same = _peekSession && _peekSession.id === s.id && frame.getAttribute('src');
+  var same = _peekSession && _peekSession.id === s.id && frame._tqUrl;
   _peekSession = { id: s.id, source: s.source || 'claude', prompt: s.prompt || '' };
   document.body.classList.add('session-peek-open');
   flyout.hidden = false;
@@ -1925,10 +2384,16 @@ function openSessionFlyout(s) {
       status.textContent = 'Loading analytics…';
     }
     frame.hidden = true;
-    frame.src = sessionViewUrl(_peekSession, true);
+    if (wasHidden) attachFlyoutFrame(frame);
+    loadFlyoutFrame(frame, sessionViewUrl(_peekSession, true));
   }
   markSelectedRow();
   updatePeekNav();
+  if (wasHidden && !opts.fromHistory && !peekEntryIsCurrent() && typeof history.pushState === 'function') {
+    // Opening the panel is one step Back can undo (fact hlback).
+    // The panel's entry keeps the reader's place in the list (fact hnr12).
+    history.pushState(stateWithListPlace({ tqPeek: 1 }), '', window.location.href);
+  }
   updatePageUrl();
   pushOverlay(flyout);
   if (wasHidden) {
@@ -1936,12 +2401,16 @@ function openSessionFlyout(s) {
   }
 }
 
-function closeSessionFlyout() {
+var _ignorePeekPop = false;
+
+function closeSessionFlyout(opts) {
+  opts = opts || {};
   var flyout = document.getElementById('sessionFlyout');
   var wasOpen = !!(flyout && !flyout.hidden);
+  var popEntry = wasOpen && !opts.fromHistory && peekEntryIsCurrent();
   _peekSession = null;
   document.body.classList.remove('session-peek-open');
-  var frame = document.getElementById('sessionFlyoutFrame');
+  var frame = flyoutFrameEl();
   var status = document.getElementById('sessionFlyoutStatus');
   if (flyout) {
     flyout.hidden = true;
@@ -1949,12 +2418,20 @@ function closeSessionFlyout() {
   }
   if (frame) {
     frame.hidden = true;
-    frame.removeAttribute('src');
+    frame._tqUrl = null;
+    if (wasOpen) detachFlyoutFrame(frame);
   }
   if (status) status.hidden = true;
   markSelectedRow();
   updatePeekNav();
-  updatePageUrl();
+  if (popEntry) {
+    // Closed from the panel: drop the entry opening it pushed, so Back does
+    // not reopen it (fact hlback). The list URL is that entry's predecessor.
+    _ignorePeekPop = true;
+    history.back();
+  } else {
+    updatePageUrl();
+  }
   if (wasOpen) {
     popOverlay(flyout);
     restoreOverlayFocus(flyout._tqPrevFocus, flyout);
@@ -1962,13 +2439,37 @@ function closeSessionFlyout() {
   }
 }
 
+window.addEventListener('popstate', function() {
+  if (_ignorePeekPop) {
+    _ignorePeekPop = false;
+    // The entry before the panel may predate a filter change made while it was open.
+    updatePageUrl();
+    return;
+  }
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('session');
+  var flyout = document.getElementById('sessionFlyout');
+  var open = !!(flyout && !flyout.hidden);
+  if (!id) {
+    if (open) closeSessionFlyout({ fromHistory: true });
+    return;
+  }
+  if (open && _peekSession && _peekSession.id === id) return;
+  var match = null;
+  for (var i = 0; i < ALL.length; i++) {
+    if (ALL[i].id === id) { match = ALL[i]; break; }
+  }
+  openSessionFlyout(match || { id: id, source: params.get('sessionSource') || 'claude' }, { fromHistory: true });
+});
+
 function restoreSessionFlyoutFromUrl() {
   if (!_peekSession) return;
   var match = null;
   for (var i = 0; i < ALL.length; i++) {
     if (ALL[i].id === _peekSession.id) { match = ALL[i]; break; }
   }
-  openSessionFlyout(match || _peekSession);
+  // The URL already names the session: opening it is not a new step.
+  openSessionFlyout(match || _peekSession, { fromHistory: true });
 }
 
 (function bindSessionFlyout() {
@@ -1990,11 +2491,13 @@ function restoreSessionFlyoutFromUrl() {
     next.addEventListener('click', function() { peekStep(1); });
     if (typeof install === 'function') install(next);
   }
-  var frame = document.getElementById('sessionFlyoutFrame');
+  var frame = flyoutFrameEl();
   var flyoutEl = document.getElementById('sessionFlyout');
   if (frame) {
     frame.addEventListener('load', function() {
       if (!_peekSession) return;
+      // The empty document a reinserted frame starts with is not the session.
+      try { if (frame.contentWindow && frame.contentWindow.location.href === 'about:blank') return; } catch (e) { /* cross-origin: a session page */ }
       var status = document.getElementById('sessionFlyoutStatus');
       if (status) status.hidden = true;
       frame.hidden = false;

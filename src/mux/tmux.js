@@ -15,7 +15,7 @@
  *                           unavailable (test/CI isolation — spawned serve
  *                           processes must not touch a real tmux server)
  */
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFile, execFileSync, spawnSync } from "node:child_process";
 
 /** Effective tmux binary after env override. */
 export function tmuxBin() {
@@ -109,34 +109,86 @@ export const RUN_OPTION_NAMES = ["tq_agent", "tq_cwd", "tq_started", "tq_ended",
  * separator is destroyed before Node ever sees it. So the formats use
  * only printable structure: space-separated space-free fields with the
  * one arbitrary-content field (tq_cwd, resp. window_name) placed LAST
- * so it may contain anything, split across two id-keyed queries.
+ * so it may contain anything, split across id-keyed lists — all chained in
+ * ONE tmux invocation (runTableArgs), each line tagged with its list.
  */
 export function listWindows(session = tmuxSession()) {
-  // tq_agent is a registry id, tq_started/tq_ended ISO timestamps, pane_pid
-  // a number, tq_session_attr a closed token ("sid"/"pid"/"prompt"/"heur"),
-  // tq_session_id a UUID and tq_resumed_from an 8-hex session hash — all
-  // space-free by construction. tq_cwd is arbitrary, hence last.
-  const fields = tmuxProbe([
-    "list-windows",
-    "-t",
-    `=${session}`,
-    "-F",
-    "#{window_id} #{pane_dead} #{pane_pid} #{@tq_agent} #{@tq_started} #{@tq_session_attr} #{@tq_session_id} #{@tq_resumed_from} #{@tq_ended} #{@tq_cwd}",
-  ]);
-  if (fields.status !== 0) return [];
-  const nameById = idKeyedQuery(session, "#{window_name}");
-  // tq_session is an arbitrary filesystem path (may contain spaces), so like
-  // window_name it gets its own id-keyed query with the value LAST.
-  const sessionById = idKeyedQuery(session, "#{@tq_session}");
-  // tq_prompt is arbitrary user text (stored single-line at creation), so it
-  // also travels as an id-keyed query with the value LAST.
-  const promptById = idKeyedQuery(session, "#{@tq_prompt}");
-  // tq_resumed_path (source recording path) and tq_fork_prompt (the source
-  // conversation's first user message) are arbitrary too — id-keyed each.
-  const resumedPathById = idKeyedQuery(session, "#{@tq_resumed_path}");
-  const forkPromptById = idKeyedQuery(session, "#{@tq_fork_prompt}");
+  return parseRunTable(tmuxProbe(runTableArgs(session, [])), []).windows;
+}
+
+/**
+ * The run table as one non-blocking tmux call: listWindows' windows plus
+ * the given session-level user options (names without "@"; "" when unset),
+ * all read from the same tmux snapshot. The session list page and GET
+ * /api/runs build their runs from it without stalling the event loop on
+ * a dozen synchronous tmux spawns (fact hnr13). Never rejects: a missing
+ * session, server or binary answers no windows and empty options.
+ * @param {string[]} optionNames
+ * @returns {Promise<{ windows: object[], sessionOptions: Map<string, string> }>}
+ */
+export function runTableAsync(optionNames = [], session = tmuxSession()) {
+  return new Promise((resolve) => {
+    execFile(tmuxBin(), [...socketArgs(), ...runTableArgs(session, optionNames)], {
+      encoding: "utf8",
+      maxBuffer: TMUX_MAX_BUFFER_BYTES,
+      timeout: TMUX_TIMEOUT_MS,
+    }, (err, stdout) => {
+      resolve(parseRunTable({ status: err ? 1 : 0, stdout }, optionNames));
+    });
+  });
+}
+
+// tq_agent is a registry id, tq_started/tq_ended ISO timestamps, pane_pid
+// a number, tq_session_attr a closed token ("sid"/"pid"/"prompt"/"heur"),
+// tq_session_id a UUID and tq_resumed_from an 8-hex session hash — all
+// space-free by construction. tq_cwd is arbitrary, hence last.
+const RUN_TABLE_MAIN_FORMAT = "#{window_id} #{pane_dead} #{pane_pid} #{@tq_agent} #{@tq_started} #{@tq_session_attr} #{@tq_session_id} #{@tq_resumed_from} #{@tq_ended} #{@tq_cwd}";
+
+// Arbitrary-content values (window_name, the tq_session path, the tq_prompt
+// user text, tq_resumed_path, tq_fork_prompt) each travel in their own
+// id-keyed list with the value LAST.
+const RUN_TABLE_ID_KEYED = ["#{window_name}", "#{@tq_session}", "#{@tq_prompt}", "#{@tq_resumed_path}", "#{@tq_fork_prompt}"];
+
+/**
+ * One tmux invocation (commands chained with ";") listing the windows, the
+ * id-keyed values and the session options. Every output line starts with a
+ * printable tag naming its list: "W" a window, "0".."4" an id-keyed value,
+ * "O <name>" a session option.
+ */
+function runTableArgs(session, optionNames) {
+  const target = `=${session}`;
+  const args = ["list-windows", "-t", target, "-F", `W ${RUN_TABLE_MAIN_FORMAT}`];
+  RUN_TABLE_ID_KEYED.forEach((format, i) => {
+    args.push(";", "list-windows", "-t", target, "-F", `${i} #{window_id} ${format}`);
+  });
+  for (const name of optionNames) {
+    args.push(";", "display-message", "-p", "-t", `${target}:`, `O ${name} #{@${name}}`);
+  }
+  return args;
+}
+
+/** runTableArgs' output → { windows, sessionOptions }; no windows when tmux failed. */
+function parseRunTable(out, optionNames) {
+  const sessionOptions = new Map(optionNames.map((name) => [name, ""]));
+  if (!out || out.status !== 0) return { windows: [], sessionOptions };
+  const main = [];
+  const byId = RUN_TABLE_ID_KEYED.map(() => new Map());
+  for (const line of String(out.stdout || "").split("\n")) {
+    if (line.startsWith("W ")) {
+      main.push(line.slice(2));
+    } else if (line.startsWith("O ")) {
+      const sep = line.indexOf(" ", 2);
+      const name = sep > 0 ? line.slice(2, sep) : line.slice(2);
+      if (sessionOptions.has(name)) sessionOptions.set(name, sep > 0 ? line.slice(sep + 1) : "");
+    } else {
+      const list = byId[Number(line.slice(0, 1))];
+      const sep = line.indexOf(" ", 2);
+      if (list && line[1] === " " && sep > 2) list.set(line.slice(2, sep), line.slice(sep + 1));
+    }
+  }
+  const [nameById, sessionById, promptById, resumedPathById, forkPromptById] = byId;
   const windows = [];
-  for (const line of String(fields.stdout || "").split("\n")) {
+  for (const line of main) {
     const m = line.match(/^(@\d+) ([01]?) (\d*) (\S*) (\S*) (\S*) (\S*) (\S*) (\S*)(?: (.*))?$/);
     if (!m) continue;
     const [, id, dead, panePid, tqAgent, tqStarted, tqSessionAttr, tqSessionId, tqResumedFrom, tqEnded, tqCwd] = m;
@@ -160,24 +212,7 @@ export function listWindows(session = tmuxSession()) {
       },
     });
   }
-  return windows;
-}
-
-/** One list-windows query mapping window_id → an arbitrary-content format value. */
-function idKeyedQuery(session, format) {
-  const out = tmuxProbe([
-    "list-windows",
-    "-t",
-    `=${session}`,
-    "-F",
-    `#{window_id} ${format}`,
-  ]);
-  const byId = new Map();
-  for (const line of String(out.stdout || "").split("\n")) {
-    const sep = line.indexOf(" ");
-    if (sep > 0) byId.set(line.slice(0, sep), line.slice(sep + 1));
-  }
-  return byId;
+  return { windows, sessionOptions };
 }
 
 /**

@@ -140,6 +140,17 @@ export const RUN_IS_LIVE_SRC = runIsLive.toString().replace(/^export /, "");
 export const RUN_IDENTITY_STATUS_SRC = runIdentityStatus.toString().replace(/^export /, "");
 export const LIVE_NOW_SRC = RUN_IS_LIVE_SRC + "\n" + liveNow.toString().replace(/^export /, "");
 
+/**
+ * liveNow() over given runs and live sessions — the same source the client
+ * bundles embed, evaluated with those as its _runs and _liveSessions, so the
+ * server-painted #appLive count (fact hlstrip) can never drift from the
+ * client's.
+ */
+const _liveNowOver = new Function("_runs", "_liveSessions", LIVE_NOW_SRC + "\nreturn liveNow();");
+export function liveCountOf(runs, liveSessions) {
+  return _liveNowOver(Array.isArray(runs) ? runs : [], Array.isArray(liveSessions) ? liveSessions : []);
+}
+
 const LIMITING_WINDOW_SRC = limitingWindow.toString().replace(/^export /, "");
 const FORMAT_PERCENT_SRC = formatPercent.toString().replace(/^export /, "");
 const RELATIVE_RESET_SRC = relativeReset.toString().replace(/^export /, "");
@@ -194,7 +205,14 @@ function usageWidgetHtml(harness, host, snapshot) {
   );
 }
 
-function paintUsageLimits(data) {
+/**
+ * The usage-limits strip's markup for a GET /api/usage-limits answer: the
+ * #appLimits chips and the #usageRow widgets, one per ok or unauthenticated
+ * harness (local first, then each imported host). Shared by the server,
+ * which serves every app-chrome page with the strip filled (fact hlstrip),
+ * and the client poll, so both paint byte-identical markup.
+ */
+function usageStripMarkup(data) {
   var chips = [];
   var widgets = [];
   function pushVisible(snapshot, host) {
@@ -221,30 +239,43 @@ function paintUsageLimits(data) {
   if (data && data.local) pushVisible(data.local, null);
   var hosts = (data && data.hosts) || [];
   for (var j = 0; j < hosts.length; j++) pushVisible(hosts[j], hosts[j].host);
-  var row = document.getElementById("usageRow");
-  if (row) {
-    if (!widgets.length) {
-      row.hidden = true;
-      row.innerHTML = "";
-    } else {
-      row.hidden = false;
-      row.innerHTML = widgets.join("");
+  return { chips: chips.join(""), widgets: widgets.join("") };
+}
+
+/** A short signature of strip markup: the painted markup is tagged with it. */
+function usageMarkupSig(html) {
+  var h = 5381;
+  for (var i = 0; i < html.length; i++) h = ((h * 33) ^ html.charCodeAt(i)) >>> 0;
+  return h.toString(36) + "." + html.length.toString(36);
+}
+
+function paintUsageLimits(data) {
+  var markup = usageStripMarkup(data);
+  // The server already painted the strip (fact hlstrip): an answer with the
+  // same markup touches nothing, so nothing on the page moves or reflows.
+  function paint(el, html) {
+    if (!el) return;
+    if (!html) {
+      if (!el.hidden) el.hidden = true;
+      if (el.innerHTML) el.innerHTML = "";
+      el.removeAttribute("data-usage-sig");
+      return;
     }
+    var sig = usageMarkupSig(html);
+    if (el.getAttribute("data-usage-sig") !== sig) {
+      el.innerHTML = html;
+      el.setAttribute("data-usage-sig", sig);
+    }
+    if (el.hidden) el.hidden = false;
   }
-  var el = document.getElementById("appLimits");
+  paint(document.getElementById("usageRow"), markup.widgets);
+  paint(document.getElementById("appLimits"), markup.chips);
   var btn = document.getElementById("appLimitsBtn");
-  if (!el) return;
-  if (!chips.length) {
-    el.hidden = true;
-    el.innerHTML = "";
-    if (btn) btn.hidden = true;
-    return;
-  }
-  el.hidden = false;
-  el.innerHTML = chips.join("");
   if (btn) {
-    btn.hidden = false;
-    btn.setAttribute("data-more", chips.length > 3 ? "+" + (chips.length - 3) : "");
+    var n = usageChipCount(markup.chips);
+    if (btn.hidden !== !n) btn.hidden = !n;
+    var more = n > 3 ? "+" + (n - 3) : "";
+    if (btn.getAttribute("data-more") !== more) btn.setAttribute("data-more", more);
   }
 }
 
@@ -271,6 +302,8 @@ export const USAGE_LIMITS_CLIENT_SRC =
   USAGE_AMOUNTS_SRC + "\n" +
   USAGE_WINDOW_LABEL_SRC + "\n" +
   usageWidgetHtml.toString().replace(/^export /, "") + "\n" +
+  usageStripMarkup.toString().replace(/^export /, "") + "\n" +
+  usageMarkupSig.toString().replace(/^export /, "") + "\n" +
   paintUsageLimits.toString().replace(/^export /, "") + "\n" +
   startUsageLimitsPolling.toString().replace(/^export /, "");
 
@@ -369,7 +402,7 @@ export function appTopHtml({ crumbHtml, extraHtml = "", nav = "" } = {}) {
     </button>
     <button class="new-run-btn" id="newRunBtn" type="button" title="Start an agent run — g then n">${ICON_PLUS}<span>New run</span></button>
   </header>
-  <div class="usage-row" id="usageRow" hidden role="dialog" aria-label="Plan limits"></div>`;
+  ${USAGE_ROW_EMPTY}`;
 }
 
 /**
@@ -383,6 +416,56 @@ export function appTopStaticHtml(nav) {
     ${appNavHtml(nav)}
     <a class="new-run-btn app-top-push" href="/?launch=1" title="Start an agent run">${ICON_PLUS}<span>New run</span></a>
   </header>`;
+}
+
+/** The live counter as appTopHtml writes it, still empty. */
+const APP_LIVE_EMPTY = '<span class="app-live" id="appLive" hidden></span>';
+
+/**
+ * A page built with appTopHtml, its #appLive counter painted with the
+ * client's own text for `n` live agents: the counter is in the first paint
+ * instead of growing the app bar when the client script first runs. Zero
+ * leaves it hidden, as the client does.
+ */
+export function fillAppLive(html, n) {
+  if (!n || typeof html !== "string") return html;
+  return html.replace(APP_LIVE_EMPTY, () => '<span class="app-live" id="appLive">' + n + " running</span>");
+}
+
+/** The strip's elements as appTopHtml writes them, still empty. */
+const APP_LIMITS_BTN_EMPTY = '<button class="app-limits-btn" id="appLimitsBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="usageRow" title="Plan limits" hidden>';
+const APP_LIMITS_EMPTY = '<span class="app-limits" id="appLimits" hidden></span>';
+const USAGE_ROW_EMPTY = '<div class="usage-row" id="usageRow" hidden role="dialog" aria-label="Plan limits"></div>';
+
+/** How many chips strip markup holds. */
+function usageChipCount(chips) {
+  return chips ? chips.split('class="app-limit-chip').length - 1 : 0;
+}
+
+/**
+ * A page built with appTopHtml, its usage-limits strip filled from a
+ * GET /api/usage-limits answer: the chips and widgets are in the first
+ * paint, at their final size, instead of being inserted when the client's
+ * first poll answers. Elements with nothing to show stay hidden. Each filled
+ * element carries the signature the client poll compares, so an unchanged
+ * answer repaints nothing.
+ */
+export function fillUsageStrip(html, data) {
+  if (!data || typeof html !== "string") return html;
+  var markup = usageStripMarkup(data);
+  var out = html;
+  if (markup.chips) {
+    var n = usageChipCount(markup.chips);
+    out = out.replace(APP_LIMITS_BTN_EMPTY, () =>
+      APP_LIMITS_BTN_EMPTY.replace(" hidden>", (n > 3 ? ' data-more="+' + (n - 3) + '"' : "") + ">"));
+    out = out.replace(APP_LIMITS_EMPTY, () =>
+      '<span class="app-limits" id="appLimits" data-usage-sig="' + usageMarkupSig(markup.chips) + '">' + markup.chips + "</span>");
+  }
+  if (markup.widgets) {
+    out = out.replace(USAGE_ROW_EMPTY, () =>
+      '<div class="usage-row" id="usageRow" role="dialog" aria-label="Plan limits" data-usage-sig="' + usageMarkupSig(markup.widgets) + '">' + markup.widgets + "</div>");
+  }
+  return out;
 }
 
 export const APP_TOP_CSS = `

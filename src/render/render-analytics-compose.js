@@ -127,6 +127,7 @@ export const ANALYTICS_COMPOSE_JS = `
   let toolPerfExpanded = false;
   let toolPerfSort = 'errors'; // 'errors' (most error-prone first) or 'usage' (most used first)
   let activeToolPerfFilter = null; // tool name being filtered on via click
+  let toolPerfEntries = []; // [name, stats] pairs of the latest render
 
   function renderToolPerformance() {
     const chapters = getChapters();
@@ -161,6 +162,8 @@ export const ANALYTICS_COMPOSE_JS = `
 
     const entries = toolStatNames.map(function(name) { return [name, toolStats[name]]; });
     var sorted = sortToolPerfEntries(entries, toolPerfSort);
+    // A sort button a live update kept sorts the newest figures (fact hnr7).
+    toolPerfEntries = entries;
 
     var wrap = h('div', { className: 'tool-perf' + (toolPerfExpanded ? ' expanded' : '') });
 
@@ -190,6 +193,7 @@ export const ANALYTICS_COMPOSE_JS = `
       header.querySelector('.tool-perf-toggle').textContent = toolPerfExpanded ? '\\u25be' : '\\u25b8';
       header.setAttribute('aria-expanded', toolPerfExpanded ? 'true' : 'false');
     });
+    header._tqOn = true;
     wrap.appendChild(header);
 
     var body = h('div', { className: 'tool-perf-body', id: 'tool-perf-body' });
@@ -204,7 +208,7 @@ export const ANALYTICS_COMPOSE_JS = `
         onClick: function(ev) {
           ev.stopPropagation();
           toolPerfSort = mode;
-          var newSorted = sortToolPerfEntries(entries, mode);
+          var newSorted = sortToolPerfEntries(toolPerfEntries, mode);
           rebuildToolPerfTable(newSorted);
           sortBar.querySelectorAll('.tool-perf-sort-btn').forEach(function(b) {
             b.classList.toggle('active', b.textContent === mode);

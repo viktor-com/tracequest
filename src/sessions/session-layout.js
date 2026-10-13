@@ -22,6 +22,7 @@
  * recording a rollout-*.jsonl under sessions/YYYY/MM/DD; every
  * ~/.grok/sessions dir a percent-encoded cwd.
  */
+import { statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -45,17 +46,59 @@ export function grokSessionsRoot(home = homedir()) {
 
 /* ── claude (and the claude-family cursor-cloud import root) ──────────── */
 
+/** Claude Code truncates a longer sanitized cwd to this many chars and appends "-<hash>". */
+const CLAUDE_SLUG_MAX = 200;
+
 /**
- * Claude project-dir slug for a cwd: the absolute path with every "/"
- * replaced by "-", INCLUDING the leading one (/w → "-w").
+ * Claude project-dir slug for a cwd, exactly as Claude Code names it
+ * (verified against Claude Code 2.1.289's path sanitizer): every character
+ * outside [A-Za-z0-9] — the leading "/" included, and "." / "_" too —
+ * becomes "-" (/Users/x/.kandev/my_proj → "-Users-x--kandev-my-proj"); a
+ * result over 200 chars keeps its first 200 and gains "-" plus the base-36
+ * absolute 32-bit string hash of the raw cwd. Mapping only "/" missed every
+ * dotted or underscored cwd (fact clslug).
  */
 export function claudeProjectSlug(cwd) {
-  return "-" + String(cwd).replace(/^\//, "").replace(/\//g, "-");
+  const raw = String(cwd);
+  const slug = raw.replace(/[^A-Za-z0-9]/g, "-");
+  if (slug.length <= CLAUDE_SLUG_MAX) return slug;
+  let h = 0;
+  for (let i = 0; i < raw.length; i++) h = ((h << 5) - h + raw.charCodeAt(i)) | 0;
+  return `${slug.slice(0, CLAUDE_SLUG_MAX)}-${Math.abs(h).toString(36)}`;
 }
 
-/** ~/.claude/projects/<slug>: the dir holding a cwd's root-level *.jsonl recordings. */
-export function claudeProjectDir(home, cwd) {
-  return join(claudeProjectsRoot(home), claudeProjectSlug(cwd));
+/**
+ * The slug tracequest used before fact clslug: only "/" mapped to "-"
+ * (/Users/x/.kandev/my_proj -> "-Users-x-.kandev-my_proj"), no length cap.
+ */
+function claudeLegacyProjectSlug(cwd) {
+  return String(cwd).replace(/\//g, "-");
+}
+
+/**
+ * ~/.claude/projects/<slug>: the dir holding a cwd's root-level *.jsonl
+ * recordings — the dir Claude Code names (claudeProjectSlug), or, when that
+ * dir does not exist but the legacy "/"-only slug dir does, the legacy one
+ * (fact clslug). `isDir` (default: statSync) is consulted only when the two
+ * slugs differ, so a cwd made of letters, digits and "/" costs no stat.
+ */
+export function claudeProjectDir(home, cwd, isDir = dirExists) {
+  const root = claudeProjectsRoot(home);
+  const slug = claudeProjectSlug(cwd);
+  const current = join(root, slug);
+  const legacySlug = claudeLegacyProjectSlug(cwd);
+  if (legacySlug === slug) return current;
+  if (isDir(current)) return current;
+  const legacy = join(root, legacySlug);
+  return isDir(legacy) ? legacy : current;
+}
+
+function dirExists(path) {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 /* ── cursor-agent ─────────────────────────────────────────────────────── */

@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, readlinkSync, realpathSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { isProcRaceErr } from "../utils/fs-expected-err.js";
 
 /**
@@ -39,9 +39,21 @@ function platformOf(deps) {
   return deps?.platform ?? process.platform;
 }
 
+/**
+ * lsof lives in /usr/sbin on macOS, which launchd's default PATH
+ * (/usr/local/bin:/usr/bin:/bin) leaves out — so a hub started as a launchd
+ * agent never found it and saw no live session (fact lsofpath). The probe's
+ * PATH always includes the system admin dirs.
+ */
+function lsofEnv() {
+  const dirs = String(process.env.PATH || "").split(":").filter(Boolean);
+  for (const d of ["/usr/sbin", "/sbin"]) if (!dirs.includes(d)) dirs.push(d);
+  return { ...process.env, PATH: dirs.join(":") };
+}
+
 function runLsof(args, deps) {
   const spawn = pick(deps, "spawnSync", spawnSync);
-  const result = spawn("lsof", args, { encoding: "utf-8", timeout: LSOF_TIMEOUT_MS });
+  const result = spawn("lsof", args, { encoding: "utf-8", timeout: LSOF_TIMEOUT_MS, env: lsofEnv() });
   if (result?.error) {
     warnLsofOnce(`live sessions: lsof probe unavailable, live detection disabled: ${result.error.message}`);
     return "";
@@ -52,6 +64,42 @@ function runLsof(args, deps) {
   // mostly-idle session files. stdout is the only reliable signal. Per-file
   // complaints (a session file deleted mid-probe) are routine and suppressed by -w.
   return result?.stdout ?? "";
+}
+
+/**
+ * One child process run without blocking the calling thread: the result has
+ * spawnSync's shape ({ status, stdout, error }; a probe killed at `timeout`
+ * answers status null), so callers classify it exactly as they would a
+ * synchronous run. Probes started this way run concurrently (fact hlv3).
+ */
+export function spawnText(cmd, args, { timeout, env } = {}) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(cmd, args, { timeout, env, stdio: ["ignore", "pipe", "ignore"] });
+    } catch (error) {
+      resolve({ error, status: null, stdout: "" });
+      return;
+    }
+    let stdout = "";
+    let error = null;
+    child.stdout.setEncoding("utf-8");
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.on("error", (err) => { error = err; });
+    child.on("close", (code) => {
+      resolve(error ? { error, status: null, stdout } : { status: code, stdout });
+    });
+  });
+}
+
+/** runLsof without blocking: same arguments, same stdout-only reading. */
+async function runLsofAsync(args) {
+  const result = await spawnText("lsof", args, { timeout: LSOF_TIMEOUT_MS, env: lsofEnv() });
+  if (result.error) {
+    warnLsofOnce(`live sessions: lsof probe unavailable, live detection disabled: ${result.error.message}`);
+    return "";
+  }
+  return result.stdout ?? "";
 }
 
 /** lsof runs every few seconds; a broken probe must not spam the log. */
@@ -91,10 +139,7 @@ function parseLsofFields(stdout) {
  * @returns {Map<string, string>} pid → cwd (pids that could not be resolved are absent)
  */
 export function procCwds(pids, deps) {
-  // Pids reach us from ~/.grok/active_sessions.json, so they are untrusted input.
-  // `lsof -p` rejects the entire comma-joined list if any entry is non-numeric,
-  // which would silently drop every other pid in the batch.
-  const list = [...pids].map(String).filter((p) => /^\d+$/.test(p));
+  const list = numericPids(pids);
   const out = new Map();
   if (!list.length) return out;
 
@@ -113,11 +158,41 @@ export function procCwds(pids, deps) {
   if (platform !== "darwin") return out;
 
   // One lsof call for the whole pid set: per-pid spawns cost ~90ms each.
-  const stdout = runLsof(["-a", "-d", "cwd", "-n", "-P", "-w", "-p", list.join(","), "-F0pn"], deps);
+  return cwdsFromLsof(runLsof(cwdLsofArgs(list), deps));
+}
+
+/**
+ * Pids reach us from ~/.grok/active_sessions.json, so they are untrusted input.
+ * `lsof -p` rejects the entire comma-joined list if any entry is non-numeric,
+ * which would silently drop every other pid in the batch.
+ */
+function numericPids(pids) {
+  return [...pids].map(String).filter((p) => /^\d+$/.test(p));
+}
+
+function cwdLsofArgs(list) {
+  return ["-a", "-d", "cwd", "-n", "-P", "-w", "-p", list.join(","), "-F0pn"];
+}
+
+function cwdsFromLsof(stdout) {
+  const out = new Map();
   for (const { pid, name } of parseLsofFields(stdout)) {
     if (pid && !out.has(pid)) out.set(pid, name);
   }
   return out;
+}
+
+/**
+ * procCwds without blocking the calling thread: the same lookup, with the
+ * darwin lsof run as an asynchronous child process (linux reads /proc and
+ * spawns nothing, so it answers synchronously).
+ * @param {Iterable<string|number>} pids
+ * @returns {Promise<Map<string, string>>}
+ */
+export async function procCwdsAsync(pids) {
+  const list = numericPids(pids);
+  if (!list.length || process.platform !== "darwin") return procCwds(list);
+  return cwdsFromLsof(await runLsofAsync(cwdLsofArgs(list)));
 }
 
 /** Resolve one pid's cwd, or null. */
@@ -221,15 +296,24 @@ function holdersLinux(aliases, deps) {
 function holdersDarwin(aliases, paths, deps) {
   /** @type {Map<string, Set<string>>} */
   const holders = new Map();
-  for (let i = 0; i < paths.length; i += LSOF_PATH_CHUNK) {
-    const chunk = paths.slice(i, i + LSOF_PATH_CHUNK);
-    const stdout = runLsof(["-n", "-P", "-w", "-F0pn", "--", ...chunk], deps);
-    for (const { pid, name } of parseLsofFields(stdout)) {
-      const original = aliases.get(name);
-      if (original && pid) addHolder(holders, original, pid);
-    }
-  }
+  for (const chunk of lsofPathChunks(paths)) addLsofHolders(holders, aliases, runLsof(chunk, deps));
   return holders;
+}
+
+/** `lsof -- <paths>` argv per chunk of at most LSOF_PATH_CHUNK paths. */
+function lsofPathChunks(paths) {
+  const out = [];
+  for (let i = 0; i < paths.length; i += LSOF_PATH_CHUNK) {
+    out.push(["-n", "-P", "-w", "-F0pn", "--", ...paths.slice(i, i + LSOF_PATH_CHUNK)]);
+  }
+  return out;
+}
+
+function addLsofHolders(holders, aliases, stdout) {
+  for (const { pid, name } of parseLsofFields(stdout)) {
+    const original = aliases.get(name);
+    if (original && pid) addHolder(holders, original, pid);
+  }
 }
 
 /**
@@ -259,6 +343,22 @@ export function openPathHolders(paths, deps) {
 export function openPathsAmong(paths, deps) {
   if (!paths?.length) return [];
   const holders = openPathHolders(paths, deps);
+  return paths.filter((p) => (holders.get(p)?.size ?? 0) > 0);
+}
+
+/**
+ * openPathsAmong without blocking the calling thread: on darwin every lsof
+ * chunk runs as an asynchronous child process, all at once; linux scans
+ * /proc and spawns nothing, so it answers synchronously.
+ * @param {string[]} paths
+ * @returns {Promise<string[]>}
+ */
+export async function openPathsAmongAsync(paths) {
+  if (!paths?.length || process.platform !== "darwin") return openPathsAmong(paths);
+  const aliases = candidateAliases(paths, "darwin");
+  const holders = new Map();
+  const outputs = await Promise.all(lsofPathChunks(paths).map((args) => runLsofAsync(args)));
+  for (const stdout of outputs) addLsofHolders(holders, aliases, stdout);
   return paths.filter((p) => (holders.get(p)?.size ?? 0) > 0);
 }
 
