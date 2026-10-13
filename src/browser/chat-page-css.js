@@ -237,6 +237,9 @@ body { overflow: hidden; }
   max-height: 0 !important; height: 0 !important; min-height: 0 !important; overflow: hidden !important;
   margin: 0 !important; padding: 0 !important; border: none !important;
 }
+/* A parked block shows nothing, so the browser skips laying out its content:
+   in a long transcript most blocks are parked. */
+[data-block-key][data-contained="parked"] { content-visibility: hidden; }
 .chat-assistant + .tool-card { margin-top: 10px; }
 .tool-card + .tool-card { margin-top: 6px; }
 .chat-assistant p { margin: 6px 0; white-space: pre-wrap; }

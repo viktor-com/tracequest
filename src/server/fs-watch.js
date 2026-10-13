@@ -11,6 +11,9 @@ import { watch, existsSync } from "node:fs";
  *     declare a policy rather than dropping the event by accident.
  *   - Setup can fail for reasons the caller cannot act on (missing path, inotify
  *     limits). Those degrade to a no-op handle instead of throwing.
+ *   - A live watcher can fail too, and an FSWatcher that emits "error" with no
+ *     listener throws — taking serve down. Every watcher gets a listener; the
+ *     failure is reported as an unnamed change and the watch is re-armed.
  *
  * Recursive watching is used unconditionally. It is supported on darwin and
  * win32 always, and on linux since node 20.13 — and this project's engines floor
@@ -35,6 +38,11 @@ const RESOURCE_CODES = new Set(["ENOSPC", "EMFILE", "ENFILE"]);
 const NO_RECURSIVE_CODES = new Set(["ERR_FEATURE_UNAVAILABLE_ON_PLATFORM", "EINVAL", "ENOTSUP"]);
 
 const NOOP_HANDLE = Object.freeze({ close() {} });
+
+/** False for the no-op handle returned when a path could not be watched. */
+export function isLiveWatchHandle(handle) {
+  return Boolean(handle) && handle !== NOOP_HANDLE;
+}
 
 const _warnedOnce = new Set();
 
@@ -95,13 +103,92 @@ function startNativeWatch(target, options, listener, label, watchImpl) {
   }
 }
 
-function closableOnce(handle) {
+/**
+ * Route a live watcher's "error" event to `onError(kind)` instead of letting it
+ * throw. Node's linux recursive watcher emits one whenever a directory it walks
+ * into cannot be read (EACCES), is deleted before it is read (ENOENT) — a race
+ * any deleted project tree can hit — or is a symlink loop (ELOOP) (fact fsw-err).
+ * Each kind is logged once per path: a failure that recurs on every walk is not
+ * repeated, but an earlier ENOENT race must not hide a later EACCES.
+ */
+function onWatchError(handle, label, onError) {
+  if (typeof handle?.on !== "function") return;
+  handle.on("error", (err) => {
+    const kind = err?.code || err?.message;
+    warnOnce(`error:${label}:${kind}`, `fs-watch: watching ${label} failed (${kind}); re-arming it.`);
+    onError(kind);
+  });
+}
+
+/**
+ * Watch a directory, surviving watcher errors: the broken watcher is closed, the
+ * caller hears an unnamed change (nothing that happened while no watcher was
+ * live can be named), and the watch is re-armed once the directory exists,
+ * followed by another unnamed change for whatever happened in between; the
+ * recovery is logged once per kind of failure, like the failure. Errors that
+ * keep coming back off like a missing file in watchFile.
+ *
+ * What node's own walk hits while a watcher starts (a directory that became
+ * unreadable while no watcher was live) it skips without an error event, so
+ * only failures of a running watcher are reported.
+ */
+function watchDirectory(dir, options, onChange, opts) {
+  if (!existsSync(dir)) return NOOP_HANDLE;
+  const label = opts.label || dir;
+  const notify = safeCallback(onChange, label);
+  const reArmDelay = opts.reArmDelayMs ?? RE_ARM_DELAY_MS;
+  const maxBackoff = opts.maxReArmDelayMs ?? MAX_RE_ARM_DELAY_MS;
+  let backoff = reArmDelay;
+  let lastErrorAt = -Infinity;
+  let failedWith = null;
+  let current = null;
+  let timer = null;
   let closed = false;
+
+  const arm = () => {
+    const handle = startNativeWatch(dir, options, notify, label, opts.watchImpl);
+    onWatchError(handle, label, (kind) => {
+      if (closed || handle !== current) return;
+      try { handle.close(); } catch { /* already closed */ }
+      current = null;
+      failedWith = kind;
+      notify("error", null);
+      const now = Date.now();
+      backoff = now - lastErrorAt < maxBackoff ? Math.min(backoff * 2, maxBackoff) : reArmDelay;
+      lastErrorAt = now;
+      reArmLater();
+    });
+    return handle;
+  };
+
+  const reArmLater = () => {
+    timer = setTimeout(() => {
+      timer = null;
+      if (closed) return;
+      current = existsSync(dir) ? arm() : null;
+      if (current) {
+        warnOnce(`re-armed:${label}:${failedWith}`, `fs-watch: watching ${label} again after ${failedWith}.`);
+        notify("rename", null);
+      } else {
+        backoff = Math.min(backoff * 2, maxBackoff);
+        reArmLater();
+      }
+    }, backoff);
+    // Re-arming must not hold the event loop open.
+    if (typeof timer.unref === "function") timer.unref();
+  };
+
+  current = arm();
+  if (!current) return NOOP_HANDLE;
   return {
     close() {
       if (closed) return;
       closed = true;
-      try { handle.close(); } catch { /* already closed */ }
+      if (timer) { clearTimeout(timer); timer = null; }
+      if (current) {
+        try { current.close(); } catch { /* already closed */ }
+        current = null;
+      }
     },
   };
 }
@@ -113,10 +200,7 @@ function closableOnce(handle) {
  * @returns {{ close(): void }} idempotent handle
  */
 export function watchDir(dir, onChange, opts = {}) {
-  if (!existsSync(dir)) return NOOP_HANDLE;
-  const label = opts.label || dir;
-  const handle = startNativeWatch(dir, { persistent: false, recursive: false }, safeCallback(onChange, label), label, opts.watchImpl);
-  return handle ? closableOnce(handle) : NOOP_HANDLE;
+  return watchDirectory(dir, { persistent: false, recursive: false }, onChange, opts);
 }
 
 /**
@@ -128,10 +212,7 @@ export function watchDir(dir, onChange, opts = {}) {
  * @returns {{ close(): void }} idempotent handle
  */
 export function watchTree(dir, onChange, opts = {}) {
-  if (!existsSync(dir)) return NOOP_HANDLE;
-  const label = opts.label || dir;
-  const handle = startNativeWatch(dir, { persistent: false, recursive: true }, safeCallback(onChange, label), label, opts.watchImpl);
-  return handle ? closableOnce(handle) : NOOP_HANDLE;
+  return watchDirectory(dir, { persistent: false, recursive: true }, onChange, opts);
 }
 
 /**
@@ -168,7 +249,13 @@ export function watchFile(file, onChange, opts = {}) {
       // rename means this inode is gone (replaced, moved, or deleted).
       if (eventType === "rename") scheduleReArm();
     }, label);
-    current = startNativeWatch(file, { persistent: false }, listener, label, opts.watchImpl);
+    const handle = startNativeWatch(file, { persistent: false }, listener, label, opts.watchImpl);
+    onWatchError(handle, label, () => {
+      if (closed || handle !== current) return;
+      safeCallback(onChange, label)("error", null);
+      scheduleReArm();
+    });
+    current = handle;
     if (!current) scheduleReArm(true);
   };
 

@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { forEachJsonlLine } from "../parse/jsonl-read.js";
 import { sessionMtimeMs } from "./session-list.js";
 import { isIndexDiskExpectedErr, isProcRaceErr } from "../utils/fs-expected-err.js";
-import { procCwds, openPathsAmong } from "./proc-probe.js";
+import { procCwds, procCwdsAsync, openPathsAmong, openPathsAmongAsync, spawnText } from "./proc-probe.js";
 import { codexSessionMetaCwd } from "../parse/parse-codex.js";
 import { normalizeProjectFolder, shortenProjectPath } from "../server/server-session-path.js";
 import {
@@ -16,6 +16,8 @@ import {
   grokSessionDir,
 } from "./session-layout.js";
 import { recordingIsGenerating } from "./live-session-generating.js";
+import { isImportedHostSession } from "./session-discovery-paths.js";
+import { claudeSubagentsDirFromSessionPath, listClaudeSubagentJsonlFiles } from "./claude-subagents.js";
 
 // The layout helpers live in session-layout.js (ONE definition shared with
 // discovery and run attribution); re-exported here for callers/tests that
@@ -47,23 +49,34 @@ export function grokProcCwdMatches(entryCwd, procCwd) {
   return procCwd === `${entryCwd} (deleted)`;
 }
 
-export function findLiveGrok() {
-  const home = homeDir();
-  const activePath = join(home, ".grok", "active_sessions.json");
-  const live = [];
+/** The well-formed entries of ~/.grok/active_sessions.json ([] when absent or unreadable). */
+function grokActiveEntries(home) {
   let entries;
   try {
-    entries = JSON.parse(readFileSync(activePath, "utf-8"));
+    entries = JSON.parse(readFileSync(join(home, ".grok", "active_sessions.json"), "utf-8"));
   } catch (err) {
-    if (isIndexDiskExpectedErr(err)) return live;
-    console.error("findLiveGrok: failed to read active_sessions.json:", err.message);
-    return live;
+    if (!isIndexDiskExpectedErr(err)) console.error("findLiveGrok: failed to read active_sessions.json:", err.message);
+    return [];
   }
-  if (!Array.isArray(entries)) return live;
+  if (!Array.isArray(entries)) return [];
+  return entries.filter((e) => e && e.session_id && e.cwd && e.pid);
+}
 
-  const valid = entries.filter((e) => e && e.session_id && e.cwd && e.pid);
+/**
+ * @typedef {object} ProbeFacts What one detection pass learned from its
+ *   process probes, gathered concurrently by detectLiveSessionsAsync (fact hlv3).
+ * @property {Map<string, { status: number | null, stdout: string, error?: Error }>} pgrep
+ *   each pgrep invocation's result, keyed by pgrepKey(args)
+ * @property {Map<string, string>} cwds pid → cwd for every pid any family matched
+ */
+
+/** @param {ProbeFacts | null} [facts] */
+export function findLiveGrok(facts = null) {
+  const home = homeDir();
+  const live = [];
+  const valid = grokActiveEntries(home);
   if (!valid.length) return live;
-  const cwds = procCwds(valid.map((e) => e.pid), _findLiveClaudeDeps ?? undefined);
+  const cwds = facts?.cwds ?? procCwds(valid.map((e) => e.pid), _findLiveClaudeDeps ?? undefined);
 
   for (const entry of valid) {
     const procCwd = cwds.get(String(entry.pid));
@@ -99,6 +112,16 @@ function newestJsonlInDir(dir, logLabel) {
   return newest;
 }
 
+/** True when `path` is a directory (the injected statSync in tests). */
+function isDirForLiveProbe(path) {
+  const stat = _findLiveClaudeDeps?.statSync ?? statSync;
+  try {
+    return stat(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 /** Newest root-level .jsonl in a Claude project dir (null when none). */
 function newestClaudeJsonlInProjDir(projDir) {
   return newestJsonlInDir(projDir, "findLiveClaude");
@@ -120,34 +143,54 @@ export function claudePgrepArgs(platform = process.platform) {
   return platform === "darwin" ? ["-ax", "claude"] : ["-x", "claude"];
 }
 
-export function findLiveClaude() {
+/** One line per pid, as pgrep prints them. */
+function pidsFromStdout(stdout) {
+  const pids = [];
+  forEachJsonlLine(stdout, (line) => {
+    const pid = line.trim();
+    if (pid) pids.push(pid);
+  });
+  return pids;
+}
+
+/** Key of one pgrep invocation in ProbeFacts.pgrep. */
+function pgrepKey(args) {
+  return args.join("\0");
+}
+
+/** One pgrep invocation's result: from the pass's gathered facts, else run now. */
+function runPgrep(args, facts) {
+  const gathered = facts?.pgrep.get(pgrepKey(args));
+  if (gathered) return gathered;
+  const spawn = _findLiveClaudeDeps?.spawnSync ?? spawnSync;
+  return spawn("pgrep", args, { encoding: "utf-8", timeout: 2000 });
+}
+
+/** @param {ProbeFacts | null} [facts] */
+export function findLiveClaude(facts = null) {
   const home = homeDir();
   const live = [];
-  const spawn = _findLiveClaudeDeps?.spawnSync ?? spawnSync;
 
   let pids;
   try {
-    const args = claudePgrepArgs(_findLiveClaudeDeps?.platform);
-    const result = spawn("pgrep", args, { encoding: "utf-8", timeout: 2000 });
+    const result = runPgrep(claudePgrepArgs(_findLiveClaudeDeps?.platform), facts);
     if (result.status !== 0 || !result.stdout) return live;
-    pids = [];
-    forEachJsonlLine(result.stdout, (line) => {
-      const pid = line.trim();
-      if (pid) pids.push(pid);
-    });
+    pids = pidsFromStdout(result.stdout);
   } catch (err) {
     console.error("findLiveClaude: pgrep failed:", err.message);
     return live;
   }
   if (!pids.length) return live;
 
-  const cwds = procCwds(pids, _findLiveClaudeDeps ?? undefined);
+  const cwds = facts?.cwds ?? procCwds(pids, _findLiveClaudeDeps ?? undefined);
   /** @type {Map<string, string | null>} projDir → newest session (null = scanned, none found) */
   const projDirCache = new Map();
+  /** Parents whose subagents/ dir this pass already checked. */
+  const subagentParents = new Set();
   for (const pid of pids) {
     const cwd = cwds.get(pid);
     if (!cwd) continue;
-    const projDir = claudeProjectDir(home, cwd);
+    const projDir = claudeProjectDir(home, cwd, isDirForLiveProbe);
     let newest;
     if (projDirCache.has(projDir)) {
       newest = projDirCache.get(projDir);
@@ -155,9 +198,44 @@ export function findLiveClaude() {
       newest = newestClaudeJsonlInProjDir(projDir);
       projDirCache.set(projDir, newest);
     }
-    if (newest && recordingIsGenerating("claude", newest, { home, pid })) live.push(newest);
+    if (!newest) continue;
+    if (recordingIsGenerating("claude", newest, { home, pid })) live.push(newest);
+    if (!subagentParents.has(newest)) {
+      subagentParents.add(newest);
+      for (const child of generatingClaudeSubagents(newest)) live.push(child);
+    }
   }
   return live;
+}
+
+/** True when Claude Code recorded that the user stopped this subagent (<name>.meta.json). */
+function claudeSubagentStopped(childPath) {
+  try {
+    const meta = JSON.parse(readFileSync(childPath.replace(/\.jsonl$/, ".meta.json"), "utf-8"));
+    return meta?.stoppedByUser === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Subagent transcripts (<parent>/subagents/agent-*.jsonl) the same claude
+ * process is writing. Each child is classified from its OWN transcript: the
+ * pid's sidecar status describes the parent's turn, never a child's, and a
+ * background child keeps running after its parent's turn has ended.
+ */
+function generatingClaudeSubagents(parentPath) {
+  const out = [];
+  let children;
+  try {
+    children = listClaudeSubagentJsonlFiles(claudeSubagentsDirFromSessionPath(parentPath), { logLabel: "findLiveClaude" });
+  } catch {
+    return out;
+  }
+  for (const { path } of children) {
+    if (recordingIsGenerating("claude", path) && !claudeSubagentStopped(path)) out.push(path);
+  }
+  return out;
 }
 
 /**
@@ -231,9 +309,9 @@ export function liveProbeDegradedForTests() {
 }
 
 /** Pids matched by one pgrep invocation ([] on no match; degraded on failure). */
-function pgrepPids(args, spawn, logLabel) {
+function pgrepPids(args, facts, logLabel) {
   try {
-    const result = spawn("pgrep", args, { encoding: "utf-8", timeout: 2000 });
+    const result = runPgrep(args, facts);
     // status 1 is pgrep's honest "matched nothing". A null status means the
     // probe was killed (timeout) or never ran — inconclusive, not negative.
     if (result?.error || result?.status === null || result?.status === undefined) {
@@ -241,17 +319,19 @@ function pgrepPids(args, spawn, logLabel) {
       return [];
     }
     if (result.status !== 0 || !result.stdout) return [];
-    const pids = [];
-    forEachJsonlLine(result.stdout, (line) => {
-      const pid = line.trim();
-      if (pid) pids.push(pid);
-    });
-    return pids;
+    return pidsFromStdout(result.stdout);
   } catch (err) {
     console.error(`${logLabel}: pgrep failed:`, err.message);
     markProbeDegraded();
     return [];
   }
+}
+
+/** Every pgrep invocation one detection pass makes (claude's, then each external agent's). */
+function passPgrepInvocations(platform) {
+  const out = [claudePgrepArgs(platform)];
+  for (const spec of EXTERNAL_AGENT_PROCESS_SPECS) out.push(...agentPgrepInvocations(spec.binary, platform));
+  return out;
 }
 
 /** Newest cursor main recording for a cwd: <slug>/agent-transcripts/<uuid>/<uuid>.jsonl. */
@@ -339,16 +419,19 @@ function agentSessionForCwd(source, cwd, home, sessions) {
  * storage layout. A process whose cwd has no recording contributes nothing;
  * every failure degrades to an empty contribution, never a throw.
  */
-export function findLiveAgentSessions(sessions = []) {
+/**
+ * @param {Array<object>} [sessions]
+ * @param {ProbeFacts | null} [facts]
+ */
+export function findLiveAgentSessions(sessions = [], facts = null) {
   const home = homeDir();
-  const spawn = _findLiveClaudeDeps?.spawnSync ?? spawnSync;
   const platform = _findLiveClaudeDeps?.platform ?? process.platform;
 
   /** @type {Map<string, Set<string>>} pid → sources whose patterns matched it */
   const pidSources = new Map();
   for (const spec of EXTERNAL_AGENT_PROCESS_SPECS) {
     for (const args of agentPgrepInvocations(spec.binary, platform)) {
-      for (const pid of pgrepPids(args, spawn, "findLiveAgentSessions")) {
+      for (const pid of pgrepPids(args, facts, "findLiveAgentSessions")) {
         let set = pidSources.get(pid);
         if (!set) { set = new Set(); pidSources.set(pid, set); }
         set.add(spec.source);
@@ -357,7 +440,7 @@ export function findLiveAgentSessions(sessions = []) {
   }
   if (!pidSources.size) return [];
 
-  const cwds = procCwds([...pidSources.keys()], _findLiveClaudeDeps ?? undefined);
+  const cwds = facts?.cwds ?? procCwds([...pidSources.keys()], _findLiveClaudeDeps ?? undefined);
   const live = [];
   const seenPairs = new Set();
   const found = new Set();
@@ -405,37 +488,100 @@ export function stampLive(obj, livePaths) {
   return obj;
 }
 
+/**
+ * Open-fd probing is extra recall for an agent caught mid-write: a recent
+ * codex/cursor/factory recording some process holds open is live when that
+ * recording is still generating (a completed jsonl merely held open by an
+ * idle-open TUI is not). So the probe asks only about the recordings it could
+ * change (fact hlv4): not already live, generating, and local — a recording
+ * copied from another machine is never generating on this one.
+ * @returns {string[]} paths, in session order
+ */
+function openFdPending(sessions, now, live) {
+  const out = [];
+  for (const s of sessions) {
+    if (now - sessionMtimeMs(s) > 120_000) continue;
+    if (s.source !== "codex" && s.source !== "cursor" && s.source !== "factory") continue;
+    if (live.has(s.path) || isImportedHostSession(s.path)) continue;
+    if (recordingIsGenerating(s.source, s.path)) out.push(s.path);
+  }
+  return out;
+}
+
 export function detectLiveSessions(sessions) {
   const now = Date.now();
   if (_liveCache !== null && now - _liveCacheTime < 5000) return _liveCache;
+  return detectionPass(sessions, now);
+}
 
+/** One synchronous detection pass, installed as the memo. */
+function detectionPass(sessions, now) {
+  const live = processFamiliesLive(sessions, null);
+  const pending = openFdPending(sessions, now, live);
+  if (pending.length) for (const p of findLiveByOpenFd(pending)) live.add(p);
+  return finishPass(live, sessions, now);
+}
+
+/**
+ * One detection pass (fact hlv3) with its process probes run concurrently
+ * instead of one after another: the exact-name pgreps start at once, then
+ * the cwd lookup for the pids they match runs alongside the full-argv
+ * pgreps (a second lookup only for a pid an argv scan alone matched). The
+ * pass then reads those answers exactly as detectLiveSessions reads its own
+ * synchronous probes, so the live set is the same; it costs about two pgreps
+ * and one cwd lookup, not the sum of all. Always probes (no memo check) and
+ * installs the result as the memo, like a synchronous pass. Probe doubles
+ * injected by tests answer synchronously, so it delegates.
+ */
+export async function detectLiveSessionsAsync(sessions) {
+  const now = Date.now();
+  if (liveProbeDepsInjected()) return detectionPass(sessions, now);
+  const pgrep = new Map();
+  const run = (args) => spawnText("pgrep", args, { timeout: 2000 }).then((result) => {
+    pgrep.set(pgrepKey(args), result);
+    return result.status === 0 && result.stdout ? pidsFromStdout(result.stdout) : [];
+  });
+  const invocations = passPgrepInvocations(process.platform);
+  // The exact-name matches run first (about half the time a full-argv scan
+  // takes); the cwd lookup for their pids then runs while the argv scans do,
+  // and a second lookup covers only pids that an argv scan alone matched.
+  const byName = invocations.filter((args) => !args.includes("-f")).map(run);
+  const named = new Set(grokActiveEntries(homeDir()).map((e) => String(e.pid)));
+  for (const pids of await Promise.all(byName)) for (const pid of pids) named.add(pid);
+  const namedCwds = procCwdsAsync(named);
+  const byArgv = invocations.filter((args) => args.includes("-f")).map(run);
+  const extra = new Set();
+  for (const pids of await Promise.all(byArgv)) for (const pid of pids) if (!named.has(pid)) extra.add(pid);
+  const [cwds, extraCwds] = await Promise.all([namedCwds, procCwdsAsync(extra)]);
+  for (const [pid, cwd] of extraCwds) cwds.set(pid, cwd);
+  const live = processFamiliesLive(sessions, { pgrep, cwds });
+  const pending = openFdPending(sessions, now, live);
+  if (pending.length) for (const p of await openPathsAmongAsync(pending)) live.add(p);
+  return finishPass(live, sessions, now);
+}
+
+/**
+ * The process-backed families of one pass (resets the pass's degraded flag).
+ * @param {ProbeFacts | null} facts
+ * @returns {Set<string>}
+ */
+function processFamiliesLive(sessions, facts) {
   _probeDegraded = false;
   const live = new Set();
 
-  // Four detection families, one union. Each process-backed family still
-  // requires a generating turn (idle-open TUIs are not live). Open-fd hits
-  // are extra mid-write recall only when the recording is still generating.
+  // Four detection families, one union (the open-fd family follows the
+  // process-backed ones, openFdPending). Each process-backed family still
+  // requires a generating turn (idle-open TUIs are not live).
   // cursor-cloud is deliberately absent: no local process exists for a
   // cloud agent, so its imported recordings are never reported live.
-  for (const p of findLiveGrok()) live.add(p);
-  for (const p of findLiveClaude()) live.add(p);
-  for (const p of findLiveAgentSessions(sessions)) live.add(p);
+  for (const p of findLiveGrok(facts)) live.add(p);
+  for (const p of findLiveClaude(facts)) live.add(p);
+  for (const p of findLiveAgentSessions(sessions, facts)) live.add(p);
+  return live;
+}
 
-  // Open-fd probing stays as extra recall for an agent caught mid-write,
-  // but only when that recording is still generating. A completed idle
-  // jsonl that is merely held open (idle-open TUI) is not live.
-  const fdCandidates = [];
-  for (const s of sessions) {
-    if (now - sessionMtimeMs(s) > 120_000) continue;
-    if (s.source === "codex" || s.source === "cursor" || s.source === "factory") fdCandidates.push(s);
-  }
-  if (fdCandidates.length) {
-    const open = new Set(findLiveByOpenFd(fdCandidates.map((s) => s.path)));
-    for (const s of fdCandidates) {
-      if (open.has(s.path) && recordingIsGenerating(s.source, s.path)) live.add(s.path);
-    }
-  }
-
+/** Degraded-pass carry-forward, then install the pass as the memo. */
+function finishPass(live, sessions, now) {
   if (_probeDegraded) {
     // Inconclusive pass: rather than reporting a confident empty set, keep what
     // the last clean pass saw — but only the paths whose RECORDING still reads
@@ -500,6 +646,26 @@ function recordingStillExists(path) {
   } catch {
     return false;
   }
+}
+
+/** True when tests injected probe doubles (detection must then run on this thread). */
+export function liveProbeDepsInjected() {
+  return _findLiveClaudeDeps !== null;
+}
+
+/** True while the 5s live-session memo still answers detectLiveSessions. */
+export function liveSessionsMemoFresh(now = Date.now()) {
+  return _liveCache !== null && now - _liveCacheTime < 5000;
+}
+
+/**
+ * Install a detection pass computed off the main thread (fact hlv1) as the
+ * memo, timed from when that pass started, so the next detectLiveSessions
+ * call answers from it instead of probing synchronously.
+ */
+export function installLiveSessionsSnapshot(livePaths, startedAt) {
+  _liveCache = [...livePaths];
+  _liveCacheTime = startedAt;
 }
 
 /** Milliseconds timestamp of the current live-session memo (0 when cold). Used for API body cache keys. */

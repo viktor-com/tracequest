@@ -5,7 +5,7 @@
  * or parser/index format version. Rebuildable — deleting
  * the file only costs one refresh.
  */
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { sessionMtimeMs } from "../sessions/session-list.js";
@@ -17,15 +17,10 @@ export function insightsCachePath(home = homedir()) {
   return join(process.env.TRACEQUEST_CACHE_DIR || join(home, ".cache", "tracequest"), "insights.json");
 }
 
-/** Cached records by session path; a missing, corrupt or stale-version file is {}. */
-export function loadInsights(home = homedir()) {
-  let text;
-  try {
-    text = readFileSync(insightsCachePath(home), "utf8");
-  } catch (err) {
-    if (isIndexDiskExpectedErr(err)) return {};
-    throw err;
-  }
+/** The last parse, reused while the file is the same (fact inslm). */
+let _parsed = null;
+
+function parseInsightsText(text) {
   try {
     const doc = JSON.parse(text);
     if (!doc || doc._v !== INSIGHTS_VERSION || doc._indexVersion !== INDEX_VERSION || typeof doc.sessions !== "object") return {};
@@ -33,6 +28,35 @@ export function loadInsights(home = homedir()) {
   } catch {
     return {};
   }
+}
+
+/**
+ * Cached records by session path; a missing, corrupt or stale-version file is {}.
+ * The file is parsed again only when its identity, size or mtime changed, so
+ * the server pays one stat per request instead of a multi-MB JSON parse. The
+ * returned object is shared: callers must not mutate it.
+ */
+export function loadInsights(home = homedir()) {
+  const path = insightsCachePath(home);
+  let st;
+  try {
+    st = statSync(path, { bigint: true });
+  } catch (err) {
+    if (isIndexDiskExpectedErr(err)) return {};
+    throw err;
+  }
+  const stamp = `${st.ino}:${st.size}:${st.mtimeNs}`;
+  if (_parsed && _parsed.path === path && _parsed.stamp === stamp) return _parsed.records;
+  let text;
+  try {
+    text = readFileSync(path, "utf8");
+  } catch (err) {
+    if (isIndexDiskExpectedErr(err)) return {};
+    throw err;
+  }
+  const records = parseInsightsText(text);
+  _parsed = { path, stamp, records };
+  return records;
 }
 
 export function saveInsights(records, home = homedir()) {
@@ -62,7 +86,9 @@ export async function refreshInsights({ sessions, parseSession, home = homedir()
     const s = list[i];
     const mtime = sessionMtimeMs(s);
     const cached = previous[s.path];
-    if (cached && cached.mtime === mtime && cached.v === INSIGHTS_VERSION) {
+    // A record without timedEvents predates the event-span active time (fact
+    // insac): its activeMs may count session bounds, so it is analysed again.
+    if (cached && cached.mtime === mtime && cached.v === INSIGHTS_VERSION && typeof cached.timedEvents === "number") {
       records[s.path] = cached;
       reused += 1;
       continue;

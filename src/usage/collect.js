@@ -45,6 +45,8 @@ export async function collectUsageLimits({
       fetchImpl,
       readFile,
       credentialText: creds.claudeJson ?? null,
+      // Credentials fetched from another host never fall back to this Mac's Keychain.
+      ...(credentials ? { readKeychain: async () => null } : {}),
       timeoutMs,
     }),
     collectCodexUsage({

@@ -9,6 +9,7 @@ import {
   handleMarkdown,
   handleRaw,
   handleCompare,
+  handleApiViewSession,
 } from "./route-handlers.js";
 import { handleApiSessions, handleApiSearch } from "./route-handlers-api.js";
 import {
@@ -38,6 +39,7 @@ export const ROUTE_MAP = {
   "/api/insights": handleApiInsights,
   "/api/sessions": handleApiSessions,
   "/api/sessions/live": handleApiSessionsLive,
+  "/api/view-session": handleApiViewSession,
   "/api/search": handleApiSearch,
   "/api/agents": handleApiAgents,
   "/api/usage-limits": handleApiUsageLimits,

@@ -9,6 +9,7 @@ import {
   defaultDataRoots,
 } from "./server-live-reload.js";
 import { createHotModuleSnapshotImporter } from "./hot-module-snapshot.js";
+import { registerStockSessionModules } from "./session-pool.js";
 
 const __srcDir = new URL("..", import.meta.url);
 const home = homedir();
@@ -74,6 +75,8 @@ export async function hotModules() {
       chatHomePage: rp.chatHomePage,
       liveSessionPage: rp.liveSessionPage,
     };
+    // The session workers run the same (current) source (fact hps4).
+    registerStockSessionModules(_mods);
     _lastV = v;
   }
   return _mods;

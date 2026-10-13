@@ -67,19 +67,11 @@ export const TRAPS = Object.freeze([
   { id: "ci-wait", label: "CI wait", hint: "The agent polled or watched CI instead of working." },
 ]);
 
-const SHELL_TOOL_RE = /^(?:bash|shell|exec|exec_command|run_terminal_cmd|run_command|execute|local_shell|terminal|monitor)$/i;
 const FILE_TOOL_RE = /^(?:read|edit|write|multiedit|notebookedit|create|str_replace|str_replace_editor|apply_patch|view|read_file|write_file|edit_file|search_replace)$/i;
 const WRITE_TOOL_RE = /^(?:edit|write|multiedit|notebookedit|create|str_replace|str_replace_editor|apply_patch|write_file|edit_file|search_replace)$/i;
 
-export function isShellTool(name) {
-  return SHELL_TOOL_RE.test(String(name ?? ""));
-}
-
-/** Tools that can legitimately run for minutes: commands, sub-agents, fetches, MCP. */
-export function isLongRunningTool(name) {
-  const n = String(name ?? "");
-  return isShellTool(n) || /^(?:agent|task|subagent|spawn_agent|skill|webfetch|web_fetch|websearch|web_search|wait|write_stdin)$/i.test(n) || /^mcp__/.test(n);
-}
+// The tool predicates worked time uses too (fact durac): one definition.
+export { isLongRunningTool, isShellTool } from "../sessions/active-time.js";
 
 export function isFileTool(name) {
   return FILE_TOOL_RE.test(String(name ?? ""));

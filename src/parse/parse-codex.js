@@ -5,8 +5,16 @@ import { forEachJsonlLineFromFile, parseJsonlLine } from "./jsonl-read.js";
 import { normalizeToolName, enrichToolEvent, extractToolResultText } from "./parse-enrich.js";
 import {
   isCodexDisplayableUserText,
+  isCodexHeadUnread,
   isCodexIndexSkippableLine,
   isCodexIndexedJsonlLine,
+  codexCommandExecutionCmd,
+  codexProvenanceModel,
+  codexSubThreadItem,
+  codexSubThreadItemText,
+  codexThreadSettingsModel,
+  readCodexLineHead,
+  resolveCodexModel,
   visitCodexEventMsgPayload,
 } from "./codex-event-msg.js";
 import { isCodexToolPayloadError, visitCodexResponseItemPayload } from "./codex-response-item.js";
@@ -102,13 +110,26 @@ export function parseCodex(filePath) {
   let sessionId = null;
   let cwd = null;
   let model = null;
+  let provider = null;
+  let settingsModel = null;
+  let provenanceModel = null;
   let gitBranch = null;
   let turnId = 0;
+  // Newer codex rollouts record prompts only as user response_items; older
+  // ones also emit event_msg user_message. Count each prompt once (fact cdxprompt).
+  let sawUserMessage = false;
 
   const toolEvents = [];
   let pendingTokens = null;
+  let runningTotal = null;
   const pendingToolCalls = [];
   const pendingToolResults = [];
+
+  // Most rollout bytes are lines parseCodex never reads (event_msg
+  // item_completed mirrors of the session's own thread, compacted history,
+  // usage records): decide from the line's leading bytes and skip those
+  // without decoding or JSON.parse (fact cdxsub3).
+  const keepLine = (buf, start, end) => !isCodexHeadUnread(readCodexLineHead(buf, start, end), sessionId);
 
   forEachJsonlLineFromFile(filePath, (rawLine) => {
     if (isCodexIndexSkippableLine(rawLine)) return;
@@ -119,7 +140,8 @@ export function parseCodex(filePath) {
       const p = line.payload || {};
       sessionId = p.id;
       cwd = p.cwd;
-      model = p.model_provider || "codex";
+      provider = p.model_provider || "codex";
+      if (!provenanceModel) provenanceModel = codexProvenanceModel(p);
       if (p.git?.branch) gitBranch = p.git.branch;
     }
 
@@ -132,20 +154,70 @@ export function parseCodex(filePath) {
 
     if (line.type === "event_msg") {
       visitCodexEventMsgPayload(line.payload, {
+        onThreadSettings(p) {
+          if (!settingsModel) settingsModel = codexThreadSettingsModel(p);
+        },
+        // A review sub-thread's items exist in this rollout only as
+        // item_completed events: its prompt, commands and replies (fact cdxsub).
+        onItemCompleted(p) {
+          const item = codexSubThreadItem(p, sessionId);
+          if (!item) return;
+          if (item.type === "UserMessage") {
+            const text = codexSubThreadItemText(item);
+            if (isCodexDisplayableUserText(text)) {
+              events.push({ type: "user", timestamp: line.timestamp, text: capContent(text, 500), uuid: `codex-user-${turnId++}` });
+            }
+          } else if (item.type === "AgentMessage") {
+            const text = codexSubThreadItemText(item);
+            if (text) {
+              events.push({
+                type: "assistant", timestamp: line.timestamp, text: capContent(text, 500), toolCalls: [],
+                tokens: { input: 0, output: 0, cacheHit: 0, cacheWrite: 0 }, stopReason: "end_turn", uuid: `codex-asst-${turnId++}`,
+              });
+            }
+          } else if (item.type === "CommandExecution") {
+            const id = item.id || `codex-exec-${turnId}`;
+            const isError = isCodexToolPayloadError(item);
+            events.push({
+              type: "assistant", timestamp: line.timestamp, text: "", toolCalls: [{ id, name: "Bash", input: codexCommandExecutionCmd(item) }],
+              tokens: { input: 0, output: 0, cacheHit: 0, cacheWrite: 0 }, stopReason: "tool_use", uuid: `codex-asst-${turnId++}`,
+            });
+            const output = item.aggregated_output || item.stdout || item.stderr || "";
+            events.push({ type: "tool_result", timestamp: line.timestamp, toolUseId: id, text: capContent(output, 1000), isError, errorConfirmed: isError, uuid: `codex-result-${turnId++}` });
+          }
+        },
         onUserMessage(p) {
+          sawUserMessage = true;
           const text = p.message || "";
           if (isCodexDisplayableUserText(text)) {
             events.push({ type: "user", timestamp: line.timestamp, text: capContent(text, 500), uuid: `codex-user-${turnId++}` });
           }
         },
         onTokenCount(p) {
-          const u = p.info.last_token_usage;
-          pendingTokens = {
-            input: u.input_tokens || 0,
-            output: u.output_tokens || 0,
-            cacheHit: u.cached_input_tokens || 0,
-            cacheWrite: 0,
-          };
+          // Every request since the previous assistant message counts: take the
+          // growth of the running total (repeated token_count rows add nothing),
+          // or the per-request usage when the rollout carries no running total.
+          const total = p.info.total_token_usage;
+          let used = p.info.last_token_usage;
+          if (total) {
+            const grew = !runningTotal || (
+              (total.input_tokens || 0) >= (runningTotal.input_tokens || 0)
+              && (total.output_tokens || 0) >= (runningTotal.output_tokens || 0)
+              && (total.cached_input_tokens || 0) >= (runningTotal.cached_input_tokens || 0));
+            if (grew) {
+              used = {
+                input_tokens: (total.input_tokens || 0) - (runningTotal?.input_tokens || 0),
+                output_tokens: (total.output_tokens || 0) - (runningTotal?.output_tokens || 0),
+                cached_input_tokens: (total.cached_input_tokens || 0) - (runningTotal?.cached_input_tokens || 0),
+              };
+            }
+            runningTotal = total;
+          }
+          if (!used) return;
+          if (!pendingTokens) pendingTokens = { input: 0, output: 0, cacheHit: 0, cacheWrite: 0 };
+          pendingTokens.input += used.input_tokens || 0;
+          pendingTokens.output += used.output_tokens || 0;
+          pendingTokens.cacheHit += used.cached_input_tokens || 0;
         },
         onPatchApplyEnd(p) {
           let summary = "";
@@ -216,6 +288,10 @@ export function parseCodex(filePath) {
 
       // Legacy content-block function_call_output (user role)
       if (role === "user") {
+        if (ptype === "message") {
+          const text = content.filter((b) => b?.type === "input_text" && isCodexDisplayableUserText(b.text || "")).map((b) => b.text).join("\n");
+          if (text) events.push({ type: "user", timestamp: line.timestamp, text: capContent(text, 500), uuid: `codex-user-${turnId++}`, fromResponseItem: true });
+        }
         for (const block of content) {
           if (block?.type === "function_call_output") {
             const output = extractToolResultText(block.output);
@@ -258,10 +334,9 @@ export function parseCodex(filePath) {
           events.push({ type: "tool_result", timestamp: te.ts, toolUseId: te.id, text: capContent(te.output, 1000), isError: te.isError, errorConfirmed: te.isError, uuid: `codex-result-${turnId++}` });
         }
 
-        const tokens = pendingTokens || { input: 0, output: 0, cacheHit: 0, cacheWrite: 0 };
-        pendingTokens = null;
-
         if (textBlocks.length || toolCalls.length) {
+          const tokens = pendingTokens || { input: 0, output: 0, cacheHit: 0, cacheWrite: 0 };
+          pendingTokens = null;
           events.push({
             type: "assistant", timestamp: line.timestamp, text: capContent(textBlocks.join("\n"), 500), toolCalls,
             tokens,
@@ -270,7 +345,7 @@ export function parseCodex(filePath) {
         }
       }
     }
-  });
+  }, { keep: keepLine });
 
   // Flush any remaining pending tool calls/results as a standalone assistant turn
   if (pendingToolCalls.length || toolEvents.length) {
@@ -294,8 +369,27 @@ export function parseCodex(filePath) {
         tokens: pendingTokens || { input: 0, output: 0, cacheHit: 0, cacheWrite: 0 },
         stopReason: "tool_use", uuid: `codex-asst-${turnId++}`,
       });
+      pendingTokens = null;
     }
   }
 
-  return buildSession({ sessionId, cwd, model, gitBranch, events, source: "codex" });
+  const sessionEvents = sawUserMessage ? events.filter((e) => !e.fromResponseItem) : events;
+  for (const e of sessionEvents) delete e.fromResponseItem;
+
+  // Usage reported after the last assistant message still belongs to the
+  // session: credit it to that message so the totals match the rollout's.
+  if (pendingTokens) {
+    for (let i = sessionEvents.length - 1; i >= 0; i--) {
+      if (sessionEvents[i].type !== "assistant") continue;
+      const t = sessionEvents[i].tokens;
+      t.input += pendingTokens.input;
+      t.output += pendingTokens.output;
+      t.cacheHit += pendingTokens.cacheHit;
+      break;
+    }
+  }
+
+  // The model id comes from turn_context, else thread_settings_applied or the
+  // base_instructions provenance; model_provider ("openai") only names the vendor (facts cdxmodel, cdxprov).
+  return buildSession({ sessionId, cwd, model: resolveCodexModel({ turnModel: model, settingsModel, provenanceModel, provider }), gitBranch, events: sessionEvents, source: "codex" });
 }

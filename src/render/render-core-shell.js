@@ -39,21 +39,29 @@ export const CORE_SHELL_JS = `
     return base;
   }
 
-  function updateUrl() {
+  // The page's own URL keeps embed=1 so a reload inside the Runs flyout stays
+  // the compact embedded view; permalinks (buildFilterSearchParams) never carry it.
+  function pageSearchParams() {
     var base = buildFilterSearchParams();
+    if (new URLSearchParams(window.location.search).get('embed') === '1') base.set('embed', '1');
+    return base;
+  }
+
+  function updateUrl() {
+    var base = pageSearchParams();
     var hash = window.location.hash || '';
     var url = window.location.pathname + '?' + base.toString() + hash;
     history.replaceState(null, '', url);
   }
 
   function setChapterHash(idx) {
-    var base = buildFilterSearchParams();
+    var base = pageSearchParams();
     var url = window.location.pathname + '?' + base.toString() + '#chapter-' + idx;
     history.replaceState(null, '', url);
   }
 
   function clearChapterHash() {
-    var base = buildFilterSearchParams();
+    var base = pageSearchParams();
     var url = window.location.pathname + '?' + base.toString();
     history.replaceState(null, '', url);
   }
@@ -97,6 +105,7 @@ export const CORE_SHELL_JS = `
       expandAllChapterDetails();
       window.print();
     });
+    printBtn._tqOn = true;
 
     const mdUrl = '/markdown?' + params.toString();
     const mdIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -118,6 +127,7 @@ export const CORE_SHELL_JS = `
       ev.stopPropagation();
       if (typeof openShareModal === 'function') openShareModal();
     });
+    shareBtn._tqOn = true;
 
     // Served from tracequest (not an exported or shared file): a way back.
     const root = typeof document !== 'undefined' ? document.documentElement : null;
@@ -147,10 +157,14 @@ export const CORE_SHELL_JS = `
         metaItem('model', session.model || '—'),
         metaItem('cwd', session.cwd || '—'),
         metaItem('branch', session.gitBranch || '—'),
-        metaItem('duration', session.durationMs > 0 ? (session.timesEstimated ? '~' : '') + formatDuration(session.durationMs) : '—'),
+        metaItem('duration', sessionDurationMs() > 0 ? (session.timesEstimated ? '~' : '') + formatDuration(sessionDurationMs()) : '—'),
         metaItem('started', session.startTime && session.eventCount > 0 ? (session.timesEstimated ? '~' : '') + new Date(session.startTime).toLocaleString() : '—'),
       )
     );
+  }
+
+  function sessionDurationMs() {
+    return session.summary ? session.summary.durationMs : session.durationMs;
   }
 
   function metaItem(label, value) {
@@ -327,17 +341,20 @@ export const CORE_SHELL_JS = `
     const wrap = h('div', { className: 'session-summary' });
     const items = [];
 
-    if (session.durationMs > 0) {
-      items.push(summaryItem('duration', formatDuration(session.durationMs), 'ss-duration'));
+    if (sessionDurationMs() > 0) {
+      items.push(summaryItem('duration', formatDuration(sessionDurationMs()), 'ss-duration'));
     }
 
-    const totalCost = estimateParsedStatsCost(session.model, s);
+    // The served view carries the per-session summary the session list shows
+    // (session.summary); a standalone export without one falls back to the parse.
+    const sum = session.summary;
+    const totalCost = sum ? estimateCost(sum) : estimateParsedStatsCost(session.model, s);
     const costLabel = fmtCost(totalCost);
     if (costLabel) {
       items.push(summaryItem('cost', costLabel, 'ss-cost'));
     }
 
-    const totalTok = s.totalInputTokens + s.totalOutputTokens;
+    const totalTok = sum ? sum.totalTokens : s.totalInputTokens + s.totalOutputTokens;
     if (totalTok > 0) {
       items.push(summaryItem('tokens', fmtTokens(totalTok), 'ss-tokens'));
     }

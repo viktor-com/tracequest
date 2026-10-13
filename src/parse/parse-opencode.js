@@ -137,7 +137,12 @@ export function parseOpenCode(uri) {
   }
 
   try {
-    return buildSession({ sessionId, cwd, model, gitBranch: null, events, source: "opencode" });
+    const session = buildSession({ sessionId, cwd, model, gitBranch: null, events, source: "opencode" });
+    // The mtime discovery records for this session, so the view can use its
+    // session index entry while that entry is current (sessionSummary).
+    const updated = sessionRow ? new Date(sessionRow.time_updated || sessionRow.time_created).getTime() : NaN;
+    if (Number.isFinite(updated)) session.sourceMtimeMs = updated;
+    return session;
   } finally {
     db.close();
   }

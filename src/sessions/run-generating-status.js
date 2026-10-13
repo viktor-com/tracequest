@@ -22,9 +22,27 @@ const AGENT_SOURCE = {
   droid: "factory",
 };
 
-export function runGeneratingStatus(dead, sessionPath, generating) {
+/**
+ * How long a live pane may go without a linked recording and still count as
+ * starting up (fact hlorph). An agent writes its recording within seconds of
+ * its first turn; a pane that never produced one is waiting, not generating.
+ */
+export const RUN_UNLINKED_RUNNING_MS = 5 * 60 * 1000;
+
+/**
+ * How long after a run started, or after the last event in its recording, an
+ * idle run with its pane open is still current, pinned above the session
+ * list (fact hlpin). Six hours is a long break in a working day; a run idle
+ * longer has been left, and is an ordinary row.
+ */
+export const RUN_IDLE_PINNED_MS = 6 * 60 * 60 * 1000;
+
+export function runGeneratingStatus(dead, sessionPath, generating, startedAt = null, now = Date.now()) {
   if (dead) return "exited";
-  if (!sessionPath) return "running";
+  if (!sessionPath) {
+    const started = startedAt == null ? NaN : Date.parse(startedAt);
+    return Number.isFinite(started) && now - started > RUN_UNLINKED_RUNNING_MS ? "idle" : "running";
+  }
   return generating ? "running" : "idle";
 }
 

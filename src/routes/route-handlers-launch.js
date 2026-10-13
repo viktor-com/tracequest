@@ -11,7 +11,8 @@
  */
 import { statSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { send } from "../server/server-http.js";
+import { isHubMode, send, sendFinished } from "../server/server-http.js";
+import { redactBody } from "../server/redact-body.js";
 import {
   available,
   capturePane,
@@ -19,7 +20,9 @@ import {
   killWindow,
   listWindows,
   newWindow,
+  runTableAsync,
   sendKeys,
+  setSessionOption,
   tmuxSession,
 } from "../mux/tmux.js";
 import {
@@ -36,8 +39,10 @@ import {
   linkRunSession,
   readRunTombstones,
   recordRunTombstone,
+  RUN_LEDGER_OPTION,
   sessionFreshnessPath,
   syncRunLedger,
+  TOMBSTONE_OPTION,
 } from "../sessions/run-session-link.js";
 import { parseSession } from "../parse/index.js";
 import { peekSession } from "../sessions/session-peek.js";
@@ -46,9 +51,12 @@ import { resolveSessionPathForRequest } from "../server/server-helpers.js";
 import { sourceForSessionPath } from "../server/server-session-path.js";
 import { isImportedHostSession } from "../sessions/session-discovery-paths.js";
 import { detectLiveSessions } from "../sessions/live-sessions.js";
+import { warmLiveSessions } from "../sessions/live-sessions-async.js";
 import { launchedRunGenerating, runGeneratingStatus } from "../sessions/run-generating-status.js";
 import { sessionHash } from "../sessions/session-hash.js";
 import { hotModules } from "../server/server-state.js";
+import { openLiveSessionOffThread, usesSessionWorkers } from "../server/session-pool.js";
+import { resolveSessionsAndIndexAsync, sessionFinderForHandle } from "./route-cache.js";
 
 /** A run id IS a tmux window id — "@" + digits, nothing else. */
 const RUN_ID_RE = /^@\d+$/;
@@ -238,13 +246,15 @@ export function runActivityLine(session, dead) {
  * per poll while the recording is idle). Any failure degrades to null —
  * the list must answer even when a recording vanishes mid-request.
  */
-function runActivityFor(linkedPath, dead, deps, source) {
+function runActivityFor(linkedPath, dead, deps, source, onSession = null) {
   if (!linkedPath) return null;
   const statImpl = deps.statSync || statSync;
   try {
     const st = statImpl(sessionFreshnessPath(linkedPath));
     const etag = `${Math.floor(st.mtimeMs)}-${st.size}`;
-    return runActivityLine(parsedRunSession(linkedPath, etag, deps, source).session, dead);
+    const { session } = parsedRunSession(linkedPath, etag, deps, source);
+    if (onSession) onSession(session);
+    return runActivityLine(session, dead);
   } catch {
     return null;
   }
@@ -333,8 +343,8 @@ function runsFromWindows(windows, deps = {}) {
       { pid: w.panePid },
       deps,
     );
-    const status = runGeneratingStatus(w.dead, linked.path, generating);
-    runs.push({
+    const status = runGeneratingStatus(w.dead, linked.path, generating, w.options.tq_started);
+    const run = {
       id: w.id,
       agent: w.options.tq_agent,
       cwd: w.options.tq_cwd,
@@ -346,11 +356,18 @@ function runsFromWindows(windows, deps = {}) {
       link: linked.link,
       attribution: linked.attribution ?? null,
       state: status,
-      activity: runActivityFor(linked.path, w.dead, deps),
+      activity: null,
+    };
+    run.activity = runActivityFor(linked.path, w.dead, deps, undefined, (session) => {
+      if (session?.endTime) _runLastEvent.set(run, session.endTime);
     });
+    runs.push(run);
   }
   return runs;
 }
+
+/** A run object -> the time of the last event in its recording (fact hlpin). */
+const _runLastEvent = new WeakMap();
 
 /**
  * /api/runs — method-dispatched (the route map never inspects methods):
@@ -369,9 +386,75 @@ export async function handleApiRuns(req, res, url, _deps = null) {
  * tmux/session is absent.
  */
 async function handleApiRunsList(_req, res, _url, _deps = null) {
-  const deps = _deps || {};
-  const windows = (deps.listWindows || listWindows)();
-  sendJson(res, { runs: runsFromWindows(windows, deps) });
+  const runs = await launchedRuns(_deps);
+  sendJson(res, { runs, runActiveAt: runsActiveAt(runs) });
+}
+
+/**
+ * When each linked run was last active, keyed by run id (fact hlpin): the
+ * time of the last event in its recording, from the parse its activity line
+ * already made. The session list pins an idle run only while it is current.
+ * Not the file's mtime: an agent left open for weeks still appends
+ * bookkeeping lines (Claude Code's bridge-session records) without any turn.
+ * It travels beside the runs, so a run object keeps its shape; a run whose
+ * recording has no timed event is left out (the list goes by its start).
+ */
+export function runsActiveAt(runs) {
+  const out = {};
+  for (const r of runs) {
+    const ms = Date.parse(_runLastEvent.get(r) || "");
+    if (Number.isFinite(ms)) out[r.id] = new Date(ms).toISOString();
+  }
+  return out;
+}
+
+/**
+ * The tmux side of the run list — the windows, the run ledger and the
+ * tombstones — from one tmux call that does not block the event loop. With
+ * tmux switched off (TRACEQUEST_SKIP_TMUX=1) the ledger and the tombstones
+ * are never read or written, as readRunTombstones and syncRunLedger decide
+ * through available() themselves.
+ */
+export function readRunTable() {
+  const tmuxOff = process.env.TRACEQUEST_SKIP_TMUX === "1";
+  return runTableAsync(tmuxOff ? [] : [RUN_LEDGER_OPTION, TOMBSTONE_OPTION]).then((table) => ({ ...table, tmuxOff }));
+}
+
+/**
+ * The runs GET /api/runs answers right now. GET /sessions embeds the same
+ * list so its first paint already has the run rows it pins (fact hnr13);
+ * `sessions` is the full session list when the caller already has it, and
+ * `table` a readRunTable() the caller started early.
+ */
+export async function launchedRuns(_deps = null, sessions = null, table = null) {
+  let deps = _deps || {};
+  let windows;
+  if (_deps) {
+    windows = (deps.listWindows || listWindows)();
+  } else {
+    // The ledger sync and the linker read the options from the same tmux
+    // snapshot as the windows; writes still go to tmux.
+    const snapshot = await (table || readRunTable());
+    windows = snapshot.windows;
+    const options = snapshot.sessionOptions;
+    deps = {
+      getSessionOption: (name) => options.get(name) ?? "",
+      setSessionOption: (name, value) => {
+        setSessionOption(name, value);
+        options.set(name, String(value));
+      },
+      syncRunLedger: snapshot.tmuxOff ? () => {} : syncRunLedger,
+    };
+  }
+  if (!_deps && windows.some((w) => w.options?.tq_agent)) {
+    // Probe off-thread against the full session list (fact hlruns), so run
+    // status never runs pgrep/lsof on this thread and never installs a live
+    // memo computed from the run recordings alone.
+    const all = sessions || (await resolveSessionsAndIndexAsync(null, await hotModules())).sessions;
+    await warmLiveSessions(all);
+    deps = { ...deps, findSessions: () => all };
+  }
+  return runsFromWindows(windows, deps);
 }
 
 /**
@@ -714,6 +797,42 @@ const RUN_SESSION_MEMO_MAX = 16;
 /** Reset the parsed-session memo (tests only). */
 export function clearRunSessionMemo() {
   _runSessionMemo.clear();
+  _liveJsonMemo.clear();
+}
+
+/**
+ * /api/sessions/live with the server's own modules (facts hps4, hlj1): the
+ * whole-file parse and the serialization of its session and chapters run in a
+ * session worker, once per etag, so neither a first open nor an open after
+ * the recording grew blocks the event loop, and an open of an unchanged
+ * recording only splices the memoized JSON into its answer. Concurrent
+ * requests for one etag share one job. path -> { etag, promise }.
+ */
+const _liveJsonMemo = new Map();
+
+function liveSessionJson(path, etag, source) {
+  const hit = _liveJsonMemo.get(path);
+  if (hit && hit.etag === etag) {
+    _liveJsonMemo.delete(path);
+    _liveJsonMemo.set(path, hit);
+    return hit.promise;
+  }
+  const entry = { etag, promise: null };
+  entry.promise = openLiveSessionOffThread(path, source, { hub: isHubMode() }).promise.then((reply) => {
+    if (reply.failed) throw new Error(`session worker: ${reply.failed}`);
+    if (reply.error != null) throw new Error(reply.error);
+    return reply;
+  });
+  // A failed parse is not remembered: the next poll tries again.
+  entry.promise.catch(() => {
+    if (_liveJsonMemo.get(path) === entry) _liveJsonMemo.delete(path);
+  });
+  _liveJsonMemo.delete(path);
+  _liveJsonMemo.set(path, entry);
+  if (_liveJsonMemo.size > RUN_SESSION_MEMO_MAX) {
+    _liveJsonMemo.delete(_liveJsonMemo.keys().next().value);
+  }
+  return entry.promise;
 }
 
 function parsedRunSession(path, etag, deps, source) {
@@ -1038,15 +1157,24 @@ export async function handleApiSessionsLive(_req, res, url, _deps = null) {
   // once a second, so resolving a hash used to walk every discovery root twice
   // per poll: once inside resolveSessionPathForRequest and once here.
   let sessions = null;
-  const scanOnce = findSessions
+  // Serve resolves the list without blocking the event loop (fact hsa1):
+  // the last discovered list when it knows the handle, else an async refresh.
+  const listOnce = findSessions ? await sessionFinderForHandle(handle, deps) : null;
+  const scanOnce = listOnce
     ? () => {
-        if (sessions === null) sessions = findSessions(null);
+        if (sessions === null) sessions = listOnce(null);
         return sessions;
       }
     : null;
   const path = resolveSessionPathForRequest(handle, res, scanOnce);
   if (!path) return; // 400/403/404/409 already answered
   if (sessions === null) sessions = scanOnce ? scanOnce() : [];
+  if (findSessions?.async) {
+    // Liveness reads the CURRENT list (a recording created since the last
+    // scan must count), resolved and probed off the event loop (fact hlv1).
+    ({ sessions } = await resolveSessionsAndIndexAsync(null, deps));
+    if (!deps.detectLiveSessions) await warmLiveSessions(sessions);
+  }
   const s = sessions.find((x) => x.path === path) || null;
   const livePaths = (deps.detectLiveSessions || detectLiveSessions)(sessions);
   const live = livePaths.includes(path);
@@ -1074,6 +1202,20 @@ export async function handleApiSessionsLive(_req, res, url, _deps = null) {
   if (url.searchParams.get("etag") === etag) {
     return sendJson(res, { ...meta, etag, unchanged: true, session: null, chapters: null });
   }
+  if (usesSessionWorkers(deps)) {
+    let json;
+    try {
+      json = await liveSessionJson(path, etag, source);
+    } catch (err) {
+      return sendError(res, 500, `failed to parse session: ${errorMessage(err)}`);
+    }
+    // The same document JSON.stringify({ ...meta, etag, session, chapters })
+    // gives: the small head here (redacted in hub mode), the rest finished by
+    // the worker (fact hlj1).
+    const json0 = JSON.stringify({ ...meta, etag });
+    const head = isHubMode() ? redactBody(json0, "json") : json0;
+    return sendFinished(res, 200, [head.slice(0, -1), json.body], "application/json; charset=utf-8");
+  }
   let entry;
   try {
     entry = parsedRunSession(path, etag, deps, source);
@@ -1090,11 +1232,15 @@ export async function handleApiSessionsLive(_req, res, url, _deps = null) {
  */
 export async function handleApiAgents(_req, res, _url, _deps = null) {
   const deps = _deps || {};
-  const muxAvailable = (deps.muxAvailable || available)();
-  const agents = (deps.detectAgents || detectAgents)();
+  // Hub mode answers every launch/continue with 403 (fact hubro), so it
+  // advertises nothing to launch with: pages then render no Continue/New run.
+  const hub = isHubMode();
+  const muxAvailable = hub ? false : (deps.muxAvailable || available)();
+  const agents = hub ? [] : (deps.detectAgents || detectAgents)();
   const body = JSON.stringify({
     mux: { available: muxAvailable, session: tmuxSession() },
     agents,
+    ...(hub ? { readOnly: true } : {}),
   });
   send(res, 200, body, "application/json; charset=utf-8");
 }

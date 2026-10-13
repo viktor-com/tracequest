@@ -217,7 +217,8 @@ function matchTerm(session, term, now, ctx) {
   switch (term.key) {
     case 'project': result = getCachedProjectLower(session).includes(v); break;
     case 'source': result = getCachedSourceLower(session) === v; break;
-    case 'host': result = getCachedHostLower(session) === v; break;
+    // The hub's own sessions carry no host id; host:local names them (fact hlhost).
+    case 'host': { const h = getCachedHostLower(session); result = h === v || (v === 'local' && h === ''); break; }
     case 'tool': {
       const toolsLower = getCachedToolsLower(session);
       result = false;

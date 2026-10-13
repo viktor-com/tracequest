@@ -121,7 +121,12 @@ export const CORE_JS = `  ${FORM_FIELD_GUARD_SRC}
         if (!Object.prototype.hasOwnProperty.call(attrs, k)) continue;
         const v = attrs[k];
         if (k === 'className') el.className = v;
-        else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
+        else if (k.startsWith('on')) {
+          el.addEventListener(k.slice(2).toLowerCase(), v);
+          // A live update keeps such an element only while its attributes,
+          // which carry the handler's data, are unchanged (fact hnr6).
+          el._tqOn = true;
+        }
         else el.setAttribute(k, v);
       }
     }

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 
 export const SESSION_HASH_RE = /^[0-9a-f]{8}$/;
 
@@ -30,4 +31,41 @@ export function resolveSessionHandle(input, sessions) {
   if (matches.length === 1) return { status: "ok", session: matches[0], matches };
   if (matches.length > 1) return { status: "ambiguous", session: null, matches };
   return { status: "not-found", session: null, matches };
+}
+
+/**
+ * Hash → path memo of every session file discovery has reported. Lets a hash
+ * handle (/view?id=<hash>) resolve without walking the whole session tree
+ * again: a memo hit is used only when exactly one remembered file carries the
+ * hash and it still exists; anything else falls back to a fresh discovery.
+ */
+const _hashByPath = new Map();
+const _pathsByHash = new Map();
+
+export function rememberSessionPaths(sessions) {
+  if (!Array.isArray(sessions)) return;
+  for (const s of sessions) {
+    const path = s?.path;
+    if (typeof path !== "string" || !path || _hashByPath.has(path)) continue;
+    const hash = sessionHash(path);
+    _hashByPath.set(path, hash);
+    let paths = _pathsByHash.get(hash);
+    if (!paths) _pathsByHash.set(hash, (paths = new Set()));
+    paths.add(path);
+  }
+}
+
+/** The one existing remembered session file whose hash is `hash`, else null. */
+export function rememberedSessionPathForHash(hash) {
+  if (!isSessionHash(hash)) return null;
+  const paths = _pathsByHash.get(hash);
+  if (!paths || paths.size !== 1) return null;
+  const [path] = paths;
+  if (path.includes("://") || !existsSync(path)) return null;
+  return path;
+}
+
+export function forgetSessionPathsForTests() {
+  _hashByPath.clear();
+  _pathsByHash.clear();
 }

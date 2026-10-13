@@ -10,23 +10,23 @@ function sessionIndexCoreUrl() {
 }
 
 const { indexSession } = await import(sessionIndexCoreUrl().href);
-const { indexOpenCode } = await import(new URL("./session-index-opencode.js", import.meta.url).href);
-const { openOpenCodeDbReadOnly } = await import(
-  new URL("./session-discovery-paths.js", import.meta.url).href,
-);
+const { openCodeIndexer } = await import(new URL("./session-index-opencode.js", import.meta.url).href);
 
 try {
   const results = {};
-  let opencodeDb = null;
-  for (const session of sessions) {
-    if ((session.source || "claude") === "opencode") {
-      if (!opencodeDb) opencodeDb = openOpenCodeDbReadOnly();
-      results[session.path] = indexOpenCode(session, opencodeDb.db);
-    } else {
-      results[session.path] = indexSession(session);
+  let opencode = null;
+  try {
+    for (const session of sessions) {
+      if ((session.source || "claude") === "opencode") {
+        if (!opencode) opencode = openCodeIndexer();
+        results[session.path] = opencode.index(session);
+      } else {
+        results[session.path] = indexSession(session);
+      }
     }
+  } finally {
+    opencode?.close();
   }
-  if (opencodeDb) opencodeDb.db.close();
   port.postMessage(results);
 } catch (err) {
   port.postMessage({ _error: err.message });

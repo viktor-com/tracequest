@@ -5,7 +5,7 @@
  */
 import { send } from "../server/server-http.js";
 import { getInitialFilter, hotModules } from "../server/server-state.js";
-import { resolveSessionsAndIndex } from "./route-cache.js";
+import { resolveSessionsAndIndexAsync } from "./route-cache.js";
 import { loadInsightsData, parseInsightsQuery } from "../insights/load.js";
 import { insightsPage } from "../browser/insights-page.js";
 
@@ -13,7 +13,7 @@ async function insightsData(url, _deps) {
   const mods = _deps || await hotModules();
   const query = parseInsightsQuery(url.searchParams);
   if (_deps?.loadInsightsData) return _deps.loadInsightsData(query);
-  const { sessions, index } = resolveSessionsAndIndex(getInitialFilter(), mods);
+  const { sessions, index } = await resolveSessionsAndIndexAsync(getInitialFilter(), mods);
   return loadInsightsData({ sessions, index, query });
 }
 

@@ -90,11 +90,29 @@ export const ANALYTICS_CHARTS_JS = `
       ctx.lineTo(x, HEIGHT - 8);
       ctx.stroke();
       ctx.setLineDash([]);
+    }
 
+    // Gap labels share one baseline: place the longest gaps first and drop any
+    // label that would touch one already placed, so they never overprint.
+    ctx.font = '9px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = ink('label', '#5c5c63');
+    ctx.textAlign = 'center';
+    const LABEL_PAD = 6;
+    const LABEL_CHAR_PX = 6; // generous per-character width of the 9px label font
+    const placed = [];
+    const byLength = gaps.slice().sort(function(a, b) { return b.delta - a.delta; });
+    for (const gap of byLength) {
+      const x = gap.idx * colW;
       const label = formatDuration(gap.delta);
-      ctx.font = '9px ' + getComputedStyle(document.body).fontFamily;
-      ctx.fillStyle = ink('label', '#5c5c63');
-      ctx.textAlign = 'center';
+      const half = (label.length * LABEL_CHAR_PX) / 2;
+      const left = Math.max(0, x - half);
+      const right = Math.min(W, x + half);
+      let clear = true;
+      for (let p = 0; p < placed.length; p++) {
+        if (left < placed[p].right + LABEL_PAD && right > placed[p].left - LABEL_PAD) { clear = false; break; }
+      }
+      if (!clear) continue;
+      placed.push({ left: left, right: right });
       ctx.fillText(label, x, HEIGHT - 2);
     }
 
@@ -251,6 +269,7 @@ export const ANALYTICS_CHARTS_JS = `
       });
     });
     row.dataset.tool = tool;
+    row._tqOn = true;
 
     row.appendChild(h('div', { className: 'tool-perf-dot', style: 'background:' + color }));
     var toolDispName = fmtMcpName(tool);
@@ -501,7 +520,7 @@ export const ANALYTICS_CHARTS_JS = `
     let cumulative = 0;
     let hasCost = false;
     for (const ch of chapters) {
-      const cost = estimateChapterTokenCost(session.model, ch.tokens);
+      const cost = estimateChapterTokenCost((session.summary && session.summary.model) || session.model, ch.tokens);
       cumulative += cost;
       chapterCosts.push({ cost, cumulative });
       if (cost > 0) hasCost = true;
@@ -509,7 +528,7 @@ export const ANALYTICS_CHARTS_JS = `
 
     if (!hasCost || cumulative < 0.001) return h('div');
 
-    const totalCostStr = fmtCost(cumulative, { prefix: '$' });
+    const totalCostStr = fmtCost(cumulative, { prefix: '$', min: 0.001 });
     const maxCumulative = cumulative;
     let maxSingle = 0;
     for (let i = 0; i < chapterCosts.length; i++) {

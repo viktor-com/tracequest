@@ -11,6 +11,10 @@ const HTML_HEAD = `<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The first paint waits for the list script below, which renders the
+     embedded rows, count and overview as it runs: no frame shows the list
+     chrome without them and then moves it (fact hlstrip). -->
+<link rel="expect" href="#tq-list-rendered" blocking="render">
 <title>Runs · tracequest</title>
 ${THEME_BOOT_SCRIPT}
 <style>
@@ -127,6 +131,7 @@ ${COMMAND_PALETTE_HTML}
 `;
 const HTML_TAIL = `
 </script>
+<span id="tq-list-rendered" hidden></span>
 </body>
 </html>`;
 

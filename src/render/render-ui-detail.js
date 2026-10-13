@@ -419,7 +419,7 @@ export const UI_DETAIL_JS = `
       parts.push('total: ' + fmtTokens(total));
       tokDiv.appendChild(h('div', { className: 'chapter-token-breakdown' }, parts.join(' \\u00b7 ')));
 
-      var cost = estimateChapterTokenCost(session.model, ch.tokens);
+      var cost = estimateChapterTokenCost((session.summary && session.summary.model) || session.model, ch.tokens);
       const costLabel = fmtCost(cost, { min: 0.001 });
       if (costLabel) {
         tokDiv.appendChild(h('div', { className: 'chapter-token-cost' }, costLabel));

@@ -144,6 +144,9 @@ export const INTERACTIONS_NAV_JS = `
     chapterEls.forEach(function(el) {
       var idx = parseInt(el.id.replace('chapter-', ''), 10);
       if (isNaN(idx)) return;
+      // A live update keeps unchanged chapter elements: bind them once.
+      if (el._tqTooltip) return;
+      el._tqTooltip = true;
 
       el.addEventListener('mouseenter', function() {
         if (el.classList.contains('expanded')) return;

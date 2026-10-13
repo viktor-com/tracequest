@@ -1,4 +1,5 @@
 import {
+  estimateCost,
   estimateParsedStatsCost,
   estimateChapterTokenCost,
   getModelRates,
@@ -60,11 +61,13 @@ import { CORE_JS } from "./render-core.js";
 import { INTERACTIONS_JS } from "./render-interactions.js";
 import { MAIN_JS } from "./render-main.js";
 import { SHARE_JS } from "./render-share.js";
+import { LIVE_UPDATE_JS } from "./render-live-update.js";
 import { joinBundleParts } from "./join-bundle.js";
 import { fnSrc } from "../utils/fn-src.js";
 
 const INCLUDES_LOWER_SRC = `${INDEX_OF_LOWER_JS}\n${fnSrc(includesLower)}`;
 const GET_MODEL_RATES_SRC = fnSrc(getModelRates);
+const ESTIMATE_COST_SRC = fnSrc(estimateCost);
 const ESTIMATE_PARSED_STATS_COST_SRC = estimateParsedStatsCost.toString();
 const ESTIMATE_CHAPTER_TOKEN_COST_SRC = estimateChapterTokenCost.toString();
 const FMT_TOKENS_SRC = fnSrc(fmtTokens);
@@ -210,6 +213,7 @@ export const RENDER_BUNDLE_PARTS = [
   { id: "wrapper-open", source: "(function() {" },
   { id: "includesLower", source: INCLUDES_LOWER_SRC },
   { id: "getModelRates", source: GET_MODEL_RATES_SRC },
+  { id: "estimateCost", source: ESTIMATE_COST_SRC },
   { id: "estimateParsedStatsCost", source: ESTIMATE_PARSED_STATS_COST_SRC },
   { id: "estimateChapterTokenCost", source: ESTIMATE_CHAPTER_TOKEN_COST_SRC },
   { id: "fmtTokens", source: FMT_TOKENS_SRC },
@@ -223,6 +227,7 @@ export const RENDER_BUNDLE_PARTS = [
   { id: "main", source: MAIN_JS },
   { id: "interactions", source: "  " + INTERACTIONS_JS },
   { id: "share", source: "  " + SHARE_JS },
+  { id: "live-update", source: LIVE_UPDATE_JS },
   { id: "bootstrap-readUrlState", source: "  // Read URL state before first render" },
   { id: "bootstrap-readUrlState-call", source: "  readUrlState();" },
   { id: "bootstrap-render", source: "  render();" },

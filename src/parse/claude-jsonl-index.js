@@ -61,6 +61,19 @@ export function isClaudeFallbackSearchLine(line, start, end) {
   return isClaudeIndexedJsonlLine(line, start, end) || isClaudeToolResultStderrLine(line, start, end);
 }
 
+/**
+ * A Claude Code user or assistant line by the substring test the sidecar's
+ * index_claude routes lines with; the session span ends at the last one (fact durcl).
+ */
+export function isClaudeMessageLine(line) {
+  return (
+    line.includes('"type":"user"') ||
+    line.includes('"type": "user"') ||
+    line.includes('"type":"assistant"') ||
+    line.includes('"type": "assistant"')
+  );
+}
+
 /** Parsed Claude JSONL row role for index/peek routing (null when not user/assistant). */
 export function claudeIndexedLineKind(parsedObj) {
   if (parsedObj?.type === "user" && !parsedObj.isMeta) return "user";

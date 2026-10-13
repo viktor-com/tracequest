@@ -2,6 +2,7 @@ import { normalizeToolName } from "../parse/parse-enrich.js";
 import { collapseWhitespace, isDisplayableUserText, truncateFirstPrompt } from "../parse/parse-utils.js";
 import { emptyIndexMeta, buildIndexMeta } from "./session-meta.js";
 import { accumulateTermFreqs, TOKENIZER_INPUT_CAP } from "./search-tokenizer.js";
+import { addOpenCodeRow, createActiveSpan, createOpenCodeSteps, openCodeTimeMs } from "./active-time.js";
 import { openOpenCodeDbAtPath, parseOpenCodeUri, resolveOpenCodeDbForUri, withOpenCodeDb } from "./session-discovery-paths.js";
 
 /** Part types whose body is tokenized for BM25 search (text + reasoning). */
@@ -20,7 +21,7 @@ const OPENCODE_MESSAGE_PARTS_SQL = `
   FROM message m
   LEFT JOIN part p ON p.message_id = m.id
   WHERE m.session_id = ?
-  ORDER BY m.time_created
+  ORDER BY m.time_created, m.id
 `;
 
 /**
@@ -56,18 +57,15 @@ export function accumulateOpenCodeMessages(db, sessionId) {
   let inputTokens = 0;
   let outputTokens = 0;
   let cacheReadTokens = 0;
-  let firstTs = null;
-  let lastTs = null;
+  // Worked time over the messages in time order (fact durac).
+  const span = createActiveSpan();
+  const steps = createOpenCodeSteps();
   /** @type {Map<string,number>} */
   const termFreqs = new Map();
   const tfBudget = [TOKENIZER_INPUT_CAP];
 
   forEachOpenCodeMessagePart(db, sessionId, ({ messageId, timeCreated, message, part }) => {
-    const tc = timeCreated;
-    if (tc != null && tc !== "") {
-      if (firstTs == null || tc < firstTs) firstTs = tc;
-      if (lastTs == null || tc > lastTs) lastTs = tc;
-    }
+    addOpenCodeRow(span, steps, messageId, message.role, openCodeTimeMs(timeCreated), part?.type === "tool" ? part.tool || "" : null);
     if (!model && message.modelID) model = message.modelID;
     if (message.role === "user" && !seenUserMessages.has(messageId)) {
       seenUserMessages.add(messageId);
@@ -106,11 +104,6 @@ export function accumulateOpenCodeMessages(db, sessionId) {
     }
   });
 
-  let durationMs = 0;
-  if (firstTs != null && lastTs != null) {
-    durationMs = new Date(lastTs).getTime() - new Date(firstTs).getTime();
-  }
-
   return {
     firstPrompt,
     model,
@@ -122,9 +115,49 @@ export function accumulateOpenCodeMessages(db, sessionId) {
     outputTokens,
     cacheReadTokens,
     totalTokens: inputTokens + outputTokens,
-    durationMs,
+    durationMs: span.activeMs,
     termFreqs: termFreqs.size ? termFreqs : null,
   };
+}
+
+/**
+ * Indexes OpenCode sessions for one index pass, each from its own database: a
+ * local session (opencode://<id>) from ~/.local/share/opencode/opencode.db, a
+ * session imported from a hub host (opencode://<host>/<id>) from that host's
+ * copy under the hostsDir. One read-only handle per database, closed by close().
+ */
+export function openCodeIndexer() {
+  /** dbPath → read-only handle, or null when it could not be opened. */
+  const dbs = new Map();
+  return {
+    index(session) {
+      const dbPath = resolveOpenCodeDbForUri(session.path || "");
+      let db = dbs.get(dbPath);
+      if (db === undefined) {
+        try {
+          db = openOpenCodeDbAtPath(dbPath).db;
+        } catch {
+          db = null; // indexOpenCode opens it itself and reports the failure per session
+        }
+        dbs.set(dbPath, db);
+      }
+      return indexOpenCode(session, db);
+    },
+    close() {
+      for (const db of dbs.values()) db?.close();
+      dbs.clear();
+    },
+  };
+}
+
+/**
+ * True when an OpenCode index entry read no message of its session: no chapter,
+ * no token and no model. Discovery lists only sessions with at least three
+ * messages, so such an entry was read from a database that does not hold the
+ * session (or could not be read) and is indexed again rather than reused.
+ */
+export function openCodeEntryReadNoMessages(entry) {
+  return !entry.chapters && !entry.totalTokens && !entry.model;
 }
 
 export function indexOpenCode(session, db = null) {

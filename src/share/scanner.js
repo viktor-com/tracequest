@@ -83,8 +83,18 @@ export function isAllowlisted(match, allowlist) {
 
 export function scanText(text, compiledRules, ctx, findings, seen) {
   if (!text || typeof text !== "string") return;
+  // Lower-case once per text, not once per rule: hub mode scans whole pages.
+  // (Kept self-contained: the share bundle inlines this function's source.)
+  let lower = null;
   for (const rule of compiledRules) {
-    if (!textHasKeywords(text, rule.keywords)) continue;
+    if (rule.keywords.length) {
+      if (lower === null) lower = text.toLowerCase();
+      let hasKeyword = false;
+      for (const kw of rule.keywords) {
+        if (lower.includes(kw)) { hasKeyword = true; break; }
+      }
+      if (!hasKeyword) continue;
+    }
     rule.regex.lastIndex = 0;
     let m;
     while ((m = rule.regex.exec(text)) !== null) {
