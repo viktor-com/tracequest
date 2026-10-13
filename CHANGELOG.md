@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-13
+
+### Fixed
+
+- **Hub is fast and stable on real data** (about 15.6k sessions from 4 machines). Parsing and finishing a session page, redaction, live-session probes and the sidecar run off the server's event loop, so a large session never stalls other requests and SIGTERM always stops the server. The session list renders its rows before its search catalog. Pages never reload themselves: live updates patch the page in place and keep selection, focus and scroll; the watch page polls one request at a time and every few seconds while the session is idle.
+- A session's duration is the time it was worked on, not its calendar span. Codex model ids and review sub-threads are read from more rollout shapes. Idle or orphaned launched runs are no longer pinned to the top of Runs as running.
+
 ## [0.2.0] - 2026-10-09
 
 ### Changed
