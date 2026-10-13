@@ -104,7 +104,8 @@ function renderDashboard() {
   // and the run-page shell counter use. The chrome word is running, not live.
   var liveN = liveNow();
   if (liveN) html += dashStat('<span class="dash-live-n" style="color:var(--ok)">' + liveN + '</span>', 'running');
-  html += dashStat(totalSessions, 'runs');
+  function grouped(n) { return Number(n || 0).toLocaleString('en-US'); }
+  html += dashStat(grouped(totalSessions), 'runs');
   html += dashStat(fmtCostVal, 'cost', growthBadge('cost'));
   html += dashStat(totalTokFmt || '--', 'tokens', growthBadge('tokens'));
   html += dashStat(fmtPct(cacheHitPct, { hideZero: true }), 'cache', growthBadge('cache'));
