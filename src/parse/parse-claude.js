@@ -1,6 +1,6 @@
 import { claudeUsageDelta, billingTokenUsage } from "./token-accounting.js";
 import { basename } from "node:path";
-import { isDisplayableUserText, capContent } from "./parse-utils.js";
+import { isDisplayableUserText, capContent, stripKandevContext } from "./parse-utils.js";
 import { forEachJsonlLineFromFile, parseJsonlLine } from "./jsonl-read.js";
 import { errorPattern, extractToolResultText, enrichToolEvent, joinTextContentBlocks } from "./parse-enrich.js";
 import { buildSession } from "./parse-session-build.js";
@@ -39,6 +39,7 @@ export function parseClaude(filePath, source = "claude") {
       } else if (Array.isArray(content)) {
         text = joinTextContentBlocks(content);
       }
+      text = stripKandevContext(text);
       if (isDisplayableUserText(text)) {
         events.push({ type: "user", timestamp: line.timestamp, text: capContent(text, 500), uuid: line.uuid });
       }

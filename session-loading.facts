@@ -1,0 +1,18 @@
+
+# codex
+- label: Opening Codex recordings preserves tool calls and results in recording order, including a final tool-only turn and prompts in mixed event and response formats
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Codex tool order" test/bin/session-loading.e2e.test.js
+  tags: [session-loading, implemented]
+- label: Codex task failures appear in the served transcript instead of leaving a prompt-only session
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Codex failed task" test/bin/session-loading.e2e.test.js
+  tags: [session-loading, implemented]
+
+# loading
+- label: The default chat page discovers and indexes sessions off the request event loop so other requests remain responsive during its first load
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "cold default chat" test/bin/session-loading.e2e.test.js
+  tags: [session-loading, implemented]
+
+# parsing
+- label: Claude and Codex transcripts retain user messages that follow leading Kandev context blocks, while context-only messages stay hidden
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "wrapped user prompts" test/bin/session-loading.e2e.test.js
+  tags: [session-loading, implemented]
