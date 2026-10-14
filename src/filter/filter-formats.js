@@ -99,13 +99,30 @@ export function formatDuration(ms, opts = {}) {
   return h + 'h ' + rm + 'm';
 }
 
-/** Per-million-token USD rates for Claude Sonnet vs Opus (input / output / cache read). */
+/** Standard USD rates per million tokens, verified 2026-10-14.
+ * https://www.anthropic.com/claude-opus-5-5
+ * https://platform.claude.com/docs/en/models/opus-5-5/whats-new-opus-5-5
+ * https://developers.openai.com/api/docs/models/gpt-6.1-sol
+ * https://developers.openai.com/api/docs/models/gpt-5.6-sol
+ */
 export function getModelRates(model) {
-  const isOpus = includesLower(model || '', 'opus');
+  const name = (model || '').toLowerCase();
+  if (/^(?:claude-)?opus-5-5(?:$|-)/.test(name)) {
+    return { inRate: 4, outRate: 20, cacheReadRate: 0.2, cacheWriteRate: 5, cacheWrite1hRate: 8 };
+  }
+  if (/^gpt-6\.1-sol(?:$|-)/.test(name)) {
+    return { inRate: 2, outRate: 10, cacheReadRate: 0.1, cacheWriteRate: 2.5 };
+  }
+  if (/^gpt-5\.6-sol(?:$|-)/.test(name)) {
+    return { inRate: 4, outRate: 20, cacheReadRate: 0.4, cacheWriteRate: 5 };
+  }
+  const isOpus = includesLower(name, 'opus');
   return {
     inRate: isOpus ? 15 : 3,
     outRate: isOpus ? 75 : 15,
     cacheReadRate: isOpus ? 1.5 : 0.3,
+    cacheWriteRate: isOpus ? 18.75 : 3.75,
+    cacheWrite1hRate: isOpus ? 30 : 6,
   };
 }
 
@@ -159,43 +176,45 @@ export function computeGrade(s) {
   return s._gradeCache;
 }
 
-/**
- * Session cost, billed like a chapter (estimateChapterTokenCost): cache reads at
- * the cache-read rate, output at the output rate, and every other token of
- * totalTokens (uncached input plus cache writes) at the input rate. inputTokens
- * means different things per source (Codex counts its cached tokens in it; the
- * sidecar keeps Claude cache writes out of it), so the uncached share comes from
- * the total; an entry without totalTokens bills inputTokens as uncached input.
- */
+/** Session USD estimate from recorded billing categories, else legacy totals. */
 export function estimateCost(s) {
   if (s._costCache !== undefined) return s._costCache;
-  if (!s.inputTokens && !s.outputTokens) return 0;
-  const { inRate, outRate, cacheReadRate } = getModelRates(s.model);
-  const cacheRead = s.cacheReadTokens || 0;
-  const output = s.outputTokens || 0;
-  const uncachedInput = s.totalTokens > 0 ? Math.max(0, s.totalTokens - output - cacheRead) : (s.inputTokens || 0);
-  s._costCache = (uncachedInput * inRate + cacheRead * cacheReadRate + output * outRate) / 1000000;
+  const rates = getModelRates(s.model);
+  const tokens = s.billingTokens;
+  const cacheRead = tokens ? tokens.cacheHit || 0 : s.cacheReadTokens || 0;
+  const output = tokens ? tokens.output || 0 : s.outputTokens || 0;
+  const writes = tokens ? tokens.cacheWrite || 0 : 0;
+  const oneHour = tokens ? tokens.cacheWrite1h || 0 : 0;
+  const input = tokens ? tokens.input || 0 : s.totalTokens > 0 ? s.totalTokens - output : (s.inputTokens || 0) + cacheRead;
+  const base = Math.max(0, input - cacheRead - writes);
+  s._costCache = (base * rates.inRate + cacheRead * rates.cacheReadRate + output * rates.outRate
+    + Math.max(0, writes - oneHour) * (rates.cacheWriteRate || rates.inRate)
+    + oneHour * (rates.cacheWrite1hRate || rates.cacheWriteRate || rates.inRate)) / 1e6;
   return s._costCache;
 }
 
-/** Per-chapter USD cost from token breakdown (input includes cache reads). */
+/** Chapter USD estimate; billingTokens retain each request's pricing weights. */
 export function estimateChapterTokenCost(model, tokens) {
   if (!tokens) return 0;
-  const { inRate, outRate, cacheReadRate } = getModelRates(model);
-  const input = tokens.input || 0;
-  const cacheHit = tokens.cacheHit || 0;
-  const output = tokens.output || 0;
-  const uncachedInput = Math.max(0, input - cacheHit);
-  return (uncachedInput * inRate + cacheHit * cacheReadRate + output * outRate) / 1e6;
+  const rates = getModelRates(model);
+  const t = tokens.billingTokens || tokens;
+  const cacheRead = t.cacheHit || 0;
+  const writes = t.cacheWrite || 0;
+  const oneHour = t.cacheWrite1h || 0;
+  const base = Math.max(0, (t.input || 0) - cacheRead - writes);
+  return (base * rates.inRate + cacheRead * rates.cacheReadRate + (t.output || 0) * rates.outRate
+    + Math.max(0, writes - oneHour) * (rates.cacheWriteRate || rates.inRate)
+    + oneHour * (rates.cacheWrite1hRate || rates.cacheWriteRate || rates.inRate)) / 1e6;
 }
 
-/** Cost from full-session parse stats (totalInputTokens includes cache reads). */
+/** Full-session parse stats use the same billing categories as list and chapters. */
 export function estimateParsedStatsCost(model, stats) {
   if (!stats) return 0;
   return estimateChapterTokenCost(model, {
     input: stats.totalInputTokens || 0,
     cacheHit: stats.totalCacheHit || 0,
     output: stats.totalOutputTokens || 0,
+    billingTokens: stats.billingTokens,
   });
 }
 

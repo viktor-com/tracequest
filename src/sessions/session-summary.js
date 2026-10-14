@@ -30,6 +30,7 @@ function summaryFromIndexEntry(session, entry) {
     inputTokens: entry.inputTokens || 0,
     outputTokens: entry.outputTokens || 0,
     cacheReadTokens: entry.cacheReadTokens || 0,
+    ...(entry.billingTokens ? { billingTokens: entry.billingTokens } : {}),
   };
 }
 
@@ -66,6 +67,7 @@ function summaryFromParse(session) {
     inputTokens: source === "codex" ? input : Math.max(0, input - cacheRead - cacheWrite),
     outputTokens: output,
     cacheReadTokens: cacheRead,
+    ...(st.billingTokens ? { billingTokens: st.billingTokens } : {}),
   };
 }
 

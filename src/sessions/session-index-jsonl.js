@@ -1,3 +1,4 @@
+import { claudeUsageDelta, billingTokenUsage, addTokenUsage } from "../parse/token-accounting.js";
 import { closeSync, existsSync, fstatSync, openSync, readFileSync, readSync } from "node:fs";
 import { join } from "node:path";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
@@ -190,19 +191,27 @@ function accumulateErrors(line, state, extractToolResultChunks) {
   }
 }
 
-function accumulateAssistantTokensAndText(line, state) {
+function accumulateAssistantTokensAndText(line, state, parsedObj) {
   if (line.includes('"input_tokens"')) {
-    const usage = {};
-    const tokMatch = line.match(/"input_tokens":\s*(\d+)/);
-    const outMatch = line.match(/"output_tokens":\s*(\d+)/);
-    const cacheMatch = line.match(/"cache_read_input_tokens":\s*(\d+)/);
-    const cacheWriteMatch = line.match(/"cache_creation_input_tokens":\s*(\d+)/);
-    if (tokMatch) usage.input_tokens = parseInt(tokMatch[1], 10);
-    if (outMatch) usage.output_tokens = parseInt(outMatch[1], 10);
-    if (cacheMatch) usage.cache_read_input_tokens = parseInt(cacheMatch[1], 10);
-    if (cacheWriteMatch) usage.cache_creation_input_tokens = parseInt(cacheWriteMatch[1], 10);
-    const rolled = rollupClaudeUsage(usage);
-    state.inputTokens += rolled.input - rolled.cacheHit;
+    let rolled;
+    if (state.claudeUsageSeen) {
+      rolled = claudeUsageDelta(parsedObj, state.claudeUsageSeen);
+    } else {
+      const usage = {};
+      const tokMatch = line.match(/"input_tokens":\s*(\d+)/);
+      const outMatch = line.match(/"output_tokens":\s*(\d+)/);
+      const cacheMatch = line.match(/"cache_read_input_tokens":\s*(\d+)/);
+      const cacheWriteMatch = line.match(/"cache_creation_input_tokens":\s*(\d+)/);
+      if (tokMatch) usage.input_tokens = parseInt(tokMatch[1], 10);
+      if (outMatch) usage.output_tokens = parseInt(outMatch[1], 10);
+      if (cacheMatch) usage.cache_read_input_tokens = parseInt(cacheMatch[1], 10);
+      if (cacheWriteMatch) usage.cache_creation_input_tokens = parseInt(cacheWriteMatch[1], 10);
+      rolled = rollupClaudeUsage(usage);
+    }
+    if (state.claudeUsageSeen) {
+      state.billingTokens = addTokenUsage(state.billingTokens || {}, billingTokenUsage(rolled, parsedObj?.message?.model));
+    }
+    state.inputTokens += rolled.input - rolled.cacheHit - (state.claudeUsageSeen ? rolled.cacheWrite : 0);
     state.cacheReadTokens += rolled.cacheHit;
     state.outputTokens += rolled.output;
     state.totalTokens += rolled.input + rolled.output;
@@ -418,7 +427,7 @@ function indexClaudeFamilyJsonl(filePath, {
           if (onAssistantLine) {
             parsedObj = onAssistantLine(line, state, parsedObj) || parsedObj;
           }
-          if (useClaudeAccumulators) accumulateAssistantTokensAndText(line, state);
+          if (useClaudeAccumulators) accumulateAssistantTokensAndText(line, state, parsedObj);
         } else if (onIndexedLine) {
           parsedObj = onIndexedLine(line, state, parsedObj) || parsedObj;
         }
@@ -482,6 +491,7 @@ export function indexClaudeJsonl(filePath) {
       return parsedObj;
     },
     onAssistantLine(_line, state, parsedObj) {
+      if (!state.claudeUsageSeen) state.claudeUsageSeen = new Map();
       if (!state.model && parsedObj?.message?.model) {
         state.model = parsedObj.message.model;
       }

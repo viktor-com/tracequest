@@ -1,3 +1,4 @@
+import { billingTokenUsage, addTokenUsage } from "../parse/token-accounting.js";
 import { normalizeToolName } from "../parse/parse-enrich.js";
 import { codexCommandExecutionCmd, codexSubThreadItem, visitCodexEventMsgPayload } from "../parse/codex-event-msg.js";
 import { isCodexToolPayloadError, visitCodexResponseItemPayload } from "../parse/codex-response-item.js";
@@ -26,6 +27,16 @@ export function accumulateCodexContentFunctionCall(block, filePath, state) {
 export function accumulateCodexTokenCount(info, state) {
   const u = info?.total_token_usage || info?.last_token_usage;
   if (!u) return;
+  const prev = state._billingTotal || {};
+  const total = info?.total_token_usage;
+  const used = total ? {
+    input: Math.max(0, (u.input_tokens || 0) - (prev.input_tokens || 0)),
+    output: Math.max(0, (u.output_tokens || 0) - (prev.output_tokens || 0)),
+    cacheHit: Math.max(0, (u.cached_input_tokens || 0) - (prev.cached_input_tokens || 0)),
+    cacheWrite: Math.max(0, (u.cache_write_input_tokens || 0) - (prev.cache_write_input_tokens || 0)),
+  } : { input: u.input_tokens || 0, output: u.output_tokens || 0, cacheHit: u.cached_input_tokens || 0, cacheWrite: u.cache_write_input_tokens || 0 };
+  if (total) state._billingTotal = total;
+  state.billingTokens = addTokenUsage(state.billingTokens || {}, billingTokenUsage(used, state.model));
   const inTok = u.input_tokens || 0;
   const outTok = u.output_tokens || 0;
   const cache = u.cached_input_tokens || 0;

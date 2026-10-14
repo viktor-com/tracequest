@@ -95,6 +95,7 @@ export function buildIndexMetaFromState(state, { defaultModel = null, durationMs
     toolCounts: state.toolCounts,
     chapters: state.chapters,
     ...tok,
+    ...(state.billingTokens ? { billingTokens: state.billingTokens } : {}),
     durationMs: durationMs ?? durationMsFromState(state),
     errors: state.errors,
     files,

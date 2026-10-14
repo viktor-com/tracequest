@@ -1,3 +1,5 @@
+import { addTokenUsage } from "./token-accounting.js";
+
 function charsFromToolResults(toolCalls, toolResultsByUseId) {
   let chars = 0;
   for (const tc of toolCalls) {
@@ -79,6 +81,7 @@ function processSessionEvents(events) {
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
   let totalCacheHit = 0;
+  let billingTokens = null;
   let tokensEstimated = false;
 
   if (assistants.length > 0) {
@@ -99,6 +102,9 @@ function processSessionEvents(events) {
       totalInputTokens += e.tokens.input;
       totalOutputTokens += e.tokens.output;
       totalCacheHit += e.tokens.cacheHit;
+      if (e.tokens.billingTokens) {
+        billingTokens = addTokenUsage(billingTokens || {}, e.tokens.billingTokens);
+      }
       if (e.tokens.estimated) tokensEstimated = true;
     }
   }
@@ -112,6 +118,7 @@ function processSessionEvents(events) {
       totalInputTokens,
       totalOutputTokens,
       totalCacheHit,
+      ...(billingTokens ? { billingTokens } : {}),
       errors,
       toolCounts,
       tokensEstimated,

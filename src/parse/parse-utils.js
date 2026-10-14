@@ -1,7 +1,7 @@
 /**
  * Normalize Claude assistant usage into parse-layer token fields.
  * `input` rolls up base + cache read + cache write (matches chapter stats);
- * cacheHit/cacheWrite stay split for cost (input − cacheHit bills uncached + writes).
+ * Cache reads and writes stay split for their respective billing rates.
  */
 export function rollupClaudeUsage(usage = {}) {
   const cacheHit = usage.cache_read_input_tokens || 0;
@@ -12,6 +12,7 @@ export function rollupClaudeUsage(usage = {}) {
     output: usage.output_tokens || 0,
     cacheHit,
     cacheWrite,
+    ...(usage.cache_creation?.ephemeral_1h_input_tokens ? { cacheWrite1h: usage.cache_creation.ephemeral_1h_input_tokens } : {}),
   };
 }
 

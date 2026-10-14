@@ -1,3 +1,4 @@
+import { billingTokenUsage, addTokenUsage } from "./token-accounting.js";
 import { readFileSync, openSync, readSync, closeSync, fstatSync } from "node:fs";
 import { normalizeProjectFolder } from "../server/server-session-path.js";
 import { safeSlice, capContent, parseToolArgs } from "./parse-utils.js";
@@ -218,6 +219,10 @@ export function parseCodex(filePath) {
           pendingTokens.input += used.input_tokens || 0;
           pendingTokens.output += used.output_tokens || 0;
           pendingTokens.cacheHit += used.cached_input_tokens || 0;
+          pendingTokens.billingTokens = addTokenUsage(pendingTokens.billingTokens || {}, billingTokenUsage({
+            input: used.input_tokens || 0, output: used.output_tokens || 0,
+            cacheHit: used.cached_input_tokens || 0, cacheWrite: used.cache_write_input_tokens || 0,
+          }, model || settingsModel || provenanceModel));
         },
         onPatchApplyEnd(p) {
           let summary = "";
@@ -385,6 +390,7 @@ export function parseCodex(filePath) {
       t.input += pendingTokens.input;
       t.output += pendingTokens.output;
       t.cacheHit += pendingTokens.cacheHit;
+      if (pendingTokens.billingTokens) t.billingTokens = addTokenUsage(t.billingTokens || {}, pendingTokens.billingTokens);
       break;
     }
   }

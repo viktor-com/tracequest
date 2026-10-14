@@ -1,5 +1,7 @@
 //! Session indexing and index cache I/O.
 
+use crate::token_accounting::{claude_usage_delta, BillingTokens, CostIndexEntry};
+
 use crate::types::{parse_opencode_timestamp, IndexEntry, Session};
 use memmap2;
 use rayon::prelude::*;
@@ -1153,7 +1155,14 @@ pub(crate) fn grok_event_kind(event_type: Option<&str>, tool_name: Option<&str>)
     }
 }
 
+#[cfg(test)]
 pub(crate) fn index_claude(path: &Path) -> IndexEntry {
+    index_claude_with_cost(path).meta
+}
+
+fn index_claude_with_cost(path: &Path) -> CostIndexEntry {
+    let mut usage_seen = HashMap::new();
+    let mut billing_tokens = BillingTokens::default();
     let mut first_prompt: Option<String> = None;
     let mut model: Option<String> = None;
     let mut search_text = String::new();
@@ -1231,29 +1240,14 @@ pub(crate) fn index_claude(path: &Path) -> IndexEntry {
                     }
                 }
             }
-            // Tokens
-            if let Some(caps) = INPUT_TOKENS_RE.captures(line) {
-                if let Some(v) = caps.get(1).and_then(|m| m.as_str().parse::<i64>().ok()) {
-                    total_tokens += v;
-                    input_tokens += v;
-                }
-            }
-            if let Some(caps) = OUTPUT_TOKENS_RE.captures(line) {
-                if let Some(v) = caps.get(1).and_then(|m| m.as_str().parse::<i64>().ok()) {
-                    total_tokens += v;
-                    output_tokens += v;
-                }
-            }
-            if let Some(caps) = CACHE_READ_TOKENS_RE.captures(line) {
-                if let Some(v) = caps.get(1).and_then(|m| m.as_str().parse::<i64>().ok()) {
-                    total_tokens += v;
-                    cache_read_tokens += v;
-                }
-            }
-            if let Some(caps) = CACHE_WRITE_TOKENS_RE.captures(line) {
-                if let Some(v) = caps.get(1).and_then(|m| m.as_str().parse::<i64>().ok()) {
-                    total_tokens += v;
-                }
+            // Count message usage once, while retaining all content fragments.
+            if let Ok(record) = serde_json::from_str::<serde_json::Value>(line) {
+                let t = claude_usage_delta(&record, &mut usage_seen);
+                input_tokens += t[0] - t[2] - t[3];
+                output_tokens += t[1];
+                cache_read_tokens += t[2];
+                total_tokens += t[0] + t[1];
+                billing_tokens.add(&t, record["message"]["model"].as_str().unwrap_or(""));
             }
             // Text blocks
             for caps in TEXT_BLOCK_RE.captures_iter(line) {
@@ -1329,22 +1323,25 @@ pub(crate) fn index_claude(path: &Path) -> IndexEntry {
     let mut tools_vec: Vec<String> = tools.into_iter().collect();
     tools_vec.sort_unstable();
 
-    IndexEntry {
-        first_prompt,
-        model,
-        term_freqs: Some(tokenize(&search_text)),
-        tools: tools_vec,
-        tool_counts,
-        chapters,
-        total_tokens,
-        input_tokens,
-        output_tokens,
-        cache_read_tokens,
-        duration_ms,
-        errors,
-        files: files.len() as i32,
-        commits,
-        mtime: 0,
+    CostIndexEntry {
+        meta: IndexEntry {
+            first_prompt,
+            model,
+            term_freqs: Some(tokenize(&search_text)),
+            tools: tools_vec,
+            tool_counts,
+            chapters,
+            total_tokens,
+            input_tokens,
+            output_tokens,
+            cache_read_tokens,
+            duration_ms,
+            errors,
+            files: files.len() as i32,
+            commits,
+            mtime: 0,
+        },
+        billing_tokens: Some(billing_tokens),
     }
 }
 
@@ -1808,7 +1805,7 @@ pub(crate) fn index_codex(path: &Path) -> IndexEntry {
 /// ("openai") only names the vendor and stays the fallback (facts cdxmodel,
 /// cdxprov, mirrors Node indexCodexJsonl).
 pub(crate) fn index_codex_session(path: &Path) -> IndexEntry {
-    let (mut entry, named_model) = index_codex_with_named_model(path);
+    let (mut entry, named_model, _) = index_codex_with_named_model(path);
     if named_model.is_some() {
         entry.model = named_model;
     }
@@ -1902,7 +1899,9 @@ fn codex_command_execution_cmd(item: &serde_json::Value) -> String {
 
 /// One pass over a rollout: the raw entry plus the model id the rollout names
 /// (first turn_context model, else thread_settings_applied, else provenance).
-fn index_codex_with_named_model(path: &Path) -> (IndexEntry, Option<String>) {
+fn index_codex_with_named_model(path: &Path) -> (IndexEntry, Option<String>, BillingTokens) {
+    let mut cost_requests = Vec::new();
+    let mut cost_total = [0i64; 4];
     let mut first_prompt: Option<String> = None;
     let mut model: Option<String> = None;
     let mut search_text = String::new();
@@ -2220,6 +2219,21 @@ fn index_codex_with_named_model(path: &Path) -> (IndexEntry, Option<String>) {
                         .get("cached_input_tokens")
                         .and_then(|v| v.as_i64())
                         .unwrap_or(0);
+                    let writes = usage["cache_write_input_tokens"].as_i64().unwrap_or(0);
+                    let now = [in_tok, out_tok, cache, writes];
+                    let cumulative = p["info"]["total_token_usage"].is_object();
+                    let mut delta = [0; 5];
+                    for i in 0..4 {
+                        delta[i] = if cumulative {
+                            (now[i] - cost_total[i]).max(0)
+                        } else {
+                            now[i]
+                        };
+                    }
+                    if cumulative {
+                        cost_total = now;
+                    }
+                    cost_requests.push(delta);
                     input_tokens = in_tok;
                     output_tokens = out_tok;
                     total_tokens = in_tok + out_tok;
@@ -2256,7 +2270,12 @@ fn index_codex_with_named_model(path: &Path) -> (IndexEntry, Option<String>) {
         commits,
         mtime: 0,
     };
-    (entry, turn_model.or(settings_model).or(provenance_model))
+    let named_model = turn_model.or(settings_model).or(provenance_model);
+    let mut billing = BillingTokens::default();
+    for request in cost_requests {
+        billing.add(&request, named_model.as_deref().unwrap_or(""));
+    }
+    (entry, named_model, billing)
 }
 
 /// Match JS `Math.round(chars / 4)` for non-negative char counts.
@@ -2929,7 +2948,11 @@ const INDEX_META_KEYS: [&str; 2] = ["_v", "_codex"];
 /// Read existing disk cache and return entries whose _v version matches expected.
 #[cfg(test)]
 pub fn read_index_cache(path: &Path, expected_version: i32) -> HashMap<String, IndexEntry> {
-    read_index_cache_with_codex_format(path, expected_version).0
+    read_index_cache_with_codex_format(path, expected_version)
+        .0
+        .into_iter()
+        .map(|(k, v)| (k, v.meta))
+        .collect()
 }
 
 /// Like read_index_cache, plus whether the file's codex entries are in the
@@ -2937,7 +2960,7 @@ pub fn read_index_cache(path: &Path, expected_version: i32) -> HashMap<String, I
 fn read_index_cache_with_codex_format(
     path: &Path,
     expected_version: i32,
-) -> (HashMap<String, IndexEntry>, bool) {
+) -> (HashMap<String, CostIndexEntry>, bool) {
     let raw = match fs::read_to_string(path) {
         Ok(r) => r,
         Err(_) => return (HashMap::new(), false),
@@ -2960,7 +2983,7 @@ fn read_index_cache_with_codex_format(
             if INDEX_META_KEYS.contains(&key.as_str()) {
                 continue;
             }
-            if let Ok(entry) = serde_json::from_value::<IndexEntry>(val.clone()) {
+            if let Ok(entry) = serde_json::from_value::<CostIndexEntry>(val.clone()) {
                 map.insert(key.clone(), entry);
             }
         }
@@ -3010,7 +3033,7 @@ pub const KNOWN_SOURCES: [&str; 7] = [
 /// source must be added here (and to `KNOWN_SOURCES`) to be indexable.
 fn indexer_for(source: &str) -> Option<fn(&Session) -> IndexEntry> {
     match source {
-        "claude" => Some(|s| index_claude(Path::new(&s.path))),
+        "claude" => Some(|s| index_claude_with_cost(Path::new(&s.path)).meta),
         "codex" => Some(|s| index_codex_session(Path::new(&s.path))),
         "cursor" => Some(|s| index_cursor(Path::new(&s.path))),
         "cursor-cloud" => Some(|s| index_cursor_cloud(Path::new(&s.path))),
@@ -3039,7 +3062,7 @@ pub fn build_index(
     version: i32,
     sessions: &[Session],
     search_stale: &HashSet<String>,
-) -> Result<HashMap<String, IndexEntry>, UnknownSourceError> {
+) -> Result<HashMap<String, CostIndexEntry>, UnknownSourceError> {
     let (cache, codex_current) = read_index_cache_with_codex_format(index_path, version);
 
     // Parse session files in parallel with rayon. The cache is read once and
@@ -3083,10 +3106,22 @@ pub fn build_index(
                 }
             }
 
-            let mut entry = if session.source == "opencode" {
-                index_opencode_in(opencode_conns, session)
+            let mut entry = if session.source == "claude" {
+                index_claude_with_cost(Path::new(&session.path))
+            } else if session.source == "codex" {
+                let (mut meta, named_model, billing) =
+                    index_codex_with_named_model(Path::new(&session.path));
+                if named_model.is_some() {
+                    meta.model = named_model;
+                }
+                CostIndexEntry {
+                    meta,
+                    billing_tokens: Some(billing),
+                }
+            } else if session.source == "opencode" {
+                index_opencode_in(opencode_conns, session).into()
             } else {
-                indexer(session)
+                indexer(session).into()
             };
             entry.mtime = mtime;
             Ok((key, entry))
@@ -3095,10 +3130,10 @@ pub fn build_index(
 }
 
 /// Write index.json disk cache — metadata-only (no termFreqs per yb5/9ct).
-pub fn write_index_cache(
+pub fn write_index_cache<T: serde::Serialize>(
     path: &Path,
     version: i32,
-    entries: &HashMap<String, IndexEntry>,
+    entries: &HashMap<String, T>,
 ) -> Result<(), std::io::Error> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
@@ -3113,12 +3148,11 @@ pub fn write_index_cache(
     );
     for (k, v) in entries {
         // Strip full-text payload fields — index.json is metadata only (yb5, 9ct).
-        let mut stripped = v.clone();
-        stripped.term_freqs = None;
-        wrapper.insert(
-            k.clone(),
-            serde_json::to_value(&stripped).unwrap_or(serde_json::Value::Null),
-        );
+        let mut stripped = serde_json::to_value(v).unwrap_or(serde_json::Value::Null);
+        if let Some(obj) = stripped.as_object_mut() {
+            obj.remove("termFreqs");
+        }
+        wrapper.insert(k.clone(), stripped);
     }
     let json = serde_json::to_string(&serde_json::Value::Object(wrapper))?;
     // Write to a sibling temp file and rename it into place so a concurrent
