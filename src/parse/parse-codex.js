@@ -1,7 +1,7 @@
 import { billingTokenUsage, addTokenUsage } from "./token-accounting.js";
 import { readFileSync, openSync, readSync, closeSync, fstatSync } from "node:fs";
 import { normalizeProjectFolder } from "../server/server-session-path.js";
-import { safeSlice, capContent, parseToolArgs } from "./parse-utils.js";
+import { safeSlice, capContent, parseToolArgs, stripKandevContext } from "./parse-utils.js";
 import { forEachJsonlLineFromFile, parseJsonlLine } from "./jsonl-read.js";
 import { normalizeToolName, enrichToolEvent, extractToolResultText } from "./parse-enrich.js";
 import {
@@ -116,15 +116,53 @@ export function parseCodex(filePath) {
   let provenanceModel = null;
   let gitBranch = null;
   let turnId = 0;
-  // Newer codex rollouts record prompts only as user response_items; older
-  // ones also emit event_msg user_message. Count each prompt once (fact cdxprompt).
-  let sawUserMessage = false;
-
-  const toolEvents = [];
+  let lastUserFormat = null;
+  let lastUserEvent = null;
+  let lastUserText = null;
+  const toolCallsById = new Set();
+  const resultsById = new Set();
   let pendingTokens = null;
   let runningTotal = null;
-  const pendingToolCalls = [];
-  const pendingToolResults = [];
+
+  function userMessage(text, timestamp, format) {
+    text = stripKandevContext(text);
+    if (!isCodexDisplayableUserText(text)) return;
+    const previous = events[events.length - 1];
+    const capped = capContent(text, 500);
+    // Only adjacent copies in different dialects are mirrors. A later
+    // response-only prompt must survive an earlier event_msg prompt.
+    if (previous === lastUserEvent && lastUserText === text && lastUserFormat && lastUserFormat !== format) {
+      lastUserFormat = null;
+      return;
+    }
+    events.push({ type: "user", timestamp, text: capped, uuid: `codex-user-${turnId++}` });
+    lastUserFormat = format;
+    lastUserEvent = events[events.length - 1];
+    lastUserText = text;
+  }
+
+  function toolCall(tc, timestamp) {
+    if (tc.id && toolCallsById.has(tc.id)) return;
+    const event = {
+      type: "assistant", timestamp, text: "", toolCalls: [tc],
+      tokens: { input: 0, output: 0, cacheHit: 0, cacheWrite: 0 },
+      stopReason: "tool_use", uuid: `codex-asst-${turnId++}`,
+    };
+    events.push(event);
+    if (tc.id) toolCallsById.add(tc.id);
+  }
+
+  function toolResult(id, output, isError, timestamp) {
+    if (id && resultsById.has(id)) return;
+    const event = { type: "tool_result", timestamp, toolUseId: id, text: capContent(output, 1000), isError, errorConfirmed: isError, uuid: `codex-result-${turnId++}` };
+    events.push(event);
+    if (id) resultsById.add(id);
+  }
+
+  function completedTool(te, timestamp) {
+    toolCall({ id: te.id, name: te.name, input: te.input }, timestamp);
+    toolResult(te.id, te.output, te.isError, timestamp);
+  }
 
   // Most rollout bytes are lines parseCodex never reads (event_msg
   // item_completed mirrors of the session's own thread, compacted history,
@@ -188,11 +226,7 @@ export function parseCodex(filePath) {
           }
         },
         onUserMessage(p) {
-          sawUserMessage = true;
-          const text = p.message || "";
-          if (isCodexDisplayableUserText(text)) {
-            events.push({ type: "user", timestamp: line.timestamp, text: capContent(text, 500), uuid: `codex-user-${turnId++}` });
-          }
+          userMessage(p.message || "", line.timestamp, "event");
         },
         onTokenCount(p) {
           // Every request since the previous assistant message counts: take the
@@ -236,16 +270,19 @@ export function parseCodex(filePath) {
               first = false;
             }
           }
-          toolEvents.push({ ts: line.timestamp, name: "Edit", id: p.call_id, input: summary, isError: isCodexToolPayloadError(p), output: capContent(p.stdout || p.stderr || "", 500) });
+          completedTool({ name: "Edit", id: p.call_id, input: summary, isError: isCodexToolPayloadError(p), output: p.stdout || p.stderr || "" }, line.timestamp);
         },
         onExecCommandEnd(p) {
           const cmd = (p.parsed_cmd?.[0]?.cmd) || (p.command || []).slice(-1)[0] || "";
           const output = capContent(p.aggregated_output || p.stdout || p.stderr || "", 500);
           const isError = isCodexToolPayloadError(p);
-          toolEvents.push({ ts: line.timestamp, name: "Bash", id: p.call_id, input: cmd, isError, output });
+          completedTool({ name: "Bash", id: p.call_id, input: cmd, isError, output }, line.timestamp);
+        },
+        onTaskComplete(p) {
+          if (p.error) toolResult(null, extractToolResultText(p.error.message || p.error), true, line.timestamp);
         },
         onWebSearchEnd(p) {
-          toolEvents.push({ ts: line.timestamp, name: "WebSearch", id: p.call_id, input: p.query || "", isError: false, output: "" });
+          completedTool({ name: "WebSearch", id: p.call_id, input: p.query || "", isError: false, output: "" }, line.timestamp);
         },
       });
     }
@@ -259,35 +296,24 @@ export function parseCodex(filePath) {
       visitCodexResponseItemPayload(payload, {
         onFunctionCall(p) {
           const args = parseToolArgs(p.arguments);
-          const ptc = { ...enrichToolEvent({ id: p.call_id, rawName: p.name, input: args }), ts: line.timestamp };
-          pendingToolCalls.push(ptc);
+          toolCall(enrichToolEvent({ id: p.call_id, rawName: p.name, input: args }), line.timestamp);
         },
         onFunctionCallOutput(p) {
           const output = extractToolResultText(p.output);
-          pendingToolResults.push({
-            callId: p.call_id,
-            output,
-            isError: isCodexToolPayloadError(p),
-            ts: line.timestamp,
-          });
+          toolResult(p.call_id, output, isCodexToolPayloadError(p), line.timestamp);
         },
         onCustomToolCall(p) {
           const name = normalizeToolName(p.name);
           const input = p.input || "";
-          pendingToolCalls.push({ id: p.call_id, name, input: safeSlice(input, 150), ts: line.timestamp });
+          toolCall({ id: p.call_id, name, input: safeSlice(input, 150) }, line.timestamp);
         },
         onCustomToolCallOutput(p) {
           const output = extractToolResultText(p.output);
-          pendingToolResults.push({
-            callId: p.call_id,
-            output,
-            isError: isCodexToolPayloadError(p),
-            ts: line.timestamp,
-          });
+          toolResult(p.call_id, output, isCodexToolPayloadError(p), line.timestamp);
         },
         onWebSearchCall(p) {
           const url = p.action?.url || "";
-          pendingToolCalls.push({ id: p.id || `codex-ws-${turnId++}`, name: "WebSearch", input: url, ts: line.timestamp });
+          toolCall({ id: p.id || `codex-ws-${turnId++}`, name: "WebSearch", input: url }, line.timestamp);
         },
       });
 
@@ -295,7 +321,7 @@ export function parseCodex(filePath) {
       if (role === "user") {
         if (ptype === "message") {
           const text = content.filter((b) => b?.type === "input_text" && isCodexDisplayableUserText(b.text || "")).map((b) => b.text).join("\n");
-          if (text) events.push({ type: "user", timestamp: line.timestamp, text: capContent(text, 500), uuid: `codex-user-${turnId++}`, fromResponseItem: true });
+          userMessage(text, line.timestamp, "response");
         }
         for (const block of content) {
           if (block?.type === "function_call_output") {
@@ -309,34 +335,13 @@ export function parseCodex(filePath) {
       if (role === "assistant") {
         const textBlocks = [];
         const toolCalls = [];
-        const toolCallIds = new Set();
         for (const b of content) {
           if (b?.type === "output_text") textBlocks.push(b.text || "");
           else if (b?.type === "function_call") {
             const args = parseToolArgs(b.arguments ?? "{}");
             const tc = enrichToolEvent({ id: b.call_id, rawName: b.name, input: args });
-            toolCalls.push(tc);
-            toolCallIds.add(tc.id);
+            if (!tc.id || !toolCallsById.has(tc.id)) toolCalls.push(tc);
           }
-        }
-
-        while (pendingToolCalls.length) {
-          const tc = pendingToolCalls.shift();
-          toolCalls.push({ id: tc.id, name: tc.name, input: tc.input });
-          toolCallIds.add(tc.id);
-        }
-        for (const tr of pendingToolResults.splice(0)) {
-          events.push({ type: "tool_result", timestamp: tr.ts, toolUseId: tr.callId, text: capContent(tr.output, 1000), isError: tr.isError, errorConfirmed: tr.isError, uuid: `codex-result-${turnId++}` });
-        }
-
-        // Attach any pending event_msg tool calls to this assistant turn
-        while (toolEvents.length) {
-          const te = toolEvents.shift();
-          if (!toolCallIds.has(te.id)) {
-            toolCalls.push({ id: te.id, name: te.name, input: te.input });
-            toolCallIds.add(te.id);
-          }
-          events.push({ type: "tool_result", timestamp: te.ts, toolUseId: te.id, text: capContent(te.output, 1000), isError: te.isError, errorConfirmed: te.isError, uuid: `codex-result-${turnId++}` });
         }
 
         if (textBlocks.length || toolCalls.length) {
@@ -347,39 +352,13 @@ export function parseCodex(filePath) {
             tokens,
             stopReason: toolCalls.length ? "tool_use" : "end_turn", uuid: `codex-asst-${turnId++}`,
           });
+          for (const tc of toolCalls) if (tc.id) toolCallsById.add(tc.id);
         }
       }
     }
   }, { keep: keepLine });
 
-  // Flush any remaining pending tool calls/results as a standalone assistant turn
-  if (pendingToolCalls.length || toolEvents.length) {
-    const toolCalls = [];
-    while (pendingToolCalls.length) {
-      const tc = pendingToolCalls.shift();
-      toolCalls.push({ id: tc.id, name: tc.name, input: tc.input });
-    }
-    for (const tr of pendingToolResults.splice(0)) {
-      events.push({ type: "tool_result", timestamp: tr.ts, toolUseId: tr.callId, text: capContent(tr.output, 1000), isError: tr.isError, errorConfirmed: tr.isError, uuid: `codex-result-${turnId++}` });
-    }
-    while (toolEvents.length) {
-      const te = toolEvents.shift();
-      toolCalls.push({ id: te.id, name: te.name, input: te.input });
-      events.push({ type: "tool_result", timestamp: te.ts, toolUseId: te.id, text: capContent(te.output, 1000), isError: te.isError, errorConfirmed: te.isError, uuid: `codex-result-${turnId++}` });
-    }
-    if (toolCalls.length) {
-      const ts = toolCalls[0]?.ts || events[events.length - 1]?.timestamp;
-      events.push({
-        type: "assistant", timestamp: ts, text: "", toolCalls,
-        tokens: pendingTokens || { input: 0, output: 0, cacheHit: 0, cacheWrite: 0 },
-        stopReason: "tool_use", uuid: `codex-asst-${turnId++}`,
-      });
-      pendingTokens = null;
-    }
-  }
-
-  const sessionEvents = sawUserMessage ? events.filter((e) => !e.fromResponseItem) : events;
-  for (const e of sessionEvents) delete e.fromResponseItem;
+  const sessionEvents = events;
 
   // Usage reported after the last assistant message still belongs to the
   // session: credit it to that message so the totals match the rollout's.

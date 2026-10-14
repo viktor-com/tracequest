@@ -25,7 +25,7 @@ import { resolveSessionPathForRequest } from "../server/server-helpers.js";
 import { LIVE_RELOAD_SCRIPT, applyAppShell, applyEmbedLayout, esc, withLiveReload } from "../server/server-html-helpers.js";
 import { hotModules, getInitialFilter, modVersion } from "../server/server-state.js";
 import { commandPaletteServeInject, injectCommandPalette, injectSearchCatalog, mountSearchInAppTop, searchCatalogEmbedScript } from "../browser/command-palette.js";
-import { resolveSessionsAndIndex, resolveSessionsAndIndexAsync, sessionFinderForHandle } from "./route-cache.js";
+import { resolveSessionsAndIndexAsync, sessionFinderForHandle } from "./route-cache.js";
 import { attachSessionSummary } from "../sessions/session-summary.js";
 import { buildSearchCatalog, getSearchCatalogAsync } from "./route-handlers-api.js";
 import { launchedRuns, readRunTable, runsActiveAt } from "./route-handlers-launch.js";
@@ -424,7 +424,7 @@ function catalogEmbedFor(sessions, index) {
  * then an exited run still in tmux, then a live external session, then the
  * newest indexed session. Returns { type, id } or null when the corpus is empty.
  */
-export function pickDefaultChatTarget(mods) {
+export async function pickDefaultChatTarget(mods) {
   try {
     const muxOk = (mods.muxAvailable || _muxAvailable)();
     if (muxOk) {
@@ -443,8 +443,9 @@ export function pickDefaultChatTarget(mods) {
   }
 
   if (typeof mods.findSessions !== "function") return null;
-  const { sessions, allSessions } = resolveSessionsAndIndex(null, mods);
+  const { sessions, allSessions } = await resolveSessionsAndIndexAsync(null, mods);
   const list = allSessions ?? sessions ?? [];
+  if (mods.findSessions.async && !mods.detectLiveSessions) await warmLiveSessions(list);
   let livePaths = [];
   try {
     livePaths = (mods.detectLiveSessions || detectLiveSessions)(list) || [];
@@ -470,7 +471,7 @@ async function serveChatHome(_req, res, url, mods) {
   if (id) {
     return serveRunById(res, mods, id);
   }
-  const target = pickDefaultChatTarget(mods);
+  const target = await pickDefaultChatTarget(mods);
   if (target?.type === "run") {
     return serveRunById(res, mods, target.id);
   }

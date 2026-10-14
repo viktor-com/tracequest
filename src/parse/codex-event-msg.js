@@ -1,5 +1,5 @@
 import { lineRangeBounds, lineRangeIncludes, lineRangeIsStreamChunkType } from "./jsonl-line-range.js";
-import { collapseWhitespace, isDisplayableUserText } from "./parse-utils.js";
+import { collapseWhitespace, isDisplayableUserText, stripKandevContext } from "./parse-utils.js";
 
 /** Codex `event_msg.payload` types handled by parseCodex, indexCodexJsonl, and peekCodex. */
 
@@ -49,11 +49,12 @@ export function isCodexIndexedJsonlLine(line, start, end) {
 const CODEX_INJECTED_USER_TEXT_PREFIX = "# AGENTS.md instructions";
 
 export function isCodexDisplayableUserText(text) {
+  text = stripKandevContext(text);
   return isDisplayableUserText(text) && !text.startsWith(CODEX_INJECTED_USER_TEXT_PREFIX);
 }
 
 export function normalizeCodexUserPromptText(text) {
-  return collapseWhitespace(text);
+  return collapseWhitespace(stripKandevContext(text));
 }
 
 export function visitCodexEventMsgPayload(payload, handlers) {
@@ -77,6 +78,10 @@ export function visitCodexEventMsgPayload(payload, handlers) {
   }
   if (ptype === "web_search_end") {
     handlers.onWebSearchEnd?.(p);
+    return;
+  }
+  if (ptype === "task_complete") {
+    handlers.onTaskComplete?.(p);
     return;
   }
   if (ptype === "thread_settings_applied") {
@@ -146,7 +151,7 @@ export function resolveCodexModel({ turnModel, settingsModel, provenanceModel, p
 }
 
 /** event_msg payload types visitCodexEventMsgPayload dispatches; every other one is ignored. */
-const CODEX_EVENT_MSG_READ_TYPES = new Set(["user_message", "token_count", "patch_apply_end", "exec_command_end", "web_search_end", "thread_settings_applied"]);
+const CODEX_EVENT_MSG_READ_TYPES = new Set(["user_message", "token_count", "patch_apply_end", "exec_command_end", "web_search_end", "thread_settings_applied", "task_complete"]);
 /** event_msg payload type read only when its thread_id is not the session's (fact cdxsub). */
 const CODEX_ITEM_COMPLETED = "item_completed";
 /** Top-level rollout line types parseCodex reads; every other one is ignored. */

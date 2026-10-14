@@ -16,6 +16,17 @@ export function rollupClaudeUsage(usage = {}) {
   };
 }
 
+/** Remove leading Kandev context blocks without discarding the user message after them. */
+export function stripKandevContext(text) {
+  let value = text || "";
+  while (value.startsWith("<kandev-system>")) {
+    const end = value.indexOf("</kandev-system>");
+    if (end < 0) break;
+    value = value.slice(end + "</kandev-system>".length).trimStart();
+  }
+  return value;
+}
+
 /** True when text is non-empty and not a hidden XML-tagged block. */
 export function isDisplayableUserText(text) {
   return Boolean(text && !text.startsWith("<"));
