@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 import { existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mkTmp, writeJsonl } from '../helpers/fixtures.js';
+import { PLAYWRIGHT } from '../helpers/playwright-gate.js';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -26,7 +27,7 @@ async function serve(home, env = {}) {
   try {
     for (let i = 0; i < 100; i++) {
       if (child.exitCode != null) throw new Error(log);
-      try { await get('/__probe'); return { get, child }; } catch { await pause(50); }
+      try { await get('/__probe'); return { get, child, base }; } catch { await pause(50); }
     }
     throw new Error(`serve did not listen: ${log}`);
   } catch (e) { child.kill('SIGKILL'); throw e; }
@@ -50,7 +51,7 @@ async function open(get, path) {
 
 test('Codex tool order preserves calls, results, mixed prompts and a tool-only tail over HTTP', async () => {
   const home = mkTmp('tq-loading-');
-  const path = join(home, '.codex/sessions/2026/10/13/ordering.jsonl');
+  const path = join(home, '.codex/sessions/2026/10/13/rollout-ordering.jsonl');
   writeJsonl(path, [meta,
     row(1, 'response_item', message('user', 'first prompt')),
     row(1, 'event_msg', { type: 'user_message', message: 'first prompt' }),
@@ -73,17 +74,26 @@ test('Codex tool order preserves calls, results, mixed prompts and a tool-only t
 
 test('Codex failed task is visible in the served transcript', async () => {
   const home = mkTmp('tq-loading-failure-');
-  const path = join(home, '.codex/sessions/2026/10/13/failure.jsonl');
+  const path = join(home, '.codex/sessions/2026/10/13/rollout-failure.jsonl');
   writeJsonl(path, [meta, row(1, 'response_item', message('user', 'review this')),
     row(2, 'event_msg', { type: 'task_complete', error: { message: 'The requested model is not supported', codex_error_info: 'other' } }),
   ]);
-  const { get, child } = await serve(home);
+  const { get, child, base } = await serve(home);
   try {
     const s = await open(get, path);
     assert.equal(s.events.length, 2);
     assert.equal(s.events[1].isError, true);
     assert.equal(s.events[1].toolUseId, null);
     assert.match(s.events[1].text, /requested model is not supported/);
+    if (PLAYWRIGHT) {
+      const browser = await PLAYWRIGHT.chromium.launch();
+      try {
+        const page = await browser.newPage();
+        await page.goto(base + '/run?session=' + encodeURIComponent(path));
+        await page.locator('.chat-errnote').waitFor({ state: 'visible' });
+        assert.match(await page.locator('.chat-errnote').innerText(), /requested model is not supported/);
+      } finally { await browser.close(); }
+    }
   } finally { await stop(child, home); }
 });
 
@@ -110,7 +120,7 @@ test('cold default chat leaves other HTTP requests responsive during discovery',
 test('wrapped user prompts survive in Claude and Codex transcripts over HTTP', async () => {
   const home = mkTmp('tq-loading-wrapped-');
   const claude = join(home, '.claude/projects/proj/wrapped.jsonl');
-  const codex = join(home, '.codex/sessions/2026/10/13/wrapped.jsonl');
+  const codex = join(home, '.codex/sessions/2026/10/13/rollout-wrapped.jsonl');
   const wrapped = '<kandev-system>Previous session context</kandev-system>\n\n<kandev-system>Tools</kandev-system>\n\nPlease continue the review';
   const onlyContext = '<kandev-system>Tools only</kandev-system>';
   writeJsonl(claude, [wrapped, onlyContext].map((text, i) => ({ type: 'user', sessionId: 'wrapped', timestamp: timestamp(i), message: { content: text } })));
