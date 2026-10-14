@@ -82,8 +82,8 @@ const INSIGHTS_PAGE_CSS = `
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 4 4 4-4 4'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 .ins-bar-row[open] > .ins-bar-head .ins-bar-label::before { transform: rotate(90deg); }
-.ins-bar-track { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
-.ins-bar-fill { height: 6px; min-width: 2px; border-radius: 999px; background: var(--text-2); transition: background var(--dur-2) var(--ease-out); }
+.ins-bar-track { height: 6px; border-radius: var(--radius-pill); background: var(--surface-2); overflow: hidden; }
+.ins-bar-fill { height: 6px; min-width: 2px; border-radius: var(--radius-pill); background: var(--text-2); transition: background var(--dur-2) var(--ease-out); }
 .ins-bar-head:hover .ins-bar-fill { background: var(--text); }
 [data-insight="error-classes"] .ins-bar-fill { background: color-mix(in srgb, var(--bad) 75%, transparent); }
 [data-insight="error-classes"] .ins-bar-head:hover .ins-bar-fill { background: var(--bad); }
@@ -124,7 +124,7 @@ const INSIGHTS_PAGE_CSS = `
 .ins-cols { display: flex; align-items: flex-end; gap: 6px; height: 160px; padding: 20px 0 0; box-shadow: inset 0 -1px 0 var(--line-2); }
 .ins-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
 .ins-col-val { font-size: 11px; color: var(--text-3); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
-.ins-col-bar { width: 100%; max-width: 64px; min-height: 2px; background: var(--surface-4); border-radius: 6px 6px 0 0; transition: background var(--dur-2) var(--ease-out); }
+.ins-col-bar { width: 100%; max-width: 64px; min-height: 2px; background: var(--surface-4); border-radius: var(--radius-sm) var(--radius-sm) 0 0; transition: background var(--dur-2) var(--ease-out); }
 .ins-col:hover .ins-col-bar { background: var(--text-2); }
 .ins-col-labels { display: flex; gap: 6px; padding-top: 8px; }
 .ins-col-labels span { flex: 1; text-align: center; color: var(--text-3); font-size: 11px; }

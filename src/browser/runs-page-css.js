@@ -179,7 +179,7 @@ html, body { min-height: 100%; }
 }
 .qf-chip:hover, .qf-error-toggle:hover { background: var(--surface-3); color: var(--text); }
 .qf-chip.qf-active, .qf-error-toggle.qf-active { background: var(--ink); color: var(--paper); }
-.qf-chip--source::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--hue, var(--hue-other)); }
+.qf-chip--source::before { content: ""; width: 7px; height: 7px; border-radius: var(--radius-xs); background: var(--hue, var(--hue-other)); }
 .qf-chip-count { color: var(--text-3); font-variant-numeric: tabular-nums; }
 .qf-chip.qf-active .qf-chip-count { color: inherit; opacity: 0.7; }
 .qf-error-toggle::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--bad); }
@@ -274,7 +274,7 @@ body.runs-loading #sessions { opacity: 0.55; transition: opacity var(--dur-3) va
 .session-row .session-stat.cost { display: block; grid-column: 6; text-align: right; color: var(--text-2); }
 .session-row .session-grade-badge { grid-column: 7; justify-self: center; }
 .session-tools { grid-column: 8; min-width: 0; }
-.tool-sparkline { display: flex; height: 4px; width: 100%; border-radius: 999px; overflow: hidden; gap: 1px; background: var(--surface-3); }
+.tool-sparkline { display: flex; height: 4px; width: 100%; border-radius: var(--radius-pill); overflow: hidden; gap: 1px; background: var(--surface-3); }
 .tool-spark-seg { display: block; height: 100%; min-width: 2px; }
 .tool-spark-tip, .session-tool { display: none; }
 .session-actions { grid-column: 9; justify-self: end; display: inline-flex; align-items: center; gap: 4px; }

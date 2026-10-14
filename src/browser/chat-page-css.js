@@ -55,7 +55,7 @@ export const CHAT_SHELL_CSS = `
 }
 .rail-sub { font-size: var(--text-xs); color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rail-sub .rail-agent { display: inline-flex; align-items: center; gap: 5px; font-weight: var(--weight-regular); color: var(--text-2) !important; }
-.rail-sub .rail-agent::before { content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--hue, currentColor); }
+.rail-sub .rail-agent::before { content: ""; width: 6px; height: 6px; border-radius: var(--radius-xs); background: var(--hue, currentColor); }
 .rail-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .rail-time { font-size: 11px; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rail-grade { font-size: 10.5px; min-width: 18px; height: 16px; padding: 0 4px; }
@@ -306,7 +306,7 @@ body { overflow: hidden; }
   font-size: 11.5px; line-height: 1.4; scrollbar-gutter: stable; scrollbar-width: thin;
 }
 .chat-card.chat-output .chat-tool-body::-webkit-scrollbar { width: 8px; }
-.chat-card.chat-output .chat-tool-body::-webkit-scrollbar-thumb { background: var(--line-3); border-radius: 4px; }
+.chat-card.chat-output .chat-tool-body::-webkit-scrollbar-thumb { background: var(--line-3); border-radius: var(--radius-xs); }
 .chat-errnote {
   margin: 10px 0; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--bad-soft);
   color: var(--text); font-size: var(--text-sm); white-space: pre-wrap; overflow-wrap: anywhere;
@@ -548,7 +548,7 @@ body[data-leftover-reading="1"][data-watch="session"][data-run-state="idle"] .ch
 body[data-watch="session"][data-run-state="idle"] .chat-composer-inner { padding-top: 0; padding-bottom: 18px; }
 body[data-watch="session"][data-run-state="idle"] #continueForm,
 .composer-card.live-tail-card {
-  display: flex; align-items: center; gap: 8px; margin-top: 0; padding: 7px 7px 7px 18px; border-radius: 24px;
+  display: flex; align-items: center; gap: 8px; margin-top: 0; padding: 7px 7px 7px 18px; border-radius: var(--radius-xl);
 }
 body[data-watch="session"][data-run-state="idle"] #continueForm[hidden] { display: none; }
 body[data-watch="session"][data-run-state="idle"] #continueForm .composer-context { display: none; }

@@ -385,7 +385,7 @@ export const ANALYTICS_CHARTS_JS = `
     wrap.appendChild(cursor);
 
     const regionHL = document.createElement('div');
-    regionHL.style.cssText = 'position:absolute;background:var(--hover);pointer-events:none;display:none;border-radius:2px;z-index:5;';
+    regionHL.style.cssText = 'position:absolute;background:var(--hover);pointer-events:none;display:none;border-radius:var(--radius-xs);z-index:5;';
     wrap.appendChild(regionHL);
 
     let canvasW = 0;

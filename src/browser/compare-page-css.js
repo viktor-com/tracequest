@@ -21,7 +21,7 @@ export const COMPARE_PAGE_CSS = `
 .cmp-swap[hidden] { display: none; }
 
 .cmp-side {
-  display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 8px; border-radius: 5px;
+  display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 8px; border-radius: var(--radius-sm);
   font-size: 11px; font-weight: var(--weight-medium); color: var(--paper); background: var(--ink); vertical-align: 1px;
 }
 .session-b .cmp-side, .cmp-col-b .cmp-side, .tool-cmp-head > span:last-child .cmp-side { background: var(--surface-4); color: var(--text); }
@@ -46,7 +46,7 @@ export const COMPARE_PAGE_CSS = `
 .cmp-muted { color: var(--text-3); }
 .cmp-session-id { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; font-size: var(--text-xs); color: var(--text-3); min-width: 0; }
 .cmp-source-badge { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: var(--text-xs); }
-.cmp-source-badge::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--hue, var(--hue-other)); }
+.cmp-source-badge::before { content: ""; width: 7px; height: 7px; border-radius: var(--radius-xs); background: var(--hue, var(--hue-other)); }
 .cmp-session-model { color: var(--text-3); }
 .cmp-session-hash { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-3); }
 .cmp-session-link { align-self: flex-start; font-size: var(--text-sm); color: var(--text-2); transition: color var(--dur-2) var(--ease-out); }
@@ -84,7 +84,7 @@ export const COMPARE_PAGE_CSS = `
 .tool-cmp-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; padding: 5px 0; }
 .tool-cmp-bar-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .tool-cmp-left { flex-direction: row-reverse; }
-.tool-cmp-bar { height: 6px; border-radius: 999px; min-width: 2px; opacity: 0.85; transition: opacity var(--dur-2) var(--ease-out); }
+.tool-cmp-bar { height: 6px; border-radius: var(--radius-pill); min-width: 2px; opacity: 0.85; transition: opacity var(--dur-2) var(--ease-out); }
 .tool-cmp-row:hover .tool-cmp-bar { opacity: 1; }
 .tool-cmp-count { font-size: var(--text-xs); color: var(--text-3); font-variant-numeric: tabular-nums; min-width: 22px; }
 .tool-cmp-left .tool-cmp-count { text-align: right; }
@@ -93,12 +93,12 @@ export const COMPARE_PAGE_CSS = `
   display: inline-flex; align-items: center; gap: 6px; justify-content: center; font-size: var(--text-xs); color: var(--text-2);
   max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.tool-cmp-name::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--hue, var(--hue-other)); flex: none; }
+.tool-cmp-name::before { content: ""; width: 7px; height: 7px; border-radius: var(--radius-xs); background: var(--hue, var(--hue-other)); flex: none; }
 
 .cmp-outcome { display: grid; grid-template-columns: 1fr; gap: var(--space-5); }
 .cmp-outcome-side { display: flex; flex-direction: column; gap: 8px; }
 .cmp-outcome-id { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-3); }
-.cmp-outcome-bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; gap: 2px; background: var(--surface-3); }
+.cmp-outcome-bar { display: flex; height: 8px; border-radius: var(--radius-pill); overflow: hidden; gap: 2px; background: var(--surface-3); }
 .cmp-outcome-seg { height: 100%; }
 .cmp-outcome-seg.clean { background: var(--ok); }
 .cmp-outcome-seg.corrected { background: var(--warn); }

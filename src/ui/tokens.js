@@ -33,8 +33,8 @@ export const TOKENS_STATIC = `
   --space-0: 2px; --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
   --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-16: 64px;
 
-  /* shape: controls are pills, surfaces are softly rounded */
-  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px; --radius-xl: 16px; --radius-pill: 999px;
+  /* shape: compact corners shared by controls and surfaces */
+  --radius-xs: 1px; --radius-sm: 2px; --radius-md: 3px; --radius-lg: 4px; --radius-xl: 6px; --radius-pill: var(--radius-md);
   --control-sm: 24px; --control-md: 30px; --control-lg: 36px;
 
   /* motion: short, eased, never decorative */

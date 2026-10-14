@@ -734,7 +734,7 @@ const VIEW_RUN_CHIP_CSS = `<style>
 .view-run-chip {
   position: fixed; right: var(--space-5, 20px); bottom: var(--space-5, 20px); z-index: var(--z-popover, 200);
   display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 14px;
-  border-radius: 999px; background: var(--surface-pop); box-shadow: var(--shadow-pop);
+  border-radius: var(--radius-pill); background: var(--surface-pop); box-shadow: var(--shadow-pop);
   color: var(--text); font-size: var(--text-sm, 13px); text-decoration: none;
   transition: background var(--dur-2, 160ms) var(--ease-out, ease);
 }
@@ -751,7 +751,7 @@ const VIEW_CONTINUE_CHIP_CSS = `<style>
 .view-continue-chip {
   position: fixed; right: var(--space-5, 20px); bottom: var(--space-5, 20px); z-index: var(--z-popover, 200);
   display: flex; flex-direction: column; gap: 6px; width: 380px; max-width: calc(100vw - 40px);
-  padding: 6px 6px 6px 16px; border-radius: 22px; background: var(--surface-pop); box-shadow: var(--shadow-pop);
+  padding: 6px 6px 6px 16px; border-radius: var(--radius-xl); background: var(--surface-pop); box-shadow: var(--shadow-pop);
   color: var(--text); font-size: var(--text-sm, 13px);
   transition: box-shadow var(--dur-2, 160ms) var(--ease-out, ease);
 }
