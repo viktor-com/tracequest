@@ -1,0 +1,16 @@
+
+# accounting
+- label: Claude usage repeated across content fragments is counted once per API message in the run list, detail and chapters while every tool call remains visible
+  id: costdedup
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern "Claude fragments" test/bin/tracequest-cost-display.test.js
+  tags: [cost-display, implemented]
+
+# pricing
+- label: Cost estimates use recorded cache writes at five-minute or one-hour prices and cached reads at the model cache-read price
+  id: costcache
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern "cache writes" test/bin/tracequest-cost-display.test.js
+  tags: [cost-display, implemented]
+- label: Opus 5.5, GPT-6.1 Sol and GPT-5.6 Sol run costs use their published USD rates consistently in list, detail and chapter totals
+  id: costrates
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern "published rates" test/bin/tracequest-cost-display.test.js
+  tags: [cost-display, implemented]

@@ -31,7 +31,7 @@ import {
 } from "./search-index.js";
 
 // Bump this when index fields change to invalidate stale cache entries.
-export const INDEX_VERSION = 11;
+export const INDEX_VERSION = 12;
 
 /**
  * Codex entry format, stored as index.json's top-level `_codex` (fact cdxheal).

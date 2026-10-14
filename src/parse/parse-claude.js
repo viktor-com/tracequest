@@ -1,5 +1,6 @@
+import { claudeUsageDelta, billingTokenUsage } from "./token-accounting.js";
 import { basename } from "node:path";
-import { isDisplayableUserText, capContent, rollupClaudeUsage } from "./parse-utils.js";
+import { isDisplayableUserText, capContent } from "./parse-utils.js";
 import { forEachJsonlLineFromFile, parseJsonlLine } from "./jsonl-read.js";
 import { errorPattern, extractToolResultText, enrichToolEvent, joinTextContentBlocks } from "./parse-enrich.js";
 import { buildSession } from "./parse-session-build.js";
@@ -19,6 +20,7 @@ export function parseClaude(filePath, source = "claude") {
   let cwd = null;
   let model = null;
   let gitBranch = null;
+  const usageSeen = new Map();
 
   forEachJsonlLineFromFile(filePath, (rawLine) => {
     if (!isClaudeIndexedJsonlLine(rawLine)) return;
@@ -56,7 +58,8 @@ export function parseClaude(filePath, source = "claude") {
           toolCalls.push(enrichToolEvent({ id: b.id, rawName: b.name, input: b.input }));
         }
       }
-      const tokens = rollupClaudeUsage(msg.usage);
+      const tokens = claudeUsageDelta(line, usageSeen);
+      tokens.billingTokens = billingTokenUsage(tokens, msg.model);
       const ev = {
         type: "assistant", timestamp: line.timestamp, text: capContent(textBlocks.join("\n"), 500), toolCalls,
         tokens,

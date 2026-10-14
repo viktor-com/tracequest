@@ -102,6 +102,7 @@ export function sessionToApiObject(s, meta) {
     inputTokens: meta.inputTokens || 0,
     outputTokens: meta.outputTokens || 0,
     cacheReadTokens: meta.cacheReadTokens || 0,
+    ...(meta.billingTokens ? { billingTokens: meta.billingTokens } : {}),
     // An index bound (file times, session_meta) is not a duration (fact durut).
     durationMs: measuredDurationMs(source, meta.durationMs),
     errors: meta.errors || 0,

@@ -48,6 +48,12 @@ export function buildSessionChapters(session) {
         current.tokens.output += e.tokens.output || 0;
         current.tokens.cacheHit += e.tokens.cacheHit || 0;
         current.tokens.cacheWrite += e.tokens.cacheWrite || 0;
+        if (e.tokens.billingTokens) {
+          if (!current.tokens.billingTokens) current.tokens.billingTokens = {};
+          for (const field of ["input", "output", "cacheHit", "cacheWrite", "cacheWrite1h"]) {
+            current.tokens.billingTokens[field] = (current.tokens.billingTokens[field] || 0) + (e.tokens.billingTokens[field] || 0);
+          }
+        }
       }
       if (e.thinking && current.thinking.length < 20) {
         for (const t of e.thinking) {
