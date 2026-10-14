@@ -367,7 +367,7 @@ export const SESSION_VIEWER_RULES = `
 .chapter-diff-del { color: var(--bad); background: color-mix(in srgb, var(--bad) 7%, transparent); }
 .chapter-diff-add { color: var(--ok); background: color-mix(in srgb, var(--ok) 7%, transparent); }
 .chapter-git-op { display: flex; align-items: center; gap: 8px; font-size: var(--text-xs); color: var(--text-2); }
-.chapter-git-op-icon { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; background: var(--surface-2); color: var(--text-3); }
+.chapter-git-op-icon { width: 18px; height: 18px; border-radius: var(--radius-sm); display: grid; place-items: center; font-size: 10px; background: var(--surface-2); color: var(--text-3); }
 .chapter-git-op-icon.commit { color: var(--ok); background: var(--ok-soft); }
 .chapter-git-op-icon.branch { color: var(--info); background: var(--info-soft); }
 .chapter-git-op-icon.push { color: var(--accent-text); background: var(--accent-soft); }
@@ -451,7 +451,7 @@ export const SESSION_VIEWER_RULES = `
 .git-timeline-ops { display: flex; flex-direction: column; }
 .git-op { display: flex; align-items: center; gap: 10px; padding: 6px 4px; font-size: var(--text-xs); box-shadow: inset 0 -1px 0 var(--line-1); }
 .git-op:last-child { box-shadow: none; }
-.git-op-icon { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; flex: none; background: var(--surface-2); color: var(--text-3); }
+.git-op-icon { width: 20px; height: 20px; border-radius: var(--radius-sm); display: grid; place-items: center; font-size: 10px; flex: none; background: var(--surface-2); color: var(--text-3); }
 .git-op-icon.commit { color: var(--ok); background: var(--ok-soft); }
 .git-op-icon.branch { color: var(--info); background: var(--info-soft); }
 .git-op-icon.push { color: var(--accent-text); background: var(--accent-soft); }

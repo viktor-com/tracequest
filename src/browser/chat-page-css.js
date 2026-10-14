@@ -155,7 +155,7 @@ export const CHAT_SHELL_CSS = `
 .rail-filters .chip-key { color: var(--text-3); }
 .rail-filters .chip-op { color: var(--text-3); }
 .rail-filters .chip-value { color: var(--text); overflow: hidden; text-overflow: ellipsis; }
-.rail-filters .chip-remove { width: 16px; height: 16px; border: 0; border-radius: 50%; background: none; color: var(--text-3); cursor: pointer; font-size: 12px; line-height: 1; }
+.rail-filters .chip-remove { width: 16px; height: 16px; border: 0; border-radius: var(--radius-pill); background: none; color: var(--text-3); cursor: pointer; font-size: 12px; line-height: 1; }
 .rail-filters .chip-remove:hover { background: var(--surface-4); color: var(--text); }
 .rail-filters .qf-clear { height: 22px; padding: 0 8px; border: 0; border-radius: var(--radius-pill); background: none; cursor: pointer; font-size: 11px; color: var(--text-3); }
 .rail-filters .qf-clear:hover { color: var(--text); background: var(--hover); }
@@ -444,7 +444,7 @@ body { overflow: hidden; }
 .run-key-btn:hover { background: var(--surface-3); color: var(--text); }
 .run-key-btn .kbd { margin-left: auto; }
 .run-send-btn {
-  flex: none; width: 30px; height: 30px; display: inline-grid; place-items: center; border: none; border-radius: 50%;
+  flex: none; width: 30px; height: 30px; display: inline-grid; place-items: center; border: none; border-radius: var(--radius-pill);
   background: var(--ink); color: var(--paper); cursor: pointer;
   transition: background var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out), transform var(--dur-1) var(--ease-out);
 }

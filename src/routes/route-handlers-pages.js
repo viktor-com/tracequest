@@ -765,7 +765,7 @@ const VIEW_CONTINUE_CHIP_CSS = `<style>
 .view-continue-input::placeholder { color: var(--text-3); }
 .vc-send {
   flex: none; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
-  border: 0; border-radius: 50%; background: var(--ink); color: var(--paper); cursor: pointer;
+  border: 0; border-radius: var(--radius-pill); background: var(--ink); color: var(--paper); cursor: pointer;
 }
 .vc-send:hover { background: color-mix(in oklab, var(--ink) 86%, var(--paper)); }
 .vc-send:disabled { opacity: 0.4; cursor: default; }

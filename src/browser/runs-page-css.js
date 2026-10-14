@@ -66,7 +66,7 @@ html, body { min-height: 100%; }
 .chip-op { color: var(--text-3); }
 .chip-value { color: var(--text); }
 .chip-remove, .chip-x {
-  width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%;
+  width: 18px; height: 18px; display: grid; place-items: center; border-radius: var(--radius-pill);
   color: var(--text-3); font-size: 13px; line-height: 1;
 }
 .chip-remove:hover, .chip-x:hover { background: var(--surface-4); color: var(--text); }
