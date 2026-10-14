@@ -89,10 +89,10 @@ body.cmdk-open { overflow: hidden; }
 .cmdk-item-idline { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
 .cmdk-item-idline .cmdk-item-title { flex: 1; min-width: 0; }
 .cmdk-src { flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-xs); color: var(--text-3); }
-.cmdk-src::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--hue, var(--text-4)); }
+.cmdk-src::before { content: ""; width: 7px; height: 7px; border-radius: var(--radius-xs); background: var(--hue, var(--text-4)); }
 .cmdk-sid { flex: none; font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
 .cmdk-item-sub { font-size: var(--text-xs); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cmdk-mark { background: var(--accent-soft); color: var(--text); border-radius: 2px; padding: 0 1px; }
+.cmdk-mark { background: var(--accent-soft); color: var(--text); border-radius: var(--radius-xs); padding: 0 1px; }
 .cmdk-item.cmdk-hit .cmdk-item-sub { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .cmdk-item-keys { flex: none; display: inline-flex; align-items: center; gap: 4px; }
 .cmdk-key {
