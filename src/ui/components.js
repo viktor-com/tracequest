@@ -59,7 +59,7 @@ export const TYPE_CSS = `
 .ui-ok { color: var(--ok); } .ui-bad { color: var(--bad); } .ui-warn { color: var(--warn); } .ui-accent { color: var(--accent-text); }
 `;
 
-/** Buttons: ink primary, quiet secondary, ghost; all pills. */
+/** Buttons: ink primary, quiet secondary, ghost. */
 export const BUTTON_CSS = `
 .ui-btn {
   --btn-h: var(--control-md);
