@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
+### Fixed
+
+- Remove colored left-edge accents and flatten surface and control corners (#18).
+- Preserve user prompts after Kandev context, keep Codex tools in recording order, show failed-run errors, and avoid cold session-loading stalls (#19).
+- Deduplicate recorded token usage and correct model and cache cost estimates (#20).
+
 ## [0.3.0] - 2026-10-13
 
 ### Fixed
