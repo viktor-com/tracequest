@@ -130,6 +130,7 @@ export const CORE_SHELL_JS = `
     shareBtn._tqOn = true;
 
     // Served from tracequest (not an exported or shared file): a way back.
+    // Markdown and Export are server routes, so only a served page offers them.
     const root = typeof document !== 'undefined' ? document.documentElement : null;
     const inApp = !!(root && root.hasAttribute && root.hasAttribute('data-tq-served'));
     const backLink = inApp ? h('a', { className: 'header-back', href: '/sessions' }, '\u2190 Runs') : null;
@@ -150,7 +151,7 @@ export const CORE_SHELL_JS = `
           project ? h('span', { className: 'header-project', title: session.cwd }, project) : null,
           session.gitBranch ? h('span', { className: 'header-branch' }, session.gitBranch) : null
         ),
-        h('div', { className: 'header-actions' }, printBtn, mdBtn, exportBtn, shareBtn)
+        h('div', { className: 'header-actions' }, printBtn, inApp ? mdBtn : null, inApp ? exportBtn : null, shareBtn)
       ),
       promptText ? h('h1', { className: 'header-prompt' }, promptText) : h('h1', { className: 'header-prompt is-empty' }, 'Untitled run'),
       h('div', { className: 'meta-grid' },
