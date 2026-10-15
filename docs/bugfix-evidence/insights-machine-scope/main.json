@@ -1,0 +1,37 @@
+{
+  "phase": "main",
+  "before": {
+    "url": "http://127.0.0.1:18088/insights?expr=source%3Acodex&days=7",
+    "expression": "source:codex",
+    "range": [],
+    "activeChips": [
+      "last 7 days"
+    ],
+    "fedoraHref": "/insights?host=fedora",
+    "totals": [
+      "0sessions analysed0 machines · 0 min of agent time",
+      "0.0%of tool calls fail0 of 0 calls",
+      "0%of sessions hit an error0 sessions",
+      "0 minagents sat waiting0 stalls of 5 min or more",
+      "$0estimated model spend0 tokens"
+    ]
+  },
+  "after": {
+    "url": "http://127.0.0.1:18088/insights?host=fedora",
+    "expression": "",
+    "range": [],
+    "activeChips": [
+      "all time",
+      "machine: fedora ×"
+    ],
+    "fedoraHref": "/insights?host=fedora",
+    "totals": [
+      "1sessions analysed1 machine · 0 min of agent time",
+      "0.0%of tool calls fail0 of 0 calls",
+      "0%of sessions hit an error0 sessions",
+      "0 minagents sat waiting0 stalls of 5 min or more",
+      "$0estimated model spend17K tokens"
+    ]
+  },
+  "errors": []
+}
