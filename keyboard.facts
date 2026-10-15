@@ -321,7 +321,7 @@
   tags: [spec, overlay-focus-lifecycle, implemented]
 
 # chapter-filter
-- label: When the chapter search, tool chips or wasteful filter hide every chapter on /view, a visible message under the filter bar says no chapters match and offers a Clear filters button; clicking it empties the search, clears chip filters, shows every chapter again and hides the message
+- label: When the chapter search, tool chips, wasteful filter or a file hotspot hide every chapter on /view, a visible message under the filter bar says no chapters match (not printed) and offers a Clear filters button; clicking it empties the search, clears chip and file-hotspot filters, shows every chapter again, hides the message, and a later re-render does not bring a cleared filter back
   id: chfempty
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "chapter search with no match" test/browser/filter-empty-states.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "chapter search with no match|tool chip and a file hotspot" test/browser/filter-empty-states.playwright.test.js
   tags: [spec, chapter-filter, implemented]

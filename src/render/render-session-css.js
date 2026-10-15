@@ -12,7 +12,7 @@ const SESSION_VIEWER_PRINT_RULES = `
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { background: #fff; font-size: 11px; }
   #app { max-width: none; padding: 0; }
-  .header-back, .header-actions, .filter-bar, .expand-toggle, .chapter-tooltip, .chapter-permalink,
+  .header-back, .header-actions, .filter-bar, .chapters-filter-empty, .expand-toggle, .chapter-tooltip, .chapter-permalink,
   .hf-modal-overlay, .waveform-tooltip, .waveform-cursor, .cost-chart-tooltip, .activity-timeline-tooltip,
   .error-dot, .error-timeline, .minimap, .minimap-tooltip, .tool-perf-sort { display: none !important; }
   .sv-section { margin-top: 18px; break-inside: avoid-page; }

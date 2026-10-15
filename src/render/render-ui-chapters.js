@@ -112,16 +112,7 @@ export const UI_CHAPTERS_JS = `
     if (countEl) {
       countEl.textContent = hasFilter ? visible + '/' + chapters.length : '';
     }
-    const emptyEl = document.querySelector('.chapters-filter-empty');
-    if (emptyEl) {
-      const noneMatch = hasFilter && visible === 0 && chapters.length > 0;
-      emptyEl.hidden = !noneMatch;
-      if (noneMatch) {
-        const title = emptyEl.querySelector('.ui-empty-title');
-        title.textContent = 'No chapters match ';
-        title.appendChild(searchQuery ? h('code', null, searchQuery) : document.createTextNode('these filters'));
-      }
-    }
+    showChapterFilterEmpty(hasFilter && visible === 0 && chapters.length > 0);
     const chips = document.querySelectorAll('.filter-chip');
     chips.forEach(function(chip) {
       if (chip.textContent.indexOf('wasteful') !== -1) return;
@@ -350,7 +341,7 @@ export const UI_CHAPTERS_JS = `
     // Shown by applyFilters when the filters hide every chapter.
     wrap.appendChild(h('div', { className: 'chapters-filter-empty ui-empty', hidden: '' },
       h('div', { className: 'ui-empty-title' }),
-      h('div', { className: 'ui-empty-body' }, 'The search text and the selected tool filters must all match a chapter. Try a shorter word or drop a filter.'),
+      h('div', { className: 'ui-empty-body' }, 'A chapter has to match the search text and every active filter. Try a shorter word or drop a filter.'),
       h('div', { className: 'ui-empty-actions' },
         h('button', { type: 'button', className: 'ui-btn ui-btn--outline ui-btn--sm', onClick: clearChapterFilters }, 'Clear filters')
       )
@@ -359,10 +350,22 @@ export const UI_CHAPTERS_JS = `
     return wrap;
   }
 
+  // The empty state under the chapter list, for applyFilters and applyFileFilter.
+  function showChapterFilterEmpty(noneMatch) {
+    const emptyEl = document.querySelector('.chapters-filter-empty');
+    if (!emptyEl) return;
+    emptyEl.hidden = !noneMatch;
+    if (!noneMatch) return;
+    const title = emptyEl.querySelector('.ui-empty-title');
+    title.textContent = 'No chapters match ';
+    title.appendChild(searchQuery ? h('code', null, searchQuery) : document.createTextNode('these filters'));
+  }
+
   function clearChapterFilters() {
     searchQuery = '';
     activeToolFilters.clear();
     activeToolPerfFilter = null;
+    activeFileFilter = null;
     wasteFilterActive = false;
     const searchInput = document.querySelector('.filter-search');
     if (searchInput) searchInput.value = '';
@@ -370,7 +373,7 @@ export const UI_CHAPTERS_JS = `
       el.classList.remove('active');
       el.setAttribute('aria-pressed', 'false');
     });
-    applyFilters();
+    applyFileFilter();
     if (searchInput) searchInput.focus();
   }
 `;

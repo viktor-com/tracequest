@@ -110,6 +110,22 @@ function seedHome() {
       content: [{ type: "text", text }],
     },
   });
+  const toolUse = (ts, id, name, input) => ({
+    type: "assistant",
+    sessionId: sid,
+    timestamp: ts,
+    message: {
+      model: "claude-sonnet-4-20250514",
+      usage: { input_tokens: 100, output_tokens: 30 },
+      content: [{ type: "tool_use", id, name, input }],
+    },
+  });
+  const toolResult = (ts, id, content) => ({
+    type: "user",
+    sessionId: sid,
+    timestamp: ts,
+    message: { content: [{ type: "tool_result", tool_use_id: id, content }] },
+  });
   writeJsonl(sessionPath, [
     {
       type: "user",
@@ -118,6 +134,10 @@ function seedHome() {
       timestamp: "2026-06-03T10:00:00.000Z",
       message: { content: [{ type: "text", text: "first chapter about the parser" }] },
     },
+    toolUse("2026-06-03T10:00:03.000Z", "edit-1", "Edit", { file_path: "/repo/parser.js", old_string: "a", new_string: "b" }),
+    toolResult("2026-06-03T10:00:04.000Z", "edit-1", "ok"),
+    toolUse("2026-06-03T10:00:04.500Z", "edit-2", "Edit", { file_path: "/repo/lexer.js", old_string: "a", new_string: "b" }),
+    toolResult("2026-06-03T10:00:04.800Z", "edit-2", "ok"),
     assistant("2026-06-03T10:00:05.000Z", "Parser looks fine."),
     {
       type: "user",
@@ -125,6 +145,8 @@ function seedHome() {
       timestamp: "2026-06-03T10:07:00.000Z",
       message: { content: [{ type: "text", text: "second chapter about the renderer" }] },
     },
+    toolUse("2026-06-03T10:07:02.000Z", "bash-1", "Bash", { command: "ls" }),
+    toolResult("2026-06-03T10:07:03.000Z", "bash-1", "renderer.js"),
     assistant("2026-06-03T10:07:04.000Z", "Renderer looks fine."),
   ]);
   return { home, sessionId: sessionHash(sessionPath) };
@@ -173,6 +195,46 @@ describe("filter interaction and empty states playwright", SKIP_NO_PLAYWRIGHT, (
       assert.equal(await page.inputValue(".filter-search"), "", "search box emptied");
       assert.equal(await page.locator(".chapter:not(.filter-hidden)").count(), 2, "every chapter is back");
       assert.equal((await page.textContent("#filter-count")).trim(), "", "count label cleared");
+    });
+  });
+
+  test("chapter filters that hide every chapter through a tool chip and a file hotspot explain it, are not printed, and Clear filters resets both", async () => {
+    await withServe(async ({ page, base, sessionId }) => {
+      await page.goto(`${base}/view?id=${sessionId}`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("#chapter-1");
+      const empty = page.locator(".chapters-filter-empty");
+      const visibleChapters = () => page.locator(".chapter:not(.filter-hidden)").count();
+
+      await page.click('.filter-chip[data-tool="Bash"]');
+      assert.equal(await visibleChapters(), 1, "Bash chip keeps one chapter");
+      if ((await page.getAttribute(".file-hotspot-header", "aria-expanded")) !== "true") {
+        await page.click(".file-hotspot-header");
+      }
+      const hotspot = page.locator(".file-hotspot-item", { hasText: "parser.js" });
+      await hotspot.click();
+      await empty.waitFor({ state: "visible", timeout: 5_000 });
+      assert.equal(await visibleChapters(), 0, "chip plus file hotspot hide every chapter");
+      assert.equal((await page.textContent("#filter-count")).trim(), "0/2");
+      assert.match(await empty.innerText(), /No chapters match these filters/);
+
+      await page.emulateMedia({ media: "print" });
+      assert.equal(await empty.isVisible(), false, "the empty state is not printed");
+      await page.emulateMedia({ media: "screen" });
+
+      await empty.getByRole("button", { name: "Clear filters" }).click();
+      await empty.waitFor({ state: "hidden", timeout: 5_000 });
+      assert.equal(await visibleChapters(), 2, "every chapter is back");
+      assert.equal(await hotspot.getAttribute("aria-pressed"), "false", "file hotspot filter cleared");
+      assert.equal(await page.getAttribute('.filter-chip[data-tool="Bash"]', "aria-pressed"), "false", "chip cleared");
+      assert.equal((await page.textContent("#filter-count")).trim(), "", "count label cleared");
+
+      // A later full render must not bring the cleared file filter back.
+      await page.keyboard.press("Escape");
+      await page.keyboard.press("j");
+      await page.keyboard.press("o");
+      await page.waitForTimeout(300);
+      assert.equal(await visibleChapters(), 2, "still every chapter after a re-render");
+      assert.equal((await page.textContent("#filter-count")).trim(), "", "still no count after a re-render");
     });
   });
 
