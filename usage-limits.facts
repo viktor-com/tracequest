@@ -25,7 +25,7 @@
   id: ulua
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'usage limits chips' test/browser/usage-limits.playwright.test.js
   tags: [spec, usage-limits, ui, implemented]
-- label: the home chat surface (/ and /run) and the Runs inventory show #usageRow as the plan-limits popover opened from the app top's #appLimitsBtn, outside #dashboard: one widget per ok or unauthenticated harness (local, then id@host) with the plan, each plan window's used versus remaining and reset time, the limiting window marked, and the sign-in message when unauthenticated; missing and unavailable stay hidden
+- label: the home chat surface (/ and /run) and the Runs inventory show #usageRow as the plan-limits popover opened from the app top's #appLimitsBtn, outside #dashboard: one widget per ok, unauthenticated or error harness (local, then id@host) with the plan, each plan window's used versus remaining and reset time, the limiting window marked, the sign-in message when unauthenticated, and the error message when the collect failed; missing and unavailable stay hidden
   id: ulhr
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "usage limits chips|chat-home: / is the chat surface" test/browser/usage-limits.playwright.test.js
   tags: [spec, usage-limits, ui, implemented]
