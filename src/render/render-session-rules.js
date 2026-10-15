@@ -123,6 +123,7 @@ export const SESSION_VIEWER_RULES = `
 .error-list-count { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--bad); text-align: right; }
 .error-list-tool { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .error-list-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.error-list-cause { font-size: var(--text-xs); color: var(--bad); }
 .error-list-text code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .error-list-out { font-size: var(--text-xs); color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .error-list-ch { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3); white-space: nowrap; }
@@ -301,6 +302,7 @@ export const SESSION_VIEWER_RULES = `
   font-family: var(--font-mono); font-size: 11.5px; line-height: 1.6; color: var(--text-3); white-space: pre-wrap; overflow-wrap: anywhere;
   max-height: 96px; overflow: hidden; padding: 0 12px 0 22px;
 }
+.chapter-output.expanded, .chapter-mcp-output.expanded { max-height: none; }
 .expand-toggle {
   align-self: flex-start; height: 22px; padding: 0 8px; margin-left: 22px; border-radius: var(--radius-pill);
   font-size: 11px; color: var(--text-3); background: var(--surface-2); border: 0; cursor: pointer;
