@@ -18,7 +18,7 @@
   tags: [session-loading, implemented]
 
 # indexing
-- label: An imported OpenCode session's failed tool calls (part state.status error, or output that reads as an error) are counted by both the JavaScript and the native indexer exactly as its detail view counts them, so the Runs filter source:opencode errors:>0 lists it
+- label: An imported OpenCode session's failed tool calls (part state.status error, or output that reads as an error) are counted by both the JavaScript and the native indexer with its detail view's rule, so the Runs filter source:opencode errors:>0 lists it
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'OpenCode tool errors' test/bin/session-loading.e2e.test.js
   tags: [session-loading, implemented]
 - label: An index written before OpenCode tool errors were counted re-reads its cached OpenCode rows once, so the errors filter finds failed OpenCode sessions on an existing hub without a full re-index

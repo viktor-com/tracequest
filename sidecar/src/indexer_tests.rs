@@ -1531,10 +1531,13 @@ fn test_index_opencode_basic() {
 
 #[test]
 fn test_index_opencode_counts_tool_errors_like_detail_view() {
+    // An imported host's database, found through TRACEQUEST_HOSTS_DIR: the other
+    // OpenCode tests share TRACEQUEST_OPCODE_DB and run in parallel with this one.
     let tmp_dir = std::env::temp_dir().join("tracequest_test_opencode_tool_errors");
     let _ = fs::remove_dir_all(&tmp_dir);
-    fs::create_dir_all(&tmp_dir).unwrap();
-    let db_path = tmp_dir.join("opencode.db");
+    let db_dir = tmp_dir.join("errhost/.local/share/opencode");
+    fs::create_dir_all(&db_dir).unwrap();
+    let db_path = db_dir.join("opencode.db");
 
     let conn = Connection::open(&db_path).unwrap();
     conn.execute_batch(
@@ -1556,9 +1559,9 @@ fn test_index_opencode_counts_tool_errors_like_detail_view() {
             .unwrap();
     }
 
-    std::env::set_var("TRACEQUEST_OPCODE_DB", db_path.to_str().unwrap());
+    std::env::set_var("TRACEQUEST_HOSTS_DIR", tmp_dir.to_str().unwrap());
     let session = Session {
-        path: "opencode://sess-err".to_string(),
+        path: "opencode://errhost/sess-err".to_string(),
         project: "p".to_string(),
         file: "sess-err".to_string(),
         source: "opencode".to_string(),
@@ -1569,7 +1572,7 @@ fn test_index_opencode_counts_tool_errors_like_detail_view() {
     };
     assert_eq!(index_opencode(&session).errors, 2);
 
-    let _ = std::env::remove_var("TRACEQUEST_OPCODE_DB");
+    let _ = std::env::remove_var("TRACEQUEST_HOSTS_DIR");
     let _ = fs::remove_dir_all(&tmp_dir);
 }
 
