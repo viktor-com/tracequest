@@ -802,6 +802,29 @@ export function currentIndexEntry(path, mtimeMs) {
   return indexEntryIfCurrent(cache && path !== "_v" ? cache[path] : undefined, mtimeMs);
 }
 
+/**
+ * currentIndexEntry for a process that runs no index build (a CLI export).
+ * While index.json lacks a row format the `source`'s rows depend on, the row
+ * may still need the heal only a build applies (facts cdxheal, durcl2, durac2):
+ * it keeps its token figures, and its duration (and a Codex row's model) come
+ * from `reindex()`, the entry indexing the recording now would write. Cursor
+ * rows depend on none of those formats.
+ */
+export function currentHealedIndexEntry(path, mtimeMs, source, reindex) {
+  const entry = currentIndexEntry(path, mtimeMs);
+  if (!entry || rowFormatsCurrent(_indexFileCache, source)) return entry;
+  const fresh = reindex();
+  return { ...entry, durationMs: fresh.durationMs, ...(source === "codex" ? { model: fresh.model } : {}) };
+}
+
+function rowFormatsCurrent(cache, source) {
+  if (source === "cursor" || source === "cursor-cloud") return true;
+  if (cache._active !== ACTIVE_TIME_FORMAT) return false;
+  if (source === "codex") return cache._codex === CODEX_INDEX_FORMAT;
+  if (source === "claude") return cache._spans === CLAUDE_SPAN_FORMAT;
+  return true;
+}
+
 /** `entry` when it is an index entry recorded for a file whose mtime is `mtimeMs`, else null. */
 export function indexEntryIfCurrent(entry, mtimeMs) {
   if (!entry || typeof entry !== "object") return null;

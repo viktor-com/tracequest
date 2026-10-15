@@ -14,3 +14,13 @@
   id: costrates
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern "published rates" test/bin/tracequest-cost-display.test.js
   tags: [cost-display, implemented]
+
+# surfaces
+- label: A Cursor session rendered with tracequest render shows the same duration, input and output tokens and estimated cost as its served session view, whether or not the session index already covers the recording
+  id: costcli
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern "Cursor CLI render" test/bin/tracequest-cursor-render.e2e.test.js
+  tags: [cost-display, implemented]
+- label: tracequest render keeps an index.json row's tokens and cost, and while the index lacks a row format that row's source depends on, shows the duration indexing the recording now measures instead of the row's unhealed one
+  id: costcli2
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern "CLI render never shows" test/bin/tracequest-cursor-render.e2e.test.js
+  tags: [cost-display, implemented]

@@ -4,6 +4,9 @@ import { renderHTML } from "../render.js";
 import { exportMessages } from "../export/messages-export.js";
 import { findSessions as discoverCliSessions, buildIndex, peekSession, searchSessions, sortSessionsByMtimeDesc } from "../sessions.js";
 import { detectLiveSessions, stampLive } from "../sessions/live-sessions.js";
+import { indexSession } from "../sessions/index.js";
+import { currentHealedIndexEntry } from "../sessions/index-writers.js";
+import { attachSessionSummary } from "../sessions/session-summary.js";
 import { serve } from "../server.js";
 // normalizeProjectFolder (not projectLabel) is the single project-normalisation
 // used by every CLI printer, so `list` / `find` / `latest` / `search` render the
@@ -501,6 +504,13 @@ export function parseAndRender(inputFile, values) {
     die(`Failed to parse session ${inputFile}: ${err.message}`);
   }
   printSessionStats(session);
+  // The export shows the summary the served session view shows: the session's
+  // current index entry (healed as a server build would), or with none the
+  // entry indexing the recording now would write.
+  let fresh;
+  const reindex = () => (fresh ??= indexSession(session));
+  attachSessionSummary(session, (path, mtimeMs) =>
+    currentHealedIndexEntry(path, mtimeMs, session.source || "claude", reindex) ?? reindex());
   renderAndWrite(session, values.out, values.open);
 }
 
