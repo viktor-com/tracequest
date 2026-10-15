@@ -18,7 +18,7 @@ export function countOkCommands(commands) {
   return n;
 }
 
-/** Detect same-tool retries with similar inputs; sets ch.retries, ch.retryGroups, and ch.selfCorrections. */
+/** Detect retries of failed calls; successful inspection alone is not a retry. */
 export function detectChapterRetries(ch) {
   const seq = ch._callSeq;
   ch.retries = 0;
@@ -43,18 +43,34 @@ export function detectChapterRetries(ch) {
       }
     }
 
+    if (!seq[i].isError) {
+      i++;
+      continue;
+    }
+
     let j = i + 1;
     const baseName = seq[i].name;
     const group = [i];
     while (j < seq.length && j - i < 8) {
-      if (seq[j].name === baseName && isSimilarCallEntry(seq[i], seq[j])) {
+      // Shell prefixes (e.g. `cd /repo`) do not identify the command:
+      // different sed ranges and other successful reads are distinct work.
+      const sameInput = baseName === "Bash"
+        ? seq[i].input === seq[j].input
+        : isSimilarCallEntry(seq[i], seq[j]);
+      if (seq[j].name === baseName && sameInput) {
         group.push(j);
+        if (!seq[j].isError) break;
       }
       j++;
     }
     if (group.length >= 2) {
       ch.retries += group.length - 1;
-      ch.retryGroups.push({ tool: baseName, count: group.length, input: safeSlice(seq[i].input, 60) });
+      ch.retryGroups.push({
+        tool: baseName,
+        count: group.length,
+        input: safeSlice(seq[i].input, 60),
+        resolved: !seq[group[group.length - 1]].isError,
+      });
       i = group[group.length - 1] + 1;
     } else {
       i++;
@@ -101,7 +117,8 @@ export function computeChapterEfficiency(ch, avgTokPerChapter) {
   let callCount = 0;
   const toolKeys = chapterToolKeys(ch);
   for (let i = 0; i < toolKeys.length; i++) callCount += ch.toolCounts[toolKeys[i]] || 0;
-  const failedRetries = ch.retries;
+  const failedRetries = (ch.retryGroups || []).reduce((count, group) =>
+    count + (group.resolved ? 0 : group.count - 1), 0);
 
   const tokPerFile = fileCount > 0 ? Math.round(chTok / fileCount) : 0;
   const tokPerCommit = commitCount > 0 ? Math.round(chTok / commitCount) : 0;

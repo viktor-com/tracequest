@@ -163,6 +163,9 @@
 - label: a standalone session report (tracequest render output and the served /export download) offers no Markdown or Export header links, because both need the tracequest server; opened from a plain HTTP server its header has no link to /markdown or /export, while the served /view page keeps Markdown and Export links that download the session
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/standalone-report-actions.playwright.test.js
   tags: [spec, implemented, rendered-session, playwright, export]
+- label: Chapter retries require a preceding failed call; successful inspection of distinct command ranges is not diagnosed as retries or retry waste
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/chapter-retries.playwright.test.js
+  tags: [retry-diagnosis, implemented]
 
 # server
 - label: tracequest serve refreshes served root HTML after a nested browser helper edit in a real subprocess: the source watcher sends reload SSE, modVersion invalidates route output, and the next / response includes the edited helper output
