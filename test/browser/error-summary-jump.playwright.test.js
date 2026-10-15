@@ -12,6 +12,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mkTmp, writeJsonl } from "../helpers/fixtures.js";
+import { seedOpenCodeIndexDb } from "../helpers/opencode-db-fixtures.js";
 import { PLAYWRIGHT, SKIP_NO_PLAYWRIGHT } from "../helpers/playwright-gate.js";
 import { sessionHash } from "../../src/sessions/session-hash.js";
 
@@ -20,6 +21,8 @@ const BIN = join(ROOT, "bin/tracequest.js");
 const MISSING = "cd: /tmp/tq-missing-dir-7f3a: No such file or directory";
 const LATE_CAUSE = "FileNotFoundError: [Errno 2] No such file or directory: '/data/in-7f3a.csv'";
 const MCP_CAUSE = "Error: ENOENT: no such file or directory, open '/srv/data/x-7f3a.json'";
+const EXEC_CAUSE = "apply_patch verification failed: invalid patch: multiple operations target /tmp/tq-report-7f3a.md";
+const OPENCODE_CAUSE = "Maximum call stack size exceeded in tq-7f3a.";
 
 async function allocEphemeralPort() {
   const server = createServer();
@@ -189,6 +192,72 @@ function seedHome() {
   return { home, sessionId: sessionHash(sessionPath) };
 }
 
+/**
+ * Failures from tools no chapter list keeps: a Codex code-mode exec that
+ * reports "Script failed" and an OpenCode call to the unknown tool invalid,
+ * whose message OpenCode stores in state.error.
+ */
+async function seedGenericToolHome() {
+  const home = mkTmp("tracequest-error-generic-");
+  const dir = join(home, ".codex", "sessions", "2026", "10", "01");
+  mkdirSync(dir, { recursive: true });
+  const at = (s) => new Date(Date.UTC(2026, 9, 1, 11, 0, s)).toISOString();
+  const item = (s, payload) => ({ timestamp: at(s), type: "response_item", payload });
+  writeJsonl(join(dir, "rollout-2026-10-01T11-00-00-0199a7f3-0000-7000-8000-000000000007.jsonl"), [
+    { timestamp: at(0), type: "session_meta", payload: { id: "0199a7f3-0000-7000-8000-000000000007", timestamp: at(0), cwd: "/home/dev/repo" } },
+    item(1, { type: "message", role: "user", content: [{ type: "input_text", text: "write the review report" }] }),
+    item(2, { type: "message", role: "assistant", content: [{ type: "output_text", text: "Writing the report." }] }),
+    item(3, { type: "custom_tool_call", status: "completed", call_id: "call-exec-1", name: "exec", input: "const report = 'ok'; await tools.apply_patch(report)" }),
+    item(4, {
+      type: "custom_tool_call_output", call_id: "call-exec-1",
+      output: [
+        { type: "input_text", text: "Script failed\nWall time 0.0 seconds\nOutput:\n" },
+        { type: "input_text", text: `Script error:\n${EXEC_CAUSE}` },
+      ],
+    }),
+    item(5, { type: "message", role: "assistant", content: [{ type: "output_text", text: "The patch did not apply." }] }),
+  ]);
+  const t0 = Date.UTC(2026, 9, 1, 12, 0, 0);
+  await seedOpenCodeIndexDb(home, [{
+    id: "ses_tq07generic",
+    title: "generic tool failure",
+    time_created: t0,
+    messages: [
+      { role: "user", timeCreated: t0, parts: [{ type: "text", text: "research the llama.cpp timeframe" }] },
+      {
+        role: "assistant", modelID: "test-model", timeCreated: t0 + 2000,
+        parts: [{
+          type: "tool", tool: "invalid", callID: "oc-call-1",
+          state: { status: "error", input: { tool: "bash", error: "Model tried to call unavailable tool 'bash'." }, error: OPENCODE_CAUSE },
+        }],
+      },
+      { role: "assistant", modelID: "test-model", timeCreated: t0 + 4000, parts: [{ type: "text", text: "The tool call failed." }] },
+    ],
+  }]);
+  return home;
+}
+
+async function openGenericView(t, source) {
+  const { chromium } = PLAYWRIGHT;
+  const home = await seedGenericToolHome();
+  const port = await allocEphemeralPort();
+  const child = spawnServe(port, home);
+  const browser = await chromium.launch();
+  t.after(async () => {
+    await browser.close();
+    await stopServe(child);
+    rmSync(home, { recursive: true, force: true });
+  });
+  await waitForHttp(port, "/sessions", child);
+  const res = await fetch(`http://127.0.0.1:${port}/api/sessions`);
+  const session = (await res.json()).sessions.find((x) => x.source === source);
+  assert.ok(session, `the ${source} session is listed`);
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(`http://127.0.0.1:${port}/view?id=${session.sessionHash}`, { waitUntil: "load" });
+  await page.waitForSelector(".error-summary");
+  return page;
+}
+
 async function openView(t, width = 1280) {
   const { chromium } = PLAYWRIGHT;
   const { home, sessionId } = seedHome();
@@ -260,6 +329,19 @@ describe("error summary playwright", SKIP_NO_PLAYWRIGHT, () => {
     await page.waitForFunction(() => document.querySelector("#chapter-2.expanded"), null, { timeout: 5_000 });
     await waitForCauseOnScreen(page, 2, MCP_CAUSE);
   });
+
+  for (const [source, tool, cause] of [["codex", "Exec", EXEC_CAUSE], ["opencode", "Invalid", OPENCODE_CAUSE]]) {
+    test(`generic tool failures get a row that opens the failed call (${source} ${tool})`, async (t) => {
+      const page = await openGenericView(t, source);
+      const row = page.locator(".error-list-item", { hasText: cause });
+      assert.equal(await row.count(), 1, `the counted ${tool} failure has a row naming its cause`);
+      assert.match(await row.locator(".error-list-tool").innerText(), new RegExp(tool));
+
+      await row.click();
+      await page.waitForFunction(() => document.querySelector("#chapter-0.expanded"), null, { timeout: 5_000 });
+      await waitForCauseOnScreen(page, 0, cause);
+    });
+  }
 
   test("failure rows name the cause instead of the exit code", async (t) => {
     const page = await openView(t);

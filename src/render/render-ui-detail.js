@@ -438,6 +438,22 @@ export const UI_DETAIL_JS = `
       detail.appendChild(seDiv);
     }
 
+    if (ch.failedCalls && ch.failedCalls.length) {
+      var fcDiv = h('div', { className: 'chapter-commands' });
+      fcDiv.appendChild(h('div', { className: 'chapter-files-label' }, 'failed calls'));
+      for (var fci = 0; fci < ch.failedCalls.length; fci++) {
+        var fc = ch.failedCalls[fci];
+        fcDiv.appendChild(markFailure(h('div', { className: 'chapter-cmd' },
+          h('span', { className: 'chapter-cmd-status fail' }, '\\u2717'),
+          (fmtMcpName(fc.name) + ' ' + String(fc.input || '')).trim().slice(0, 120)
+        ), false, 'call:' + fci));
+        if (fc.output) {
+          fcDiv.appendChild(h('div', { className: 'chapter-output' }, outputPreview(fc.output, 4, false)));
+        }
+      }
+      detail.appendChild(fcDiv);
+    }
+
     if (ch.tokens.input > 0 || ch.tokens.output > 0) {
       var tokDiv = h('div', { className: 'chapter-token-detail' });
       tokDiv.appendChild(h('div', { className: 'chapter-files-label' }, 'tokens'));

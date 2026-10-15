@@ -9,15 +9,16 @@ export const UI_ERRORS_JS = `
   ];
 
   // The Insights class of one failed call, and the output line that names it:
-  // "cd: /x: No such file or directory" rather than the "Exit code 1" above it.
+  // "cd: /x: No such file or directory" rather than the "Exit code 1" above it,
+  // or the Codex "Script failed / Wall time / Output: / Script error:" framing.
   function failureCause(output) {
     var text = String(output || '');
     var cls = null;
     for (var i = 0; i < ERROR_CAUSES.length && !cls; i++) if (ERROR_CAUSES[i].re.test(text)) cls = ERROR_CAUSES[i];
     var lines = text.split('\\n').map(function(l) { return l.trim(); }).filter(Boolean);
-    var bareExit = /^(?:Exit code|exit:)\\s*\\d+$/i;
-    var line = cls ? (lines.find(function(l) { return cls.re.test(l) && !bareExit.test(l); }) || '') : '';
-    if (!line) line = lines.find(function(l) { return !bareExit.test(l); }) || lines[0] || '';
+    var framing = /^(?:(?:Exit code|exit:)\\s*\\d+|Script (?:failed|completed)|Wall time [\\d.]+ seconds|Output:|Script error:)$/i;
+    var line = cls ? (lines.find(function(l) { return cls.re.test(l) && !framing.test(l); }) || '') : '';
+    if (!line) line = lines.find(function(l) { return !framing.test(l); }) || lines[0] || '';
     return { id: cls ? cls.id : 'other', label: cls ? cls.label : '', line: line.slice(0, 200) };
   }
 
@@ -151,6 +152,7 @@ export const UI_ERRORS_JS = `
       (ch.searches || []).forEach((q, j) => { if (!q.ok) add('Grep', q.query, q.output, 'grep:' + j); });
       (ch.agents || []).forEach((ag, j) => { if (ag.isError) add(ag.toolName || 'Agent', ag.description, ag.result, 'agent:' + j); });
       (ch.standaloneErrors || []).forEach((msg, j) => { add('error', '', msg, 'err:' + j); });
+      (ch.failedCalls || []).forEach((f, j) => { add(f.name, f.input, f.output, 'call:' + j); });
     }
     groups.sort((x, y) => y.count - x.count || x.chapter - y.chapter);
     const shown = groups.slice(0, 6);

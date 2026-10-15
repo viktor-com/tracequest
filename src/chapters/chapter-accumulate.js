@@ -35,6 +35,7 @@ export function newChapter(prompt, timestamp, variant = "html") {
     ch.outcome = "clean";
   } else {
     ch.errorTools = {};
+    ch.failedCalls = [];
     ch.tokens = { input: 0, output: 0, cacheHit: 0, cacheWrite: 0 };
     ch._callSeq = [];
   }
@@ -88,7 +89,9 @@ export function accumulateAssistantToolCall(chapter, tc, resultMap, opts = {}) {
     if (filePath) entry._path = filePath;
     chapter._callSeq.push(entry);
   }
+  let listed = false;
   if (tc.name === "Bash" && tc.input) {
+    listed = true;
     chapter.commands.push({ cmd: tc.input, ok: !isError, output: safeSlice(output, 300) });
     const gitOp = detectGitOp(tc.input, output);
     if (gitOp && chapter.gitOps.length < 20) chapter.gitOps.push(gitOp);
@@ -98,6 +101,7 @@ export function accumulateAssistantToolCall(chapter, tc, resultMap, opts = {}) {
     const entry = { query: tc.input, matches: matchCount, ok: !isError };
     if (searchOutput) entry.output = safeSlice(output, FIRST_PROMPT_MAX_LEN);
     chapter.searches.push(entry);
+    listed = true;
   }
   if (tc.webInfo && chapter.webOps.length < 10) {
     const webOp = {
@@ -123,6 +127,7 @@ export function accumulateAssistantToolCall(chapter, tc, resultMap, opts = {}) {
       if (titleMatch) webOp.pageTitle = safeSlice(titleMatch[1], 100);
     }
     chapter.webOps.push(webOp);
+    listed = true;
   }
   if (tc.agentInfo && chapter.agents.length < 10) {
     const agent = {
@@ -135,6 +140,7 @@ export function accumulateAssistantToolCall(chapter, tc, resultMap, opts = {}) {
     };
     if (agentResult) agent.result = safeSlice(output, 400);
     chapter.agents.push(agent);
+    listed = true;
   }
   if (tc.mcpInfo && chapter.mcpOps.length < 15) {
     chapter.mcpOps.push({
@@ -145,5 +151,11 @@ export function accumulateAssistantToolCall(chapter, tc, resultMap, opts = {}) {
       ok: !isError,
       output: safeSlice(output, 400),
     });
+    listed = true;
+  }
+  // A failure none of the lists above keeps (a generic Exec, an unknown
+  // OpenCode tool, a failed Read) so What went wrong can still show and open it.
+  if (isError && !listed && chapter.failedCalls && chapter.failedCalls.length < 10) {
+    chapter.failedCalls.push({ name: tc.name, input: tc.input || "", output: safeSlice(output, 400) });
   }
 }

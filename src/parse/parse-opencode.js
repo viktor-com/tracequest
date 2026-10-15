@@ -94,7 +94,8 @@ export function parseOpenCode(uri) {
           const isError = state.status === "error" || errorPattern.test(state.output || "");
           events.push({
             type: "tool_result", timestamp: ts, toolUseId: pd.callID,
-            text: capContent(state.output || "", 1000), isError, uuid: `oc-result-${turnId++}`,
+            // A failed call keeps its message in state.error, not state.output.
+            text: capContent(state.output || (state.status === "error" && typeof state.error === "string" && state.error) || "", 1000), isError, uuid: `oc-result-${turnId++}`,
           });
         }
 
