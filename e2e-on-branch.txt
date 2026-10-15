@@ -1,0 +1,7 @@
+ok 1 - OpenCode tool errors match the detail view and the errors filter (javascript indexer)
+ok 2 - OpenCode tool errors match the detail view and the errors filter (native indexer)
+ok 3 - OpenCode error heal re-reads rows cached before errors were counted, once (javascript indexer)
+ok 4 - OpenCode error heal re-reads rows cached before errors were counted, once (native indexer)
+# pass 4
+# fail 0
+# skipped 0

@@ -1,0 +1,44 @@
+=== native indexer: index built by main (636d4d2), then the same index.json read by this branch ===
+$ [main]   tracequest find 'source:opencode errors:>0'
+tracequest: building index for 2 sessions (2 stale) via sidecar...
+tracequest: indexed 2 sessions via sidecar (18ms)
+No sessions match the expression.
+  index.json: _ocerr = None | ses_2db5e49a0ffe errors=0, ses_2d4176beeffe errors=0
+$ [branch] tracequest find 'source:opencode errors:>0'
+tracequest: building index for 2 sessions (2 stale) via sidecar...
+tracequest: indexed 2 sessions via sidecar (delta of 2) (18ms)
+Found 2 sessions:
+
+  2026-03-27 00:06  opencode@fedora  20e4de3f     109KB  lifeos                    opencode://fedora/ses_2d4176beeffel0iPkFYT5WDD8N
+  2026-03-25 11:21  opencode@fedora  2f2dc6c3      29KB  lifeos                    opencode://fedora/ses_2db5e49a0ffezo9WmokhrPfO42
+  index.json: _ocerr = 1 | ses_2db5e49a0ffe errors=13, ses_2d4176beeffe errors=68
+$ [branch] tracequest find 'source:opencode errors:>0'   # second run: rows not re-read
+tracequest: index up to date (2 sessions, 2 cached)
+Found 2 sessions:
+
+  2026-03-27 00:06  opencode@fedora  20e4de3f     109KB  lifeos                    opencode://fedora/ses_2d4176beeffel0iPkFYT5WDD8N
+  2026-03-25 11:21  opencode@fedora  2f2dc6c3      29KB  lifeos                    opencode://fedora/ses_2db5e49a0ffezo9WmokhrPfO42
+  index.json: _ocerr = 1 | ses_2db5e49a0ffe errors=13, ses_2d4176beeffe errors=68
+
+=== javascript indexer: index built by main (636d4d2), then the same index.json read by this branch ===
+$ [main]   tracequest find 'source:opencode errors:>0'
+tracequest: building index for 2 sessions (2 stale)...
+tracequest: indexed 2 sessions (0 cached) in 21ms
+No sessions match the expression.
+  index.json: _ocerr = None | ses_2d4176beeffe errors=0, ses_2db5e49a0ffe errors=0
+$ [branch] tracequest find 'source:opencode errors:>0'
+tracequest: building index for 2 sessions (2 stale)...
+tracequest: indexed 2 sessions (0 cached) in 20ms
+Found 2 sessions:
+
+  2026-03-27 00:06  opencode@fedora  20e4de3f     109KB  lifeos                    opencode://fedora/ses_2d4176beeffel0iPkFYT5WDD8N
+  2026-03-25 11:21  opencode@fedora  2f2dc6c3      29KB  lifeos                    opencode://fedora/ses_2db5e49a0ffezo9WmokhrPfO42
+  index.json: _ocerr = 1 | ses_2d4176beeffe errors=68, ses_2db5e49a0ffe errors=13
+$ [branch] tracequest find 'source:opencode errors:>0'   # second run: rows not re-read
+tracequest: index up to date (2 sessions, 2 cached)
+Found 2 sessions:
+
+  2026-03-27 00:06  opencode@fedora  20e4de3f     109KB  lifeos                    opencode://fedora/ses_2d4176beeffel0iPkFYT5WDD8N
+  2026-03-25 11:21  opencode@fedora  2f2dc6c3      29KB  lifeos                    opencode://fedora/ses_2db5e49a0ffezo9WmokhrPfO42
+  index.json: _ocerr = 1 | ses_2d4176beeffe errors=68, ses_2db5e49a0ffe errors=13
+

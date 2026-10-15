@@ -1,0 +1,19 @@
+not ok 1 - OpenCode tool errors match the detail view and the errors filter (javascript indexer)
+    + actual - expected
+    + []
+    - [
+    -   'opencode://gpu/ses_failedtoolcallsxxxxx'
+    - ]
+not ok 2 - OpenCode tool errors match the detail view and the errors filter (native indexer)
+    + actual - expected
+    + []
+    - [
+    -   'opencode://gpu/ses_failedtoolcallsxxxxx'
+    - ]
+not ok 3 - OpenCode error heal re-reads rows cached before errors were counted, once (javascript indexer)
+    undefined !== 1
+not ok 4 - OpenCode error heal re-reads rows cached before errors were counted, once (native indexer)
+    undefined !== 1
+# pass 0
+# fail 4
+# skipped 0

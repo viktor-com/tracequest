@@ -1,0 +1,18 @@
+$ git rev-parse --short origin/main
+636d4d2
+$ HOME=<scratch with imported fedora opencode.db> tracequest find 'source:opencode errors:>0'   # native sidecar
+tracequest: session durations checked for 0 cached sessions (0 to re-index as worked time)
+tracequest: building index for 2 sessions (2 stale) via sidecar...
+tracequest: indexed 2 sessions via sidecar (16ms)
+No sessions match the expression.
+$ ... same, JavaScript indexer (TRACEQUEST_NO_SIDECAR=1, fresh cache)
+tracequest: session durations checked for 0 cached sessions (0 to re-index as worked time)
+tracequest: building index for 2 sessions (2 stale)...
+tracequest: indexed 2 sessions (0 cached) in 23ms
+No sessions match the expression.
+$ tracequest find 'source:opencode' --json   # both sessions exist
+[{"date":"2026-03-27 00:06","source":"opencode","sessionHash":"20e4de3f","sizeKB":109,"project":"lifeos","path":"opencode://fedora/ses_2d4176beeffel0iPkFYT5WDD8N","host":"fedora"},{"date":"2026-03-25 11:21","source":"opencode","sessionHash":"2f2dc6c3","sizeKB":29,"project":"lifeos","path":"opencode://fedora/ses_2db5e49a0ffezo9WmokhrPfO42","host":"fedora"}]
+
+$ errors shown by the session detail view (parseOpenCode, same code the run page uses)
+opencode://fedora/ses_2d4176beeffel0iPkFYT5WDD8N detail errors = 68
+opencode://fedora/ses_2db5e49a0ffezo9WmokhrPfO42 detail errors = 13
