@@ -1,4 +1,3 @@
-
 # grok
 - label: A Grok session whose turn has ended reads as idle, not generating, when Grok appends its synthetic system-reminder user record after the reply: GET /api/sessions does not mark it live and GET /api/sessions/live answers state idle while its Grok process is still open; a real prompt left unanswered still reads as live and running
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Grok finished reply' test/bin/run-status.e2e.test.js
