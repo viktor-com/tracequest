@@ -1,0 +1,65 @@
+{
+  "collectedAt": "2026-10-15T13:24:49.521Z",
+  "host": "fedora",
+  "harnesses": [
+    {
+      "id": "claude",
+      "status": "ok",
+      "plan": "default_claude_max_5x",
+      "windows": [
+        {
+          "id": "five_hour",
+          "utilization": 0.16,
+          "resetsAt": "2026-10-15T18:19:59.701Z"
+        },
+        {
+          "id": "seven_day",
+          "utilization": 0.14,
+          "resetsAt": "2026-10-19T23:59:59.701Z"
+        }
+      ],
+      "limitingWindow": "five_hour"
+    },
+    {
+      "id": "codex",
+      "status": "error",
+      "plan": null,
+      "windows": [],
+      "message": "HTTP 403"
+    },
+    {
+      "id": "cursor",
+      "status": "missing",
+      "plan": null,
+      "windows": [],
+      "message": "no credential"
+    },
+    {
+      "id": "grok",
+      "status": "ok",
+      "plan": "SuperGrokPro",
+      "windows": []
+    },
+    {
+      "id": "factory",
+      "status": "unavailable",
+      "plan": null,
+      "windows": [],
+      "message": "no remaining-window collector"
+    },
+    {
+      "id": "opencode",
+      "status": "unavailable",
+      "plan": null,
+      "windows": [],
+      "message": "no remaining-window collector"
+    },
+    {
+      "id": "gemini",
+      "status": "unavailable",
+      "plan": null,
+      "windows": [],
+      "message": "no remaining-window collector"
+    }
+  ]
+}

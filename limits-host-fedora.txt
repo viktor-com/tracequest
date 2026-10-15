@@ -1,0 +1,7 @@
+claude  default_claude_max_5x  five_hour 16%  resets in 5h
+codex  error  HTTP 403
+cursor  missing  no credential
+grok  SuperGrokPro
+factory  unavailable  no remaining-window collector
+opencode  unavailable  no remaining-window collector
+gemini  unavailable  no remaining-window collector
