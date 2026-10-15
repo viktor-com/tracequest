@@ -197,7 +197,7 @@ export function grokChatIsGenerating(objs) {
       return assistantContentEmpty(o);
     }
     if (o.type === "user") {
-      // Grok appends its skills reminder after a finished reply; it is not a prompt.
+      // Grok's injected reminders (skills, MCP notices) are context, not a prompt; one can follow a finished reply.
       if (o.synthetic_reason === "system_reminder") continue;
       return true;
     }
