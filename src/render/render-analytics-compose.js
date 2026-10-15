@@ -510,6 +510,7 @@ export const ANALYTICS_COMPOSE_JS = `
       }
       const countEl = document.getElementById('filter-count');
       if (countEl) countEl.textContent = visible + '/' + chapters.length;
+      showChapterFilterEmpty(visible === 0 && chapters.length > 0);
     } else {
       applyFilters();
     }
