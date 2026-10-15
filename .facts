@@ -218,6 +218,11 @@
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/git-activity.playwright.test.js
   tags: [git-activity-12, implemented]
 
+## session-grade
+- label: Runs grades, grade filters and sorting, chat badges, full detail, standalone reports and share metadata use the same indexed session grade without chapter retry heuristics
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/session-grade.playwright.test.js
+  tags: [grade-consistency, implemented]
+
 # ui
 
 ## rendered-session

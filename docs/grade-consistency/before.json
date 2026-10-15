@@ -1,0 +1,23 @@
+{
+  "phase": "before",
+  "base": "origin/main 636d4d2 (0.4.0)",
+  "recording": "Read-only copy of real Claude test-prune session 4b7e4de0",
+  "pages": {
+    "runs": {
+      "text": "B",
+      "title": "Grade B · 83/100 — from tool-call error rate, errors per chapter and cache hit rate"
+    },
+    "detail": {
+      "text": "F\n49/100\ngood cache usage, poor error recovery, few retries",
+      "title": null
+    },
+    "chat": {
+      "text": "B",
+      "title": "session grade B (83)"
+    },
+    "report": {
+      "text": "F\n49/100\ngood cache usage, poor error recovery, few retries",
+      "title": null
+    }
+  }
+}

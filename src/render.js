@@ -45,7 +45,8 @@ function renderCacheKey(session) {
 }
 
 export function renderHTML(session) {
-  const key = renderCacheKey(session);
+  const sessionForViewer = viewerSessionData(session);
+  const key = renderCacheKey(session) + ":" + JSON.stringify(sessionForViewer.grade);
   const cached = _renderCache.get(key);
   if (cached !== undefined) {
     // Re-insert to maintain LRU order (Map preserves insertion order)
@@ -54,7 +55,6 @@ export function renderHTML(session) {
     return cached;
   }
 
-  const sessionForViewer = viewerSessionData(session);
   // "<\/" keeps "</script>" from closing the element and "\u003c!--" keeps an HTML
   // comment opener in session text from switching the script parser into its
   // escaped states (where a later "<script" would swallow the real "</script>").
