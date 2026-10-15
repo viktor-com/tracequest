@@ -29,6 +29,10 @@
   id: ulhr
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "usage limits chips|chat-home: / is the chat surface" test/browser/usage-limits.playwright.test.js
   tags: [spec, usage-limits, ui, implemented]
+- label: a harness whose usage collect failed (status error, e.g. Codex HTTP 403) stays visible in the browser: a muted #appLimits chip labelled <id> error and a #usageRow widget showing the error message, local or imported, next to the ok harnesses; missing and unavailable still stay hidden
+  id: ulerr
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'collection error' test/browser/usage-limits-error.playwright.test.js
+  tags: [spec, usage-limits, ui, implemented]
 
 # ssh
 - label: import ssh --dry-run prints the usage-limits plan and writes no usage-limits.json and creates no directories under the hosts root

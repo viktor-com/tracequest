@@ -166,11 +166,14 @@ function usageWidgetHtml(harness, host, snapshot) {
   var color = (typeof SOURCE_COLORS !== "undefined" && SOURCE_COLORS[harness.id]) || "var(--hue-other)";
   var id = host ? harness.id + "@" + host : harness.id;
   var unauth = harness.status === "unauthenticated";
-  var plan = unauth ? "sign-in" : (harness.plan || "");
+  var failed = harness.status === "error";
+  var plan = unauth ? "sign-in" : failed ? "error" : (harness.plan || "");
   var title = usageChipTitle(harness, { host: host, collectedAt: snapshot && snapshot.collectedAt, now: new Date() });
   var body = "";
   if (unauth) {
     body = '<p class="usage-widget-hint">' + esc(harness.message || "sign in") + "</p>";
+  } else if (failed) {
+    body = '<p class="usage-widget-hint">' + esc(harness.message || "usage collect failed") + "</p>";
   } else {
     var windows = harness.windows || [];
     var limit = limitingWindow(harness);
@@ -197,7 +200,7 @@ function usageWidgetHtml(harness, host, snapshot) {
   }
   var hostAttr = host ? ' data-host="' + esc(host) + '"' : "";
   return (
-    '<article class="usage-widget' + (unauth ? " is-unauth" : "") + '" data-harness="' + esc(harness.id) + '"' + hostAttr +
+    '<article class="usage-widget' + (unauth ? " is-unauth" : "") + (failed ? " is-error" : "") + '" data-harness="' + esc(harness.id) + '"' + hostAttr +
     ' style="--hue:' + color + '" title="' + esc(title) + '">' +
     '<header class="usage-widget-head"><span class="usage-widget-id">' + esc(id) + "</span>" +
     (plan ? '<span class="usage-widget-plan">' + esc(plan) + "</span>" : "") +
@@ -207,8 +210,8 @@ function usageWidgetHtml(harness, host, snapshot) {
 
 /**
  * The usage-limits strip's markup for a GET /api/usage-limits answer: the
- * #appLimits chips and the #usageRow widgets, one per ok or unauthenticated
- * harness (local first, then each imported host). Shared by the server,
+ * #appLimits chips and the #usageRow widgets, one per ok, unauthenticated or
+ * error harness (local first, then each imported host). Shared by the server,
  * which serves every app-chrome page with the strip filled (fact hlstrip),
  * and the client poll, so both paint byte-identical markup.
  */
@@ -219,13 +222,13 @@ function usageStripMarkup(data) {
     if (!snapshot || !snapshot.harnesses) return;
     for (var i = 0; i < snapshot.harnesses.length; i++) {
       var h = snapshot.harnesses[i];
-      if (h.status !== "ok" && h.status !== "unauthenticated") continue;
+      if (h.status !== "ok" && h.status !== "unauthenticated" && h.status !== "error") continue;
       var color = (typeof SOURCE_COLORS !== "undefined" && SOURCE_COLORS[h.id]) || "var(--hue-other)";
       var label = usageChipLabel(h, host);
       var title = usageChipTitle(h, { host: host, collectedAt: snapshot.collectedAt, now: new Date() });
       var unauth = h.status === "unauthenticated";
       chips.push(
-        '<span class="app-limit-chip' + (unauth ? " is-unauth" : "") + '"' +
+        '<span class="app-limit-chip' + (unauth ? " is-unauth" : "") + (h.status === "error" ? " is-error" : "") + '"' +
           ' style="--hue:' + color + '"' +
           ' title="' +
           String(title).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;") +
@@ -528,8 +531,8 @@ export const APP_TOP_CSS = `
 }
 .app-limit-chip:nth-child(n+4) { display: none; }
 .app-limit-chip::before { content: ""; width: 7px; height: 7px; border-radius: var(--radius-xs); background: var(--hue, var(--text-4)); }
-.app-limit-chip.is-unauth { color: var(--text-3); }
-.app-limit-chip.is-unauth::before { background: transparent; box-shadow: inset 0 0 0 1px var(--text-3); }
+.app-limit-chip.is-unauth, .app-limit-chip.is-error { color: var(--text-3); }
+.app-limit-chip.is-unauth::before, .app-limit-chip.is-error::before { background: transparent; box-shadow: inset 0 0 0 1px var(--text-3); }
 .theme-toggle {
   display: inline-grid; place-items: center; width: var(--control-md); height: var(--control-md);
   border-radius: var(--radius-pill); color: var(--text-3);
@@ -560,7 +563,7 @@ html.theme-switching, html.theme-switching * { transition: background-color var(
 .usage-widget-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .usage-widget-id { display: inline-flex; align-items: center; gap: 7px; color: var(--text); font-size: var(--text-sm); }
 .usage-widget-id::before { content: ""; width: 7px; height: 7px; border-radius: var(--radius-xs); background: var(--hue, var(--text-4)); }
-.usage-widget.is-unauth .usage-widget-id::before { background: transparent; box-shadow: inset 0 0 0 1px var(--text-3); }
+.usage-widget.is-unauth .usage-widget-id::before, .usage-widget.is-error .usage-widget-id::before { background: transparent; box-shadow: inset 0 0 0 1px var(--text-3); }
 .usage-widget-plan { margin-left: auto; font-size: var(--text-xs); color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
 .usage-window { display: grid; grid-template-columns: 88px 1fr auto auto; align-items: center; gap: 10px; font-size: var(--text-xs); color: var(--text-3); }
 .usage-window.is-limiting .usage-window-name { color: var(--text-2); }

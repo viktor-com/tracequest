@@ -62,6 +62,7 @@ export function formatUsageLimits(snapshot, { now = new Date() } = {}) {
 export function usageChipLabel(harness, host) {
   const id = host ? `${harness.id}@${host}` : harness.id;
   if (harness.status === "unauthenticated") return `${id} sign-in`;
+  if (harness.status === "error") return `${id} error`;
   const win = limitingWindow(harness);
   if (!win) return harness.plan ? `${id} ${harness.plan}` : id;
   return `${id} ${formatPercent(win.utilization)}`;
