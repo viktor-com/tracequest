@@ -160,6 +160,9 @@
 - label: rendered session Playwright coverage verifies keyboard navigation, native filter activation, and accessible state updates in a real rendered session viewer
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'rendered session keyboard' test/browser/rendered-session-keyboard.playwright.test.js
   tags: [spec, rendered-session, playwright, accessibility, implemented]
+- label: a standalone session report (tracequest render output and the served /export download) offers no Markdown or Export header links, because both need the tracequest server; opened from a plain HTTP server its header has no link to /markdown or /export, while the served /view page keeps Markdown and Export links that download the session
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/standalone-report-actions.playwright.test.js
+  tags: [spec, implemented, rendered-session, playwright, export]
 
 # server
 - label: tracequest serve refreshes served root HTML after a nested browser helper edit in a real subprocess: the source watcher sends reload SSE, modVersion invalidates route output, and the next / response includes the edited helper output
