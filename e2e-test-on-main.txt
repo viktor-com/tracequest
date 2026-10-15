@@ -1,7 +1,9 @@
     not ok 1 - chapter search with no match explains the empty list and Clear filters resets it
           - waiting for locator('.chapters-filter-empty') to be visible
-    not ok 2 - Display open: a pointer click on a sibling toolbar button switches or closes the menu
+    not ok 2 - chapter filters that hide every chapter through a tool chip and a file hotspot explain it, are not printed, and Clear filters resets both
+          - waiting for locator('.chapters-filter-empty') to be visible
+    not ok 3 - Display open: a pointer click on a sibling toolbar button switches or closes the menu
           - waiting for locator('#ageMenu') to be visible
 not ok 1 - filter interaction and empty states playwright
 # pass 0
-# fail 2
+# fail 3
