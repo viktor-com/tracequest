@@ -27,3 +27,8 @@
 - label: An index written before OpenCode tool errors were counted re-reads its cached OpenCode rows once, so the errors filter finds failed OpenCode sessions on an existing hub without a full re-index
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'OpenCode error heal' test/bin/session-loading.e2e.test.js
   tags: [session-loading, implemented]
+
+# reading
+- label: A finished chat conversation keeps every earlier prompt, reply and tool output in the thread at its natural height, so scrolling up reaches the first prompt and an earlier failed command, while the newest reply is still framed on open
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "earlier chat blocks" test/bin/session-loading.e2e.test.js
+  tags: [session-loading, implemented]
