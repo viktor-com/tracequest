@@ -13,6 +13,17 @@ export const UI_DETAIL_JS = `
     return el;
   }
 
+  // A call's first lines; for a failed call whose cause comes later (a
+  // traceback ending in FileNotFoundError), fewer of them plus the cause line,
+  // so the cause fits above the output's height cap.
+  function outputPreview(output, maxLines, ok) {
+    var head = joinFirstLines(output, maxLines);
+    if (ok) return head;
+    var line = failureCause(output).line;
+    if (!line || head.indexOf(line) >= 0) return head;
+    return joinFirstLines(output, Math.max(1, maxLines - 2)) + '\\n\\u2026\\n' + line;
+  }
+
   function buildChapterDetail(ch, _idx, detail) {
     var outcome = ch.outcome || 'clean';
 
@@ -236,7 +247,7 @@ export const UI_DETAIL_JS = `
           agentsDiv.appendChild(h('div', { className: 'chapter-agent-prompt' }, a.prompt.slice(0, 200)));
         }
         if (a.result && a.completed) {
-          agentsDiv.appendChild(h('div', { className: 'chapter-output' }, joinFirstLines(a.result, 4)));
+          agentsDiv.appendChild(h('div', { className: 'chapter-output' }, outputPreview(a.result, 4, !a.isError)));
         }
       }
       detail.appendChild(agentsDiv);
@@ -287,7 +298,7 @@ export const UI_DETAIL_JS = `
           h('span', { className: 'chapter-search-count' }, sLabel)
         ), s.ok, 'grep:' + si));
         if (s.output) {
-          searchDiv.appendChild(h('div', { className: 'chapter-output' }, joinFirstLines(s.output, 3)));
+          searchDiv.appendChild(h('div', { className: 'chapter-output' }, outputPreview(s.output, 3, s.ok)));
         }
       }
       detail.appendChild(searchDiv);
@@ -378,7 +389,7 @@ export const UI_DETAIL_JS = `
           mcpCard.appendChild(paramsDiv);
         }
         if (mop.output) {
-          var mcpOut = safeSlice(joinFirstLines(mop.output, 4), 300);
+          var mcpOut = safeSlice(outputPreview(mop.output, 4, mop.ok), 300);
           mcpCard.appendChild(h('div', { className: 'chapter-mcp-output' }, mcpOut));
         }
         mcpDiv.appendChild(mcpCard);
@@ -402,7 +413,7 @@ export const UI_DETAIL_JS = `
           cmd.cmd.slice(0, 120)
         ), cmd.ok, 'cmd:' + cmds[cmi]));
         if (cmd.output) {
-          cmdsDiv.appendChild(h('div', { className: 'chapter-output' }, joinFirstLines(cmd.output, 4)));
+          cmdsDiv.appendChild(h('div', { className: 'chapter-output' }, outputPreview(cmd.output, 4, cmd.ok)));
         }
       }
       if (ch.commands.length > cmds.length) {

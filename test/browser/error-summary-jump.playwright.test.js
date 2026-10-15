@@ -18,6 +18,7 @@ import { sessionHash } from "../../src/sessions/session-hash.js";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const BIN = join(ROOT, "bin/tracequest.js");
 const MISSING = "cd: /tmp/tq-missing-dir-7f3a: No such file or directory";
+const LATE_CAUSE = "FileNotFoundError: [Errno 2] No such file or directory: '/data/in-7f3a.csv'";
 
 async function allocEphemeralPort() {
   const server = createServer();
@@ -134,6 +135,30 @@ function seedHome() {
       content: [{ type: "text", text: "The lock is held by a stale worker." }],
     },
   });
+  // A second chapter whose failure names its cause only at the end of a traceback.
+  lines.push(
+    {
+      type: "user", sessionId: sid, timestamp: at(70),
+      message: { content: [{ type: "text", text: "run the importer" }] },
+    },
+    {
+      type: "assistant", sessionId: sid, timestamp: at(72),
+      message: {
+        model: "claude-sonnet-4-20250514",
+        usage: { input_tokens: 100, output_tokens: 20 },
+        content: [{ type: "tool_use", id: "bash-py", name: "Bash", input: { command: "python3 run.py" } }],
+      },
+    },
+    {
+      type: "user", sessionId: sid, timestamp: at(73),
+      message: {
+        content: [{
+          type: "tool_result", tool_use_id: "bash-py", is_error: true,
+          content: `Exit code 1\nTraceback (most recent call last):\n  File "run.py", line 9, in <module>\n    main()\n  File "run.py", line 5, in main\n    open(path)\n${LATE_CAUSE}`,
+        }],
+      },
+    },
+  );
   writeJsonl(sessionPath, lines);
   return { home, sessionId: sessionHash(sessionPath) };
 }
@@ -175,6 +200,27 @@ describe("error summary playwright", SKIP_NO_PLAYWRIGHT, () => {
       const r = out.getBoundingClientRect();
       return r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight;
     }, null, { timeout: 5_000 });
+  });
+
+  test("failure jump opens on a cause that ends a long traceback", async (t) => {
+    const page = await openView(t);
+    await page.locator(".error-list-item", { hasText: "FileNotFoundError" }).click();
+
+    await page.waitForFunction(() => document.querySelector("#chapter-1.expanded"), null, { timeout: 5_000 });
+    // The cause text itself must be on screen, not clipped by the output's height cap.
+    await page.waitForFunction((cause) => {
+      const out = Array.from(document.querySelectorAll("#chapter-1 .chapter-detail .chapter-output"))
+        .find((el) => el.textContent.includes(cause));
+      if (!out) return false;
+      const node = out.firstChild;
+      const range = document.createRange();
+      const start = node.textContent.indexOf(cause);
+      range.setStart(node, start);
+      range.setEnd(node, start + cause.length);
+      const text = range.getBoundingClientRect();
+      const box = out.getBoundingClientRect();
+      return text.height > 0 && text.top >= 0 && text.bottom <= Math.min(box.bottom, window.innerHeight);
+    }, LATE_CAUSE, { timeout: 5_000 });
   });
 
   test("failure rows name the cause instead of the exit code", async (t) => {
