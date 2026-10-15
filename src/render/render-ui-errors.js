@@ -9,13 +9,19 @@ export const UI_ERRORS_JS = `
   ];
 
   // The output text of a Codex result envelope line ({"chunk_id":…,"exit_code":1,
-  // "output":"…"}), which the stored-output cap may cut short; null otherwise.
+  // "output":"…"}), which the stored-output cap may cut short, or its exit code
+  // when that output is empty; null for any other line.
   function envelopeOutput(line) {
     if (!/^\\{"(?:chunk_id|wall_time_seconds|exit_code)"/.test(line)) return null;
-    try { var o = JSON.parse(line); if (typeof o.output === 'string') return o.output; } catch (e) {}
-    var m = line.match(/"output":"((?:[^"\\\\]|\\\\.)*)/);
-    if (!m) return null;
-    try { return JSON.parse('"' + m[1].replace(/\\\\$/, '') + '"'); } catch (e) { return null; }
+    var out = null;
+    try { var o = JSON.parse(line); if (typeof o.output === 'string') out = o.output; } catch (e) {}
+    if (out == null) {
+      var m = line.match(/"output":"((?:[^"\\\\]|\\\\.)*)/);
+      if (!m) return null;
+      try { out = JSON.parse('"' + m[1].replace(/\\\\$/, '') + '"'); } catch (e) { return null; }
+    }
+    var code = line.match(/"exit_code":(-?\\d+)/);
+    return out.trim() || !code ? out : 'Exit code ' + code[1];
   }
 
   // The Insights class of one failed call, and the output line that names it:
@@ -34,7 +40,11 @@ export const UI_ERRORS_JS = `
     for (var i = 0; i < ERROR_CAUSES.length && !cls; i++) if (ERROR_CAUSES[i].re.test(text)) cls = ERROR_CAUSES[i];
     var framing = /^(?:(?:Exit code|exit:)\\s*\\d+|Script (?:failed|completed)|Wall time:? [\\d.]+ seconds|Output:|Script error:|Chunk ID: \\S+|Process exited with code -?\\d+|Original token count: \\d+)$/i;
     var line = cls ? (lines.find(function(l) { return cls.re.test(l) && !framing.test(l); }) || '') : '';
-    if (!line) line = lines.find(function(l) { return !framing.test(l); }) || lines[0] || '';
+    // Only framing left (a failure with no output): its exit line, which also
+    // groups identical failures, rather than a one-off Chunk ID.
+    if (!line) line = lines.find(function(l) { return !framing.test(l); })
+      || lines.find(function(l) { return /^(?:Process exited with code -?\\d+|(?:Exit code|exit:)\\s*-?\\d+)$/i.test(l); })
+      || lines[0] || '';
     return { id: cls ? cls.id : 'other', label: cls ? cls.label : '', line: line.slice(0, 200) };
   }
 

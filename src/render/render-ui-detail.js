@@ -17,6 +17,7 @@ export const UI_DETAIL_JS = `
   // cause comes later (a traceback ending in FileNotFoundError), fewer of them
   // plus the cause line, which the character cap never cuts.
   function outputPreview(output, maxLines, ok, maxChars) {
+    if (!ok) output = String(output || '').replace(/<\\/?tool_use_error>/g, '');
     var cap = function(s) { return maxChars ? safeSlice(s, maxChars) : s; };
     var head = cap(joinFirstLines(output, maxLines));
     if (ok) return head;

@@ -250,6 +250,12 @@ async function seedGenericToolHome() {
         { type: "input_text", text: JSON.stringify({ chunk_id: "82ce0b", wall_time_seconds: 0.0000034, exit_code: 1, original_token_count: 13, output: `${CODEX_ENVELOPE_CAUSE}\n` }) },
       ],
     }),
+    // Two shell failures with no output, each with its own Chunk ID.
+    item(12, { type: "message", role: "user", content: [{ type: "input_text", text: "check for the marker" }] }),
+    ...["aa11bb", "cc22dd"].flatMap((chunk, i) => [
+      item(13 + i * 2, { type: "function_call", name: "exec_command", arguments: JSON.stringify({ cmd: `grep -q marker-7f3a file${i}.txt` }), call_id: `call-grep-${i}` }),
+      item(14 + i * 2, { type: "function_call_output", call_id: `call-grep-${i}`, output: `Chunk ID: ${chunk}\nWall time: 0.0000 seconds\nProcess exited with code 1\nOriginal token count: 0\nOutput:\n` }),
+    ]),
   ]);
   const t0 = Date.UTC(2026, 9, 1, 12, 0, 0);
   await seedOpenCodeIndexDb(home, [{
@@ -382,11 +388,18 @@ describe("error summary playwright", SKIP_NO_PLAYWRIGHT, () => {
     const codes = await page.locator(".error-list-item code").allInnerTexts();
     assert.ok(codes.includes(CODEX_SHELL_CAUSE), `classic exec_command failure names its cause: ${JSON.stringify(codes)}`);
     assert.ok(codes.includes(CODEX_ENVELOPE_CAUSE), `JSON result envelope names its cause: ${JSON.stringify(codes)}`);
-    for (const code of codes) assert.doesNotMatch(code, /^(?:\{"chunk_id"|Process exited|Chunk ID|Script (?:failed|completed))/, "no framing or envelope as the cause");
+    for (const code of codes) assert.doesNotMatch(code, /^(?:\{"chunk_id"|Chunk ID|Script (?:failed|completed))/, "no framing or envelope as the cause");
 
     await page.locator(".error-list-item", { hasText: CODEX_ENVELOPE_CAUSE }).click();
     await page.waitForFunction(() => document.querySelector("#chapter-2.expanded"), null, { timeout: 5_000 });
     await waitForCauseOnScreen(page, 2, CODEX_ENVELOPE_CAUSE);
+  });
+
+  test("codex failures with no output group under their exit line", async (t) => {
+    const page = await openGenericView(t, "codex");
+    const row = page.locator(".error-list-item", { hasText: "Process exited with code 1" });
+    assert.equal(await row.count(), 1, "both empty-output failures share one row");
+    assert.equal((await row.locator(".error-list-count").innerText()).trim(), "2\u00d7");
   });
 
   test("failure rows drop tool_use_error tags from the cause", async (t) => {
