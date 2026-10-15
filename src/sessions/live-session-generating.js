@@ -196,7 +196,11 @@ export function grokChatIsGenerating(objs) {
       if (Array.isArray(o.tool_calls) && o.tool_calls.length) return false;
       return assistantContentEmpty(o);
     }
-    if (o.type === "user") return true;
+    if (o.type === "user") {
+      // Grok's injected reminders (skills, MCP notices) are context, not a prompt; one can follow a finished reply.
+      if (o.synthetic_reason === "system_reminder") continue;
+      return true;
+    }
     if (o.type === "tool_result" || o.type === "tool") return false;
   }
   return false;
