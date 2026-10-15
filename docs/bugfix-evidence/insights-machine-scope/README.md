@@ -16,11 +16,17 @@ Real browser, actual `tracequest serve`, loopback port 18088, isolated tmux sock
 
 The new served-browser regression test fails on main at the lost-source assertion and passes on the fixed branch with no skips: [main test](test-main.txt), [branch test](test-branch.txt). It checks UI and API session counts with recent Codex recordings on Fedora/Mac/local, an older Fedora Codex recording, and a recent Fedora Claude recording. Selecting/switching/clearing machines, source-only, time-only and unfiltered navigation are covered.
 
-Evidence is kept on a separate branch so the fix PR contains only the three-line production change, one new browser test and its fact. Full suites are left to CI, which is currently blocked as described below.
+Evidence is kept on a separate branch so the fix PR contains only the three-line production change, one new browser test and its fact. Final merge validation uses targeted local tests and independent review, per Ivan’s revised gate. CI remains intentionally unused.
 
 
 ## Independent review and merge gate
 
 Fresh-context reviewer: **PASS**, no actionable findings. [Complete review](review.md), [12 independent real-recording browser checkpoints](review-browser-results.json), [run output](review-browser-run.log), [reproduction script](review-reproduce.mjs). The independent reviewer used a separate disposable HOME and random port, checked source/time preservation, count correctness, switching/clearing, reload, empty scope, mobile light/dark themes and encoded expressions. No page errors; reviewer service/browser stopped and HOME removed.
 
-Merge is **BLOCKED** by external CI configuration: [GitHub workflow/check evidence](ci-blocker.json), [blocking check command output](ci-watch.txt). The CI workflow is `disabled_manually` (last updated 13 October, before this task), with zero PR check suites or branch runs. Workflow settings/files were not changed. The branch was rebased against current main; no release, merge or deploy performed. The required green-CI gate is not met. All task-owned scratch services and browsers are stopped. Metered spend: $0.
+## Final outcome: DONE
+
+[PR #23](https://github.com/viktor-com/tracequest/pull/23) merged as [`ebac5de220d1a4616c7aeab6723a65172cf3bf6d`](https://github.com/viktor-com/tracequest/commit/ebac5de220d1a4616c7aeab6723a65172cf3bf6d). [Merge verification](merge-result.json). Ivan confirmed CI is intentionally disabled and replaced the CI prerequisite with targeted tests on current main plus the independent reviewer pass. No workflow was enabled or dispatched, and no settings or workflow files changed.
+
+Sibling fixes moved main repeatedly; the branch was rebased and the targeted test rerun after each move. Final tested main `70a29b0b960cfa5008b7dcec778eabc83faa6089` is exactly the merged commit's parent. [Final targeted test output](final-targeted-tests.txt): **1 passed, 0 failed, 0 manual**, using `nice -n 19 taskset -c 0-3 facts check --tags insights-machine-scope`. No rebase conflicts or code changes were needed. The complete final merged diff was reviewed; it remains exactly the renderer change, new browser test and fact. No existing tests/config changed, no abandoned/reverted hunks, and no dependencies.
+
+All Acceptance lines are met under the revised gate: reproduction and real-browser proof above; one narrow PR merged; failing/passing regression; fresh-context independent review PASS; targeted test passed on current main; isolated scratch work with cleanup and unchanged originals; completed within one day. No release or deploy. Scratch services and browsers stopped; disposable HOME removed. Metered spend: $0.

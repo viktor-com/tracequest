@@ -1,0 +1,4 @@
+  ✓ insms          hub-insights.facts > scope > Selecting, switching, or clearing a machine in Insights preserves the active filter expression and time range (TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/insights-machine-scope.playwright.test.js)  @insights-machine-scope @implemented
+
+1 passed, 0 failed, 0 manual
+? = no command — verified manually by the agent

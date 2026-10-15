@@ -1,0 +1,18 @@
+{
+  "pr": {
+    "mergeCommit": {
+      "oid": "ebac5de220d1a4616c7aeab6723a65172cf3bf6d"
+    },
+    "mergedAt": "2026-10-15T14:11:26Z",
+    "state": "MERGED",
+    "url": "https://github.com/viktor-com/tracequest/pull/23"
+  },
+  "testedMain": "70a29b0b960cfa5008b7dcec778eabc83faa6089",
+  "testedHead": "6f8f3e8e773342094255d11895e53694695f5939",
+  "validationCommand": "nice -n 19 taskset -c 0-3 facts check --tags insights-machine-scope",
+  "validationResult": "1 passed, 0 failed, 0 manual",
+  "reviewerVerdict": "PASS",
+  "CI": "Intentionally unused per Ivan; no workflow dispatch/settings/files changed",
+  "released": false,
+  "deployed": false
+}
