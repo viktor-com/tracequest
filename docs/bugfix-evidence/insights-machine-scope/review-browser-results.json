@@ -1,0 +1,82 @@
+{
+  "verdict": "PASS",
+  "isolatedHomeRemovedOnExit": true,
+  "base": "http://127.0.0.1:33283",
+  "recording": "supplied Fedora Codex recording copy; raw contents not saved in evidence",
+  "mtime": "original-copy mtime preserved; only review Fedora/Mac copies set recent for nonempty last7 scope; local copy retains old mtime",
+  "checks": [
+    {
+      "label": "source + last7 before machine",
+      "path": "/insights?expr=source%3Acodex&days=7",
+      "sessions": 2,
+      "analyzed": 2
+    },
+    {
+      "label": "select Fedora",
+      "path": "/insights?expr=source%3Acodex&days=7&host=fedora",
+      "sessions": 1,
+      "analyzed": 1
+    },
+    {
+      "label": "reload Fedora",
+      "path": "/insights?expr=source%3Acodex&days=7&host=fedora",
+      "sessions": 1,
+      "analyzed": 1
+    },
+    {
+      "label": "switch Mac",
+      "path": "/insights?expr=source%3Acodex&days=7&host=mac",
+      "sessions": 1,
+      "analyzed": 1
+    },
+    {
+      "label": "switch local empty scope",
+      "path": "/insights?expr=source%3Acodex&days=7&host=local",
+      "sessions": 0,
+      "analyzed": 0
+    },
+    {
+      "label": "clear machine",
+      "path": "/insights?expr=source%3Acodex&days=7",
+      "sessions": 2,
+      "analyzed": 2
+    },
+    {
+      "label": "all time select Fedora",
+      "path": "/insights?expr=source%3Acodex&host=fedora",
+      "sessions": 1,
+      "analyzed": 1
+    },
+    {
+      "label": "range only",
+      "path": "/insights?days=7&host=fedora",
+      "sessions": 1,
+      "analyzed": 1
+    },
+    {
+      "label": "unscoped select Fedora",
+      "path": "/insights?host=fedora",
+      "sessions": 1,
+      "analyzed": 1
+    },
+    {
+      "label": "mobile light Fedora",
+      "path": "/insights?expr=source%3Acodex&days=7&host=fedora",
+      "sessions": 1,
+      "analyzed": 1
+    },
+    {
+      "label": "mobile dark Fedora",
+      "path": "/insights?expr=source%3Acodex&days=7&host=fedora",
+      "sessions": 1,
+      "analyzed": 1
+    },
+    {
+      "label": "encoded expression with spaces quotes ampersand angle brackets",
+      "path": "/insights?expr=source%3Acodex+project%3A%22scope+%26+%3Creview%3E%22&days=30&host=fedora",
+      "sessions": 0,
+      "analyzed": 0
+    }
+  ],
+  "pageErrors": []
+}

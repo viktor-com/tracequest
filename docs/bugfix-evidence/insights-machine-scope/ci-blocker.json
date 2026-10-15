@@ -1,0 +1,20 @@
+{
+  "workflow": {
+    "name": "CI",
+    "path": ".github/workflows/ci.yml",
+    "state": "disabled_manually",
+    "updated_at": "2026-10-13T15:50:56.000+02:00",
+    "html_url": "https://github.com/viktor-com/tracequest/blob/main/.github/workflows/ci.yml"
+  },
+  "pr": {
+    "headRefOid": "8d4308e91e676661ac3321f101b92560e002c086",
+    "mergeable": "MERGEABLE",
+    "statusCheckRollup": [],
+    "url": "https://github.com/viktor-com/tracequest/pull/23"
+  },
+  "check_suites": {
+    "total_count": 0,
+    "check_suites": []
+  },
+  "branch_runs": []
+}

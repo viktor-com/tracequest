@@ -16,4 +16,11 @@ Real browser, actual `tracequest serve`, loopback port 18088, isolated tmux sock
 
 The new served-browser regression test fails on main at the lost-source assertion and passes on the fixed branch with no skips: [main test](test-main.txt), [branch test](test-branch.txt). It checks UI and API session counts with recent Codex recordings on Fedora/Mac/local, an older Fedora Codex recording, and a recent Fedora Claude recording. Selecting/switching/clearing machines, source-only, time-only and unfiltered navigation are covered.
 
-Evidence is kept on a separate branch so the fix PR contains only the three-line production change, one new browser test and its fact. Full suites run in CI.
+Evidence is kept on a separate branch so the fix PR contains only the three-line production change, one new browser test and its fact. Full suites are left to CI, which is currently blocked as described below.
+
+
+## Independent review and merge gate
+
+Fresh-context reviewer: **PASS**, no actionable findings. [Complete review](review.md), [12 independent real-recording browser checkpoints](review-browser-results.json), [run output](review-browser-run.log), [reproduction script](review-reproduce.mjs). The independent reviewer used a separate disposable HOME and random port, checked source/time preservation, count correctness, switching/clearing, reload, empty scope, mobile light/dark themes and encoded expressions. No page errors; reviewer service/browser stopped and HOME removed.
+
+Merge is **BLOCKED** by external CI configuration: [GitHub workflow/check evidence](ci-blocker.json), [blocking check command output](ci-watch.txt). The CI workflow is `disabled_manually` (last updated 13 October, before this task), with zero PR check suites or branch runs. Workflow settings/files were not changed. The branch was rebased against current main; no release, merge or deploy performed. The required green-CI gate is not met. All task-owned scratch services and browsers are stopped. Metered spend: $0.
