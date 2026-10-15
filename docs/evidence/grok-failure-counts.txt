@@ -1,0 +1,94 @@
+Grok failure counts: browser reproduction, 15 October 2026
+
+Baseline: origin/main 636d4d2 (version 0.4.0), verified by git fetch,
+git ls-remote and the GitHub branches API. This is the main exposed by
+GitHub during this run; it differs from the brief's 0.9.0+ context.
+
+Real recording: hyperbits Grok session 01a0c0fa-2acb-7042-92b2-e8202caf2595.
+This is an equivalent real recording from Fedora's ~/.grok/sessions,
+copied read-only into /tmp/tq-fix-06/home/.grok/sessions. The Mac witness
+was unreachable: SSH and hub HTTP timed out; the local proxy was absent.
+The recording contains 392 tool_completed events, all outcome=success.
+No claim is made that every command mentioned inside output succeeded.
+
+Actual surface: headless Chromium, served /view and /insights pages,
+127.0.0.1:18606, HOME=/tmp/tq-fix-06/home, separate tmux socket/session
+(tq-fix-06), no sidecar, no tmux access. No real traces or service changed.
+Insights was refreshed through bin/tracequest.js insights --refresh.
+
+Before (browser DOM text on main):
+  detail stats: 2 errors
+  What went wrong: 2 errors across 1 chapter
+  grouped cause: 2x Bash, exit: 0
+  Insights: 0.0% of tool calls fail; 0 of 392 calls
+  Insights footer: 2 results flagged as errors by the session parser
+    look like ordinary output and are not counted.
+
+After (same recording, service restarted, persisted cache reused/refreshed):
+  detail stats: 0 errors
+  .error-summary elements: 0
+  Insights: 0.0% of tool calls fail; 0 of 392 calls
+  Insights footer has no suspect-results warning.
+
+Automated reproduction:
+  nice -n 19 taskset -c 0-3 node --test --test-concurrency=1 \
+    test/browser/grok-failure-counts.playwright.test.js
+
+The browser test starts the real CLI service in a disposable HOME, refreshes
+Insights through the CLI, and opens the actual detail and Insights pages.
+It covers success with inner exit/non-error source text, confirmed failure
+with ordinary/truncated output, missing outcome fallback and leading results.
+No existing tests, fixtures, assertions or CI configuration were changed.
+No new dependencies.
+
+Main result (new test, production source unchanged):
+TAP version 13
+# Subtest: Grok recorded outcomes agree in served detail and Insights
+not ok 1 - Grok recorded outcomes agree in served detail and Insights
+  ---
+  duration_ms: 714.268192
+  type: 'test'
+  location: '/home/everlier/code/tq-wt/tq-fix-06/test/browser/grok-failure-counts.playwright.test.js:35:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    successful-output: detail errors follow outer outcome
+
+    '2' !== '0'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '0'
+  actual: '2'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/everlier/code/tq-wt/tq-fix-06/test/browser/grok-failure-counts.playwright.test.js:72:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 997.503228
+
+Branch result:
+TAP version 13
+# Subtest: Grok recorded outcomes agree in served detail and Insights
+ok 1 - Grok recorded outcomes agree in served detail and Insights
+  ---
+  duration_ms: 1382.983104
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1690.49559

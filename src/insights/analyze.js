@@ -24,7 +24,7 @@ import { redactText } from "./redact.js";
 import { MAX_MODEL_WAIT_MS, MAX_STALL_MS, STALL_MS } from "../sessions/active-time.js";
 
 /** Bump when the record shape or any classifier changes: invalidates the cache. */
-export const INSIGHTS_VERSION = 2;
+export const INSIGHTS_VERSION = 3;
 
 export { MAX_MODEL_WAIT_MS, MAX_STALL_MS, STALL_MS };
 

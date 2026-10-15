@@ -16,6 +16,9 @@
 - label: Claude and Codex transcripts retain user messages that follow leading Kandev context blocks, while context-only messages stay hidden
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "wrapped user prompts" test/bin/session-loading.e2e.test.js
   tags: [session-loading, implemented]
+- label: Grok detail and Insights use recorded tool success or error ahead of output text, retaining confirmed failures even when their text looks ordinary
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/grok-failure-counts.playwright.test.js
+  tags: [grok-failure-counts, implemented]
 
 # indexing
 - label: An imported OpenCode session's failed tool calls (part state.status error, or output that reads as an error) are counted by both the JavaScript and the native indexer with its detail view's rule, so the Runs filter source:opencode errors:>0 lists it

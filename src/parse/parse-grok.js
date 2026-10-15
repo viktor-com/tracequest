@@ -142,10 +142,12 @@ export function parseGrok(sessionDir) {
               toolCalls.push({ id: callId, name: toolName, input: "" });
             }
             const resultContent = typeof next.content === "string" ? next.content : JSON.stringify(next.content || "");
-            const isError = outcomeInfo?.outcome === "error" || errorPattern.test(resultContent);
+            // Recorded outer status outranks error-like text inside successful output.
+            const outcome = outcomeInfo?.outcome;
+            const isError = outcome === "success" ? false : outcome === "error" || errorPattern.test(resultContent);
             events.push({
               type: "tool_result", timestamp: outcomeInfo?.ts || firstTs, toolUseId: callId,
-              text: capContent(resultContent, 1000), isError, uuid: `grok-result-${turnId++}`,
+              text: capContent(resultContent, 1000), isError, errorConfirmed: outcome === "error", uuid: `grok-result-${turnId++}`,
             });
             toolOutcomeIdx++;
             j++;
@@ -167,10 +169,11 @@ export function parseGrok(sessionDir) {
       if ((line.type === "tool_result" || line.type === "tool") && !events.length) {
         const outcomeInfo = toolOutcomeIdx < toolOutcomes.length ? toolOutcomes[toolOutcomeIdx] : null;
         const resultContent = typeof line.content === "string" ? line.content : JSON.stringify(line.content || "");
-        const isError = outcomeInfo?.outcome === "error" || errorPattern.test(resultContent);
+        const outcome = outcomeInfo?.outcome;
+        const isError = outcome === "success" ? false : outcome === "error" || errorPattern.test(resultContent);
         events.push({
           type: "tool_result", timestamp: outcomeInfo?.ts || firstTs, toolUseId: line.tool_call_id || `grok-tr-${turnId}`,
-          text: capContent(resultContent, 1000), isError, uuid: `grok-result-${turnId++}`,
+          text: capContent(resultContent, 1000), isError, errorConfirmed: outcome === "error", uuid: `grok-result-${turnId++}`,
         });
         toolOutcomeIdx++;
       }
