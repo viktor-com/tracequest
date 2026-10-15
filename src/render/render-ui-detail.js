@@ -451,6 +451,12 @@ export const UI_DETAIL_JS = `
           fcDiv.appendChild(h('div', { className: 'chapter-output' }, outputPreview(fc.output, 4, false)));
         }
       }
+      if (ch.failedCallsMore) {
+        fcDiv.appendChild(h('div', { className: 'chapter-cmd' },
+          h('span', { className: 'chapter-cmd-status fail' }, ''),
+          '\\u2026 ' + ch.failedCallsMore + ' more'
+        ));
+      }
       detail.appendChild(fcDiv);
     }
 

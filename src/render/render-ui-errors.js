@@ -8,15 +8,31 @@ export const UI_ERRORS_JS = `
     ${ERROR_CAUSES_JS}
   ];
 
+  // The output text of a Codex result envelope line ({"chunk_id":…,"exit_code":1,
+  // "output":"…"}), which the stored-output cap may cut short; null otherwise.
+  function envelopeOutput(line) {
+    if (!/^\\{"(?:chunk_id|wall_time_seconds|exit_code)"/.test(line)) return null;
+    try { var o = JSON.parse(line); if (typeof o.output === 'string') return o.output; } catch (e) {}
+    var m = line.match(/"output":"((?:[^"\\\\]|\\\\.)*)/);
+    if (!m) return null;
+    try { return JSON.parse('"' + m[1].replace(/\\\\$/, '') + '"'); } catch (e) { return null; }
+  }
+
   // The Insights class of one failed call, and the output line that names it:
   // "cd: /x: No such file or directory" rather than the "Exit code 1" above it,
-  // or the Codex "Script failed / Wall time / Output: / Script error:" framing.
+  // the Codex framing around it ("Script failed", "Chunk ID", "Process exited
+  // with code 1"), a JSON result envelope or Claude's <tool_use_error> tags.
   function failureCause(output) {
-    var text = String(output || '');
+    var lines = [];
+    String(output || '').split('\\n').forEach(function(raw) {
+      var l = raw.replace(/<\\/?tool_use_error>/g, '').trim();
+      var inner = envelopeOutput(l);
+      (inner != null ? inner.split('\\n') : [l]).forEach(function(x) { x = x.trim(); if (x) lines.push(x); });
+    });
+    var text = lines.join('\\n');
     var cls = null;
     for (var i = 0; i < ERROR_CAUSES.length && !cls; i++) if (ERROR_CAUSES[i].re.test(text)) cls = ERROR_CAUSES[i];
-    var lines = text.split('\\n').map(function(l) { return l.trim(); }).filter(Boolean);
-    var framing = /^(?:(?:Exit code|exit:)\\s*\\d+|Script (?:failed|completed)|Wall time [\\d.]+ seconds|Output:|Script error:)$/i;
+    var framing = /^(?:(?:Exit code|exit:)\\s*\\d+|Script (?:failed|completed)|Wall time:? [\\d.]+ seconds|Output:|Script error:|Chunk ID: \\S+|Process exited with code -?\\d+|Original token count: \\d+)$/i;
     var line = cls ? (lines.find(function(l) { return cls.re.test(l) && !framing.test(l); }) || '') : '';
     if (!line) line = lines.find(function(l) { return !framing.test(l); }) || lines[0] || '';
     return { id: cls ? cls.id : 'other', label: cls ? cls.label : '', line: line.slice(0, 200) };

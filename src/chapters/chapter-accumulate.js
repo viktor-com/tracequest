@@ -155,7 +155,11 @@ export function accumulateAssistantToolCall(chapter, tc, resultMap, opts = {}) {
   }
   // A failure none of the lists above keeps (a generic Exec, an unknown
   // OpenCode tool, a failed Read) so What went wrong can still show and open it.
-  if (isError && !listed && chapter.failedCalls && chapter.failedCalls.length < 10) {
-    chapter.failedCalls.push({ name: tc.name, input: tc.input || "", output: safeSlice(output, 400) });
+  if (isError && !listed && chapter.failedCalls) {
+    if (chapter.failedCalls.length < 10) {
+      chapter.failedCalls.push({ name: tc.name, input: tc.input || "", output: safeSlice(output, 400) });
+    } else {
+      chapter.failedCallsMore = (chapter.failedCallsMore || 0) + 1;
+    }
   }
 }

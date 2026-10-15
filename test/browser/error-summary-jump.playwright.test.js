@@ -23,6 +23,9 @@ const LATE_CAUSE = "FileNotFoundError: [Errno 2] No such file or directory: '/da
 const MCP_CAUSE = "Error: ENOENT: no such file or directory, open '/srv/data/x-7f3a.json'";
 const EXEC_CAUSE = "apply_patch verification failed: invalid patch: multiple operations target /tmp/tq-report-7f3a.md";
 const OPENCODE_CAUSE = "Maximum call stack size exceeded in tq-7f3a.";
+const CODEX_SHELL_CAUSE = "could not create image from display tq-7f3a";
+const CODEX_ENVELOPE_CAUSE = "cat: /nope-7f3a/config.yaml: No such file or directory";
+const EDIT_CAUSE = "String to replace not found in file.";
 
 async function allocEphemeralPort() {
   const server = createServer();
@@ -188,6 +191,24 @@ function seedHome() {
       },
     },
   );
+  lines.push(
+    {
+      type: "user", sessionId: sid, timestamp: at(90),
+      message: { content: [{ type: "text", text: "rename the lock helper" }] },
+    },
+    {
+      type: "assistant", sessionId: sid, timestamp: at(92),
+      message: {
+        model: "claude-sonnet-4-20250514",
+        usage: { input_tokens: 100, output_tokens: 20 },
+        content: [{ type: "tool_use", id: "edit-1", name: "Edit", input: { file_path: "/home/dev/repo/lock.py", old_string: "def held(", new_string: "def is_held(" } }],
+      },
+    },
+    {
+      type: "user", sessionId: sid, timestamp: at(93),
+      message: { content: [{ type: "tool_result", tool_use_id: "edit-1", is_error: true, content: `<tool_use_error>${EDIT_CAUSE}</tool_use_error>` }] },
+    },
+  );
   writeJsonl(sessionPath, lines);
   return { home, sessionId: sessionHash(sessionPath) };
 }
@@ -216,6 +237,19 @@ async function seedGenericToolHome() {
       ],
     }),
     item(5, { type: "message", role: "assistant", content: [{ type: "output_text", text: "The patch did not apply." }] }),
+    // Classic exec_command framing, then a code-mode result whose JSON envelope holds the cause.
+    item(6, { type: "message", role: "user", content: [{ type: "input_text", text: "take a screenshot" }] }),
+    item(7, { type: "function_call", name: "exec_command", arguments: JSON.stringify({ cmd: "import -window root shot.png" }), call_id: "call-shell-1" }),
+    item(8, { type: "function_call_output", call_id: "call-shell-1", output: `Chunk ID: f0f23c\nWall time: 0.0000 seconds\nProcess exited with code 1\nOriginal token count: 9\nOutput:\n${CODEX_SHELL_CAUSE}\n` }),
+    item(9, { type: "message", role: "user", content: [{ type: "input_text", text: "read the config" }] }),
+    item(10, { type: "custom_tool_call", status: "completed", call_id: "call-exec-2", name: "exec", input: "text(await tools.exec_command({cmd:'cat /nope-7f3a/config.yaml'}))" }),
+    item(11, {
+      type: "custom_tool_call_output", call_id: "call-exec-2",
+      output: [
+        { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+        { type: "input_text", text: JSON.stringify({ chunk_id: "82ce0b", wall_time_seconds: 0.0000034, exit_code: 1, original_token_count: 13, output: `${CODEX_ENVELOPE_CAUSE}\n` }) },
+      ],
+    }),
   ]);
   const t0 = Date.UTC(2026, 9, 1, 12, 0, 0);
   await seedOpenCodeIndexDb(home, [{
@@ -342,6 +376,24 @@ describe("error summary playwright", SKIP_NO_PLAYWRIGHT, () => {
       await waitForCauseOnScreen(page, 0, cause);
     });
   }
+
+  test("codex shell framing and result envelopes name the cause line", async (t) => {
+    const page = await openGenericView(t, "codex");
+    const codes = await page.locator(".error-list-item code").allInnerTexts();
+    assert.ok(codes.includes(CODEX_SHELL_CAUSE), `classic exec_command failure names its cause: ${JSON.stringify(codes)}`);
+    assert.ok(codes.includes(CODEX_ENVELOPE_CAUSE), `JSON result envelope names its cause: ${JSON.stringify(codes)}`);
+    for (const code of codes) assert.doesNotMatch(code, /^(?:\{"chunk_id"|Process exited|Chunk ID|Script (?:failed|completed))/, "no framing or envelope as the cause");
+
+    await page.locator(".error-list-item", { hasText: CODEX_ENVELOPE_CAUSE }).click();
+    await page.waitForFunction(() => document.querySelector("#chapter-2.expanded"), null, { timeout: 5_000 });
+    await waitForCauseOnScreen(page, 2, CODEX_ENVELOPE_CAUSE);
+  });
+
+  test("failure rows drop tool_use_error tags from the cause", async (t) => {
+    const page = await openView(t);
+    const row = page.locator(".error-list-item", { hasText: EDIT_CAUSE });
+    assert.equal((await row.locator("code").innerText()).trim(), EDIT_CAUSE);
+  });
 
   test("failure rows name the cause instead of the exit code", async (t) => {
     const page = await openView(t);
