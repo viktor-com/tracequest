@@ -210,6 +210,14 @@
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "analytics-panel playwright" test/browser/analytics-panel.playwright.test.js
   tags: [spec, analytics-panel, ui, playwright, implemented]
 
+## git-activity
+- label: Git activity ignores checkout option flags and path restores rather than showing them as branch names
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/git-activity.playwright.test.js
+  tags: [git-activity-12, implemented]
+- label: Git activity reads commit messages from the commit command including combined -qam flags without using unrelated Python heredocs
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/git-activity.playwright.test.js
+  tags: [git-activity-12, implemented]
+
 # ui
 
 ## rendered-session
