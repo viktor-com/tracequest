@@ -429,7 +429,16 @@ pub(crate) fn index_opencode_in(conns: &mut OpenCodeConns, session: &Session) ->
                                         tools.insert(tn.clone());
                                         *tool_counts.entry(tn).or_insert(0) += 1;
                                     }
-                                    if part.get("status").and_then(|v| v.as_str()) == Some("error")
+                                    // Same rule as the detail view (parseOpenCode): a failed
+                                    // call or an error-shaped output.
+                                    let state = part.get("state");
+                                    let status = state.and_then(|s| s.get("status"));
+                                    let output = state
+                                        .and_then(|s| s.get("output"))
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("");
+                                    if status.and_then(|v| v.as_str()) == Some("error")
+                                        || OPENCODE_ERROR_OUTPUT_RE.is_match(output)
                                     {
                                         errors += 1;
                                     }
@@ -677,6 +686,12 @@ static GIT_COMMIT_RE: LazyLock<Regex> =
 
 static ERROR_PATTERN_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)^(Error:|exit code [1-9]|command failed|ENOENT|EACCES|SyntaxError|TypeError|ReferenceError)").unwrap()
+});
+
+/// ERROR_PATTERN_RE matching any line of a tool output, like the JS errorPattern
+/// (`/im`) that parseOpenCode applies to an OpenCode tool part's output.
+static OPENCODE_ERROR_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?imR)^(Error:|exit code [1-9]|command failed|ENOENT|EACCES|SyntaxError|TypeError|ReferenceError)").unwrap()
 });
 
 // Regex patterns used by claude/factory indexers

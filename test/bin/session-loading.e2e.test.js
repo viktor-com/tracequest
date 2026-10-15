@@ -1,11 +1,12 @@
 import '../helpers/skip-lr-watch-env.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mkTmp, writeJsonl } from '../helpers/fixtures.js';
+import { seedOpenCodeIndexDb } from '../helpers/opencode-db-fixtures.js';
 import { PLAYWRIGHT } from '../helpers/playwright-gate.js';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
@@ -133,3 +134,94 @@ test('wrapped user prompts survive in Claude and Codex transcripts over HTTP', a
     }
   } finally { await stop(child, home); }
 });
+
+// An OpenCode recording imported from a hub host: tool parts carry their outcome in
+// state.status, and a completed call can still print an error.
+const OC_HOST = 'gpu';
+const OC_FAILED = 'ses_failedtoolcallsxxxxx';
+const OC_CLEAN = 'ses_cleantoolcallsxxxxxx';
+const ocTool = (callID, status, output) => ({ type: 'tool', tool: 'bash', callID, state: { status, input: { command: 'ls' }, output } });
+const ocSession = (id, tools) => ({ id, title: id, messages: [
+  { role: 'user', parts: [{ type: 'text', text: `run ${id}` }] },
+  { role: 'assistant', modelID: 'gpt-5', parts: [{ type: 'text', text: 'running' }, ...tools] },
+  { role: 'user', parts: [{ type: 'text', text: 'thanks' }] },
+] });
+async function seedImportedOpenCode(home) {
+  await seedOpenCodeIndexDb(join(home, '.local/share/tracequest/hosts', OC_HOST), [
+    ocSession(OC_FAILED, [ocTool('c1', 'error'), ocTool('c2', 'completed', 'Error: ENOENT: no such file'), ocTool('c3', 'completed', 'ok')]),
+    ocSession(OC_CLEAN, [ocTool('c4', 'completed', 'ok')]),
+  ]);
+  return `opencode://${OC_HOST}/${OC_FAILED}`;
+}
+const REAL_SIDECAR = join(ROOT, 'sidecar/target/release/tracequest-sidecar');
+// The native indexer through a wrapper that records each call, so a silent fallback to JS fails
+// the test. ran() reports whether it indexed since the last ran().
+function nativeIndexerEnv(home) {
+  const bin = join(home, 'tracequest-sidecar');
+  const log = join(home, 'sidecar-calls.log');
+  writeFileSync(bin, `#!/bin/sh\necho "$1" >> ${JSON.stringify(log)}\nexec ${JSON.stringify(REAL_SIDECAR)} "$@"\n`, { mode: 0o755 });
+  const ran = () => {
+    const calls = existsSync(log) ? readFileSync(log, 'utf8') : '';
+    rmSync(log, { force: true });
+    return calls.includes('index');
+  };
+  return { env: { TRACEQUEST_NO_SIDECAR: '', TRACEQUEST_SIDECAR_PATH: bin }, ran };
+}
+const INDEXERS = { javascript: () => ({ env: {}, ran: () => true }), native: nativeIndexerEnv };
+
+for (const [name, indexer] of Object.entries(INDEXERS)) {
+  test(`OpenCode tool errors match the detail view and the errors filter (${name} indexer)`, async () => {
+    const home = mkTmp('tq-loading-ocerr-');
+    const failed = await seedImportedOpenCode(home);
+    const { env, ran } = indexer(home);
+    const { get, child } = await serve(home, env);
+    try {
+      const res = await get('/api/sessions?expr=' + encodeURIComponent('source:opencode errors:>0'));
+      assert.equal(res.status, 200);
+      const rows = (await res.json()).sessions;
+      assert.ok(ran(), `${name} indexer built the index`);
+      assert.deepEqual(rows.map(r => r.path), [failed]);
+      const view = await get('/api/view-session?path=' + encodeURIComponent(failed));
+      assert.equal(view.status, 200);
+      const detail = (await view.json()).session.stats.errors;
+      assert.equal(detail, 2);
+      assert.equal(rows[0].errors, detail);
+    } finally { await stop(child, home); }
+  });
+}
+
+function findOpenCode(home, expr, env) {
+  const r = spawnSync(process.execPath, ['bin/tracequest.js', 'find', expr, '--json'], {
+    cwd: ROOT, encoding: 'utf8', env: { ...process.env, HOME: home, TRACEQUEST_NO_SIDECAR: '1', TRACEQUEST_SKIP_TMUX: '1', TRACEQUEST_SKIP_LR_WATCH: '1', ...env },
+  });
+  assert.equal(r.status, 0, r.stderr);
+  return r.stdout.trim().startsWith('[') ? JSON.parse(r.stdout).map(s => s.path) : [];
+}
+
+for (const [name, indexer] of Object.entries(INDEXERS)) {
+  test(`OpenCode error heal re-reads rows cached before errors were counted, once (${name} indexer)`, async () => {
+    const home = mkTmp('tq-loading-ocheal-');
+    try {
+      const failed = await seedImportedOpenCode(home);
+      const { env, ran } = indexer(home);
+      const indexPath = join(home, '.cache/tracequest/index.json');
+      assert.equal(findOpenCode(home, 'source:opencode errors:>=0', env).length, 2);
+      assert.ok(ran(), `${name} indexer built the index`);
+      // Turn it into an index written before the fix: mtime-current rows with no errors and no marker.
+      const old = JSON.parse(readFileSync(indexPath, 'utf8'));
+      assert.equal(old._ocerr, 1);
+      delete old._ocerr;
+      old[failed].errors = 0;
+      writeFileSync(indexPath, JSON.stringify(old));
+      assert.deepEqual(findOpenCode(home, 'source:opencode errors:>0', env), [failed]);
+      assert.ok(ran(), `${name} indexer re-read the rows`);
+      const healed = JSON.parse(readFileSync(indexPath, 'utf8'));
+      assert.equal(healed._ocerr, 1);
+      assert.equal(healed[failed].errors, 2);
+      // Once marked, a cached row is not read again.
+      healed[failed].errors = 0;
+      writeFileSync(indexPath, JSON.stringify(healed));
+      assert.deepEqual(findOpenCode(home, 'source:opencode errors:>0', env), []);
+    } finally { rmSync(home, { recursive: true, force: true }); }
+  });
+}
