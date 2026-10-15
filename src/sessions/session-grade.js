@@ -6,21 +6,36 @@ import { currentIndexEntry } from "./index-writers.js";
 import { indexSession } from "./session-index-core.js";
 import { GROK_CHAT_FILE } from "./session-layout.js";
 
+const gradeCache = new Map();
+const MAX_CACHED_GRADES = 5;
+
 /**
  * Grade a recording with the same metadata and definition as Runs/filter/sort.
  * Reuse a current index entry; CLI/offline renders index the read-only source
  * when no entry is loaded. Enriched chapter retry/outcome heuristics are not
  * inputs to this grade.
  */
-export function sessionGrade(session) {
+export function sessionGrade(session, indexEntry = currentIndexEntry) {
   let mtime = session.sourceMtimeMs;
   if (session.path && !session.path.includes("://")) {
     const file = session.source === "grok" ? join(session.path, GROK_CHAT_FILE) : session.path;
     try { mtime = statSync(file).mtimeMs; } catch { mtime = null; }
   }
   if (mtime != null || session.path?.startsWith("opencode://")) {
-    const entry = mtime != null ? currentIndexEntry(session.path, mtime) : null;
-    return computeGrade(entry || indexSession(session));
+    const key = JSON.stringify([session.path, session.source || "claude", mtime]);
+    if (indexEntry === currentIndexEntry && mtime != null && gradeCache.has(key)) return gradeCache.get(key);
+    const entry = mtime != null ? indexEntry(session.path, mtime) : null;
+    // A session worker supplies the parent's current entry. Keep that grade too,
+    // so rendering in the worker need not reopen the source or index.json.
+    // Without a timestamp there is no safe key for an offline recording.
+    if (!entry && mtime != null && gradeCache.has(key)) return gradeCache.get(key);
+    const grade = computeGrade(entry || indexSession(session));
+    if (mtime != null) {
+      gradeCache.delete(key);
+      gradeCache.set(key, grade);
+      if (gradeCache.size > MAX_CACHED_GRADES) gradeCache.delete(gradeCache.keys().next().value);
+    }
+    return grade;
   }
 
   // Programmatic renders can supply an in-memory session without a recording.
