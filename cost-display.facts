@@ -14,3 +14,9 @@
   id: costrates
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern "published rates" test/bin/tracequest-cost-display.test.js
   tags: [cost-display, implemented]
+
+# surfaces
+- label: A Cursor session rendered with tracequest render shows the same duration, input and output tokens and estimated cost as its served session view, whether or not the session index already covers the recording
+  id: costcli
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern "Cursor CLI render" test/bin/tracequest-cursor-render.e2e.test.js
+  tags: [cost-display, implemented]
