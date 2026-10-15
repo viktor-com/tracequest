@@ -196,7 +196,11 @@ export function grokChatIsGenerating(objs) {
       if (Array.isArray(o.tool_calls) && o.tool_calls.length) return false;
       return assistantContentEmpty(o);
     }
-    if (o.type === "user") return true;
+    if (o.type === "user") {
+      // Grok appends its skills reminder after a finished reply; it is not a prompt.
+      if (o.synthetic_reason === "system_reminder") continue;
+      return true;
+    }
     if (o.type === "tool_result" || o.type === "tool") return false;
   }
   return false;
