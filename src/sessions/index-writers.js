@@ -802,6 +802,26 @@ export function currentIndexEntry(path, mtimeMs) {
   return indexEntryIfCurrent(cache && path !== "_v" ? cache[path] : undefined, mtimeMs);
 }
 
+/**
+ * currentIndexEntry for a process that runs no index build (a CLI export):
+ * null while index.json predates a row format the `source`'s rows depend on,
+ * because only a build heals those rows (facts cdxheal, durcl2, durac2).
+ * Cursor rows depend on none of them.
+ */
+export function currentHealedIndexEntry(path, mtimeMs, source) {
+  const cache = _indexFileCache !== null ? _indexFileCache : loadIndexFile(readIndexDiskMtimeMs("currentHealedIndexEntry"));
+  if (!cache || !rowFormatsCurrent(cache, source)) return null;
+  return currentIndexEntry(path, mtimeMs);
+}
+
+function rowFormatsCurrent(cache, source) {
+  if (source === "cursor" || source === "cursor-cloud") return true;
+  if (cache._active !== ACTIVE_TIME_FORMAT) return false;
+  if (source === "codex") return cache._codex === CODEX_INDEX_FORMAT;
+  if (source === "claude") return cache._spans === CLAUDE_SPAN_FORMAT;
+  return true;
+}
+
 /** `entry` when it is an index entry recorded for a file whose mtime is `mtimeMs`, else null. */
 export function indexEntryIfCurrent(entry, mtimeMs) {
   if (!entry || typeof entry !== "object") return null;

@@ -5,7 +5,7 @@ import { exportMessages } from "../export/messages-export.js";
 import { findSessions as discoverCliSessions, buildIndex, peekSession, searchSessions, sortSessionsByMtimeDesc } from "../sessions.js";
 import { detectLiveSessions, stampLive } from "../sessions/live-sessions.js";
 import { indexSession } from "../sessions/index.js";
-import { currentIndexEntry } from "../sessions/index-writers.js";
+import { currentHealedIndexEntry } from "../sessions/index-writers.js";
 import { attachSessionSummary } from "../sessions/session-summary.js";
 import { serve } from "../server.js";
 // normalizeProjectFolder (not projectLabel) is the single project-normalisation
@@ -505,8 +505,10 @@ export function parseAndRender(inputFile, values) {
   }
   printSessionStats(session);
   // The export shows the summary the served session view shows: the session's
-  // current index entry, or the entry indexing the recording now would write.
-  attachSessionSummary(session, (path, mtimeMs) => currentIndexEntry(path, mtimeMs) ?? indexSession(session));
+  // current index entry, or (no entry, or one a server build would heal first)
+  // the entry indexing the recording now would write.
+  attachSessionSummary(session, (path, mtimeMs) =>
+    currentHealedIndexEntry(path, mtimeMs, session.source || "claude") ?? indexSession(session));
   renderAndWrite(session, values.out, values.open);
 }
 

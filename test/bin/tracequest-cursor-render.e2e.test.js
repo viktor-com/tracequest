@@ -2,7 +2,7 @@ import "../helpers/skip-lr-watch-env.js";
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, copyFileSync, rmSync, statSync, utimesSync } from "node:fs";
+import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync, statSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -14,39 +14,29 @@ import { PLAYWRIGHT, SKIP_NO_PLAYWRIGHT } from "../helpers/playwright-gate.js";
 // model only in Cursor's state.vscdb, and file times spanning two hours.
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const composerId = "5e1d0c3a-7b2f-4c19-9a8e-2f6d4b1c0e77";
-const fixture = join(root, "test/fixtures/cost-display/cursor-composer.jsonl");
-let scratch, home, stateDb, child, base, env;
-const logs = [];
+const cursorRel = join(".cursor/projects/srv-shop/agent-transcripts", composerId, composerId + ".jsonl");
+const codexRel = ".codex/sessions/2026/10/14/rollout-gpt-5.6-sol.jsonl";
+let scratch, home, freshHome, env, server, browser, page;
 
-function seedRecording(homeDir) {
-  const dir = join(homeDir, ".cursor/projects/srv-shop/agent-transcripts", composerId);
-  mkdirSync(dir, { recursive: true });
-  const file = join(dir, composerId + ".jsonl");
-  copyFileSync(fixture, file);
-  const born = statSync(file).birthtimeMs || statSync(file).mtimeMs;
-  utimesSync(file, new Date(born), new Date(born + 2 * 3600_000));
-  return file;
+function seedRecordings(homeDir) {
+  const cursor = join(homeDir, cursorRel);
+  mkdirSync(dirname(cursor), { recursive: true });
+  copyFileSync(join(root, "test/fixtures/cost-display/cursor-composer.jsonl"), cursor);
+  const born = statSync(cursor).birthtimeMs || statSync(cursor).mtimeMs;
+  utimesSync(cursor, new Date(born), new Date(born + 2 * 3600_000));
+  const codex = join(homeDir, codexRel);
+  mkdirSync(dirname(codex), { recursive: true });
+  copyFileSync(join(root, "test/fixtures/cost-display/gpt-5.6-sol.jsonl"), codex);
 }
 
-before(async () => {
-  scratch = mkdtempSync(join(tmpdir(), "tracequest-cursor-render-"));
-  home = join(scratch, "home");
-  seedRecording(home);
-  stateDb = join(scratch, "state.vscdb");
-  const db = new DatabaseSync(stateDb);
-  db.exec("CREATE TABLE cursorDiskKV (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB)");
-  db.prepare("INSERT INTO cursorDiskKV VALUES (?, ?)").run(
-    `composerData:${composerId}`,
-    JSON.stringify({ composerId, modelConfig: { modelName: "claude-opus-5-5" } }),
-  );
-  db.close();
-  env = { ...process.env, TRACEQUEST_CURSOR_STATE_DB: stateDb, TRACEQUEST_NO_SIDECAR: "1", TRACEQUEST_SKIP_LR_WATCH: "1" };
+async function startServer() {
   const listener = createServer();
   await new Promise(r => listener.listen(0, "127.0.0.1", r));
   const port = listener.address().port;
   await new Promise(r => listener.close(r));
-  base = `http://127.0.0.1:${port}`;
-  child = spawn(process.execPath, [join(root, "bin/tracequest.js"), "serve", "--port", String(port)], {
+  const base = `http://127.0.0.1:${port}`;
+  const logs = [];
+  const child = spawn(process.execPath, [join(root, "bin/tracequest.js"), "serve", "--port", String(port)], {
     cwd: root, env: { ...env, HOME: home }, stdio: ["ignore", "pipe", "pipe"],
   });
   child.stdout.on("data", b => logs.push(String(b)));
@@ -55,31 +45,62 @@ before(async () => {
   while (Date.now() < deadline) {
     try {
       const response = await fetch(base + "/api/sessions");
-      if (response.ok && (await response.json()).sessions.length) return;
+      if (response.ok) {
+        const rows = (await response.json()).sessions;
+        if (rows.length === 2) return { child, base, rows };
+      }
     } catch {}
     if (child.exitCode !== null) break;
     await new Promise(r => setTimeout(r, 100));
   }
   throw new Error("serve did not start: " + logs.join(""));
+}
+
+// SIGTERM flushes the deferred index.json write.
+async function stopServer() {
+  if (!server || server.child.exitCode !== null) return;
+  const exited = new Promise(r => server.child.once("exit", r));
+  server.child.kill("SIGTERM");
+  await exited;
+}
+
+before(async () => {
+  scratch = mkdtempSync(join(tmpdir(), "tracequest-cursor-render-"));
+  home = join(scratch, "home");
+  freshHome = join(scratch, "fresh-home");
+  seedRecordings(home);
+  seedRecordings(freshHome);
+  const stateDb = join(scratch, "state.vscdb");
+  const db = new DatabaseSync(stateDb);
+  db.exec("CREATE TABLE cursorDiskKV (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB)");
+  db.prepare("INSERT INTO cursorDiskKV VALUES (?, ?)").run(
+    `composerData:${composerId}`,
+    JSON.stringify({ composerId, modelConfig: { modelName: "claude-opus-5-5" } }),
+  );
+  db.close();
+  env = { ...process.env, TRACEQUEST_CURSOR_STATE_DB: stateDb, TRACEQUEST_NO_SIDECAR: "1", TRACEQUEST_SKIP_LR_WATCH: "1" };
+  delete env.TRACEQUEST_CACHE_DIR;
+  server = await startServer();
 });
 after(async () => {
-  if (child && child.exitCode === null) {
-    const exited = new Promise(r => child.once("exit", r));
-    child.kill("SIGTERM");
-    await exited;
-  }
+  if (browser) await browser.close();
+  await stopServer();
   if (scratch) rmSync(scratch, { recursive: true, force: true });
 });
 
-function renderFromCli(homeDir, out) {
-  const file = join(homeDir, ".cursor/projects/srv-shop/agent-transcripts", composerId, composerId + ".jsonl");
-  execFileSync(process.execPath, [join(root, "bin/tracequest.js"), "render", file, "--out", out], {
+function renderFromCli(homeDir, rel, name) {
+  const out = join(scratch, name + ".html");
+  execFileSync(process.execPath, [join(root, "bin/tracequest.js"), "render", join(homeDir, rel), "--out", out], {
     cwd: root, env: { ...env, HOME: homeDir }, stdio: "pipe",
   });
   return pathToFileURL(out).href;
 }
 
-async function figures(page, url) {
+async function figures(url) {
+  if (!page) {
+    browser = await PLAYWRIGHT.chromium.launch({ headless: true });
+    page = await browser.newPage();
+  }
   await page.goto(url);
   await page.locator(".session-summary").first().waitFor();
   return page.evaluate(() => {
@@ -101,24 +122,47 @@ async function figures(page, url) {
   });
 }
 
-test("Cursor CLI render shows the served view's duration, tokens and cost", SKIP_NO_PLAYWRIGHT, async () => {
-  const row = (await (await fetch(base + "/api/sessions")).json()).sessions.find(r => r.path.endsWith(composerId + ".jsonl"));
-  assert.ok(row, "the Cursor session is listed");
-  assert.equal(row.model, "claude-opus-5-5");
-  const indexed = renderFromCli(home, join(scratch, "indexed.html"));
-  const freshHome = join(scratch, "fresh-home");
-  seedRecording(freshHome);
-  const unindexed = renderFromCli(freshHome, join(scratch, "unindexed.html"));
+function servedUrl(rel) {
+  const row = server.rows.find(r => r.path.endsWith(rel));
+  assert.ok(row, rel + " is listed");
+  return `${server.base}/view?id=${row.id}&source=${row.source}`;
+}
 
-  const browser = await PLAYWRIGHT.chromium.launch({ headless: true });
-  try {
-    const page = await browser.newPage();
-    const served = await figures(page, `${base}/view?id=${row.id}&source=cursor`);
-    // File times are not a duration; the estimate is priced at the model's rates.
-    assert.equal(served.duration, null);
-    assert.equal(served.metaDuration, "—");
-    assert.match(served.cost, /^~\$\d/);
-    assert.deepEqual(await figures(page, indexed), served, "render with the session index in place");
-    assert.deepEqual(await figures(page, unindexed), served, "render before any index exists");
-  } finally { await browser.close(); }
+function editIndex(edit) {
+  const file = join(home, ".cache/tracequest/index.json");
+  const index = JSON.parse(readFileSync(file, "utf8"));
+  edit(index);
+  writeFileSync(file, JSON.stringify(index));
+}
+
+test("Cursor CLI render shows the served view's duration, tokens and cost", SKIP_NO_PLAYWRIGHT, async () => {
+  assert.equal(server.rows.find(r => r.source === "cursor").model, "claude-opus-5-5");
+  const served = await figures(servedUrl(cursorRel));
+  // File times are not a duration; the estimate is priced at the model's rates.
+  assert.equal(served.duration, null);
+  assert.equal(served.metaDuration, "—");
+  assert.match(served.cost, /^~\$\d/);
+  assert.deepEqual(await figures(renderFromCli(freshHome, cursorRel, "unindexed")), served, "render before any index exists");
+
+  // A served index whose estimate differs from the CLI's own indexer (as the
+  // native indexer's may): the export shows the row the server shows.
+  await stopServer();
+  editIndex((index) => {
+    const row = index[join(home, cursorRel)];
+    row.outputTokens += 40000;
+    row.totalTokens += 40000;
+  });
+  server = await startServer();
+  const reindexed = await figures(servedUrl(cursorRel));
+  assert.notDeepEqual(reindexed, served, "the server reuses the index.json row");
+  assert.deepEqual(await figures(renderFromCli(home, cursorRel, "indexed")), reindexed, "render with the session index in place");
+});
+
+test("CLI render never shows an index row a server build would heal", SKIP_NO_PLAYWRIGHT, async () => {
+  await stopServer();
+  const unindexed = await figures(renderFromCli(freshHome, codexRel, "codex-unindexed"));
+  editIndex((index) => { index[join(home, codexRel)].durationMs = 5 * 3600_000; });
+  assert.equal((await figures(renderFromCli(home, codexRel, "codex-current"))).duration, "5h", "a current-format row is shown");
+  editIndex((index) => { delete index._active; });
+  assert.deepEqual(await figures(renderFromCli(home, codexRel, "codex-old-format")), unindexed, "an old-format row is indexed afresh");
 });
