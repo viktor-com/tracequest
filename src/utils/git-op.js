@@ -42,11 +42,10 @@ export function getCommitHash(cwd, opts = {}) {
 
 /** Extract commit message text from a `-m` flag in a git commit command string. */
 export function extractCommitMessageFromMFlag(gitPart) {
-  var mMatch = gitPart.match(/-m\s+["']([^"']+)["']/);
-  if (!mMatch) mMatch = gitPart.match(/-m\s+"([^"]+)"/);
-  if (!mMatch) mMatch = gitPart.match(/-m\s+'([^']+)'/);
-  if (!mMatch) mMatch = gitPart.match(/-m\s+(\S+)/);
-  return mMatch ? mMatch[1] : null;
+  var mMatch = gitPart.match(/(?:^|\s)(?:-[a-zA-Z]*m|--message)(?:\s+|=)(?:"([^"]*)"|'([^']*)'|(\S+))/);
+  var message = mMatch ? (mMatch[1] ?? mMatch[2] ?? mMatch[3]) : null;
+  // A command substitution is not the literal commit subject.
+  return message && !/^["']?\$\(/.test(message) ? message : null;
 }
 
 /** True when the working tree has staged, unstaged, or untracked changes. */
@@ -86,6 +85,7 @@ export function detectGitOp(cmd, output) {
     }
     if (!gitPart) return null;
   }
+  var gitStart = c.indexOf(gitPart);
   // Strip git -C <path> prefix so the rest of the regex patterns work
   gitPart = gitPart.replace(/^git\s+(-C\s+\S+\s+)+/, 'git ');
 
@@ -110,14 +110,19 @@ export function detectGitOp(cmd, output) {
       }
     }
     if (!op.message) {
-      var heredocMatch = cmd.match(/<<['"]?EOF['"]?\n([\s\S]*?)\nEOF/);
-      if (heredocMatch) {
-        op.message = safeSlice(heredocMatch[1].split('\n')[0].trim(), 120);
-      }
-    }
-    if (!op.message) {
       var msgFromFlag = extractCommitMessageFromMFlag(gitPart);
       if (msgFromFlag) op.message = safeSlice(msgFromFlag, 120);
+    }
+    if (!op.message) {
+      // Only use a heredoc supplied as this commit's message, never one
+      // belonging to another command (for example a Python script).
+      var heredocPrefix = /(?:^|\s)(?:-[a-zA-Z]*m|--message)(?:\s+|=)"?\$\(cat\s+<<['"]?\w+['"]?\n/;
+      // Chain splitting may cut the message body at a semicolon. Start at
+      // this commit, but only read a heredoc whose argument begins here.
+      var heredocMatch = heredocPrefix.test(gitPart) && c.slice(gitStart).match(/(?:^|\s)(?:-[a-zA-Z]*m|--message)(?:\s+|=)"?\$\(cat\s+<<['"]?(\w+)['"]?\n([\s\S]*?)\n\1(?:\n|$)/);
+      if (heredocMatch) {
+        op.message = safeSlice(heredocMatch[2].split('\n')[0].trim(), 120);
+      }
     }
     return op;
   }
@@ -152,36 +157,45 @@ export function detectGitOp(cmd, output) {
     return op;
   }
 
-  // git checkout -b (create branch)
-  if (/\bgit\s+checkout\s+-b\b/.test(gitPart)) {
-    var branchMatch = gitPart.match(/git\s+checkout\s+-b\s+([\w./-]+)/);
-    return { type: 'branch-create', cmd: gitPart, branch: branchMatch ? branchMatch[1] : '' };
-  }
-
-  // git switch -c (create branch)
-  if (/\bgit\s+switch\s+-c\b/.test(gitPart) || /\bgit\s+switch\s+--create\b/.test(gitPart)) {
-    var branchMatch = gitPart.match(/git\s+switch\s+(?:-c|--create)\s+([\w./-]+)/);
-    return { type: 'branch-create', cmd: gitPart, branch: branchMatch ? branchMatch[1] : '' };
+  // Options are not branch names; checkout <tree> -- <paths> restores files.
+  if (/^git\s+(?:checkout|switch)\s/.test(gitPart)) {
+    var tokens = gitPart.split('\n')[0].match(/"[^"]*"|'[^']*'|\S+/g).slice(2);
+    var branch = null;
+    var create = false;
+    for (var ti = 0; ti < tokens.length; ti++) {
+      var token = tokens[ti];
+      if (token === '--') {
+        if (/^git\s+checkout\b/.test(gitPart)) {
+          if (ti + 1 < tokens.length) return null;
+          break;
+        }
+        branch = tokens[ti + 1];
+        break;
+      }
+      if (/^(?:-b|-B|-c|-C|--create|--force-create|--orphan)$/.test(token)) {
+        create = true;
+        branch = tokens[++ti];
+      } else if (/^(?:-q|--quiet|-f|--force|--guess|--no-guess|--no-track|--ignore-other-worktrees)$/.test(token)) {
+        continue;
+      } else if (token.startsWith('-') && token !== '-') {
+        return null; // Unknown options cannot safely supply a branch label.
+      } else if (!branch) {
+        branch = token;
+      } else if (!create) {
+        return null; // Multiple checkout operands are paths, not a switch.
+      }
+    }
+    if (!branch || branch.startsWith('-') && branch !== '-') return null;
+    branch = branch.replace(/^(['"])(.*)\1$/, '$2');
+    // Preserve checkout's conservative treatment of file-like operands.
+    if (!create && /^git\s+checkout\b/.test(gitPart) && branch.includes('.')) return null;
+    return { type: create ? 'branch-create' : 'branch-switch', cmd: gitPart, branch };
   }
 
   // git branch (create)
   if (/\bgit\s+branch\s+[^-]/.test(gitPart) && !/\bgit\s+branch\s+-[dD]/.test(gitPart)) {
     var branchMatch = gitPart.match(/git\s+branch\s+([\w./-]+)/);
     if (branchMatch) return { type: 'branch-create', cmd: gitPart, branch: branchMatch[1] };
-  }
-
-  // git checkout (switch branch)
-  if (/\bgit\s+checkout\s+(?!--)\S/.test(gitPart) && !/\bgit\s+checkout\s+-b\b/.test(gitPart)) {
-    var branchMatch = gitPart.match(/git\s+checkout\s+([\w./-]+)/);
-    if (branchMatch && !branchMatch[1].includes('.')) {
-      return { type: 'branch-switch', cmd: gitPart, branch: branchMatch[1] };
-    }
-  }
-
-  // git switch (switch branch)
-  if (/\bgit\s+switch\s+(?!-c|--create)\S/.test(gitPart)) {
-    var branchMatch = gitPart.match(/git\s+switch\s+([\w./-]+)/);
-    if (branchMatch) return { type: 'branch-switch', cmd: gitPart, branch: branchMatch[1] };
   }
 
   // git merge
