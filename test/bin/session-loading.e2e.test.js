@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mkTmp, writeJsonl } from '../helpers/fixtures.js';
 import { seedOpenCodeIndexDb } from '../helpers/opencode-db-fixtures.js';
@@ -225,3 +225,81 @@ for (const [name, indexer] of Object.entries(INDEXERS)) {
     } finally { rmSync(home, { recursive: true, force: true }); }
   });
 }
+
+const claudeRow = (n, role, content) => ({ type: role, sessionId: 'reachable', cwd: '/repo', timestamp: timestamp(n), uuid: `${role}-${n}`, message: role === 'assistant' ? { model: 'claude-sonnet-4-20250514', content } : { content } });
+const bash = (n, id, command) => claudeRow(n, 'assistant', [{ type: 'tool_use', id, name: 'Bash', input: { command } }]);
+const result = (n, id, content, isError = false) => claudeRow(n, 'user', [{ type: 'tool_result', tool_use_id: id, content, is_error: isError }]);
+const say = (n, text) => claudeRow(n, 'assistant', [{ type: 'text', text }]);
+const lines = (label, count) => Array.from({ length: count }, (_, i) => `${label} line ${i + 1}`).join('\n');
+const firstTurn = [
+  claudeRow(0, 'user', 'Investigate the Slack pending-lock report'),
+  say(1, 'Looking at the lock directory first.'),
+  bash(2, 'cd-1', 'cd /srv/slack/pending-lock && ls'),
+  result(3, 'cd-1', 'bash: cd: /srv/slack/pending-lock: No such file or directory', true),
+  bash(4, 'rg-1', 'rg -n pending_lock src'),
+  result(5, 'rg-1', lines('rg', 30)),
+  say(6, 'The lock lives in the worker, checking its history.'),
+  bash(7, 'log-1', 'git log --oneline -20 src/worker.js'),
+  result(8, 'log-1', lines('log', 20)),
+  say(9, 'The worker never releases the pending lock after a timeout.'),
+];
+
+test('earlier chat blocks stay reachable by scrolling up in a finished conversation', { skip: !PLAYWRIGHT && 'playwright not installed' }, async () => {
+  const home = mkTmp('tq-loading-reachable-');
+  const old = new Date(Date.now() - 3600_000);
+  const recordings = {
+    single: firstTurn,
+    'newest-with-output': [...firstTurn, claudeRow(10, 'user', 'Show the release call'), bash(11, 'grep-2', 'rg -n releaseLock src'), result(12, 'grep-2', lines('release', 12)), say(13, 'Release is only called on success.')],
+    'newest-text-only': [...firstTurn, claudeRow(10, 'user', 'Summarise the cause'), say(11, 'The timeout path skips releaseLock.')],
+  };
+  for (const [name, rows] of Object.entries(recordings)) {
+    const path = join(home, `.claude/projects/proj/${name}.jsonl`);
+    writeJsonl(path, rows);
+    utimesSync(path, old, old);
+  }
+  const { child, base } = await serve(home);
+  const browser = await PLAYWRIGHT.chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    for (const [name, rows] of Object.entries(recordings)) {
+      const path = join(home, `.claude/projects/proj/${name}.jsonl`);
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto(base + '/run?session=' + encodeURIComponent(path));
+      await page.waitForFunction(text => document.querySelector('.chat-app').textContent.includes(text), rows[rows.length - 1].message.content[0].text);
+      await pause(500);
+      const shown = () => page.evaluate(() => {
+        const scroller = document.getElementById('chatScroll').getBoundingClientRect();
+        return [...document.querySelectorAll('#chatThread > *')].map(el => {
+          const r = el.getBoundingClientRect();
+          return { text: el.textContent.slice(0, 80), height: r.height, inView: r.height > 0 && r.bottom > scroller.top && r.top < scroller.bottom };
+        });
+      });
+      const initial = await shown();
+      assert.ok(initial[initial.length - 1].inView, `${name}: the final reply is framed on open`);
+      assert.deepEqual(initial.filter(b => b.height === 0).map(b => b.text), [], `${name}: no block is collapsed to zero height`);
+      assert.equal(await page.locator('#chatHistoryCol > *').count(), 0, `${name}: no block is moved off screen`);
+      await page.setViewportSize({ width: 1280, height: 520 });
+      await pause(300);
+      const resized = await shown();
+      assert.ok(resized[resized.length - 1].inView, `${name}: the final reply stays framed after the window shrinks`);
+
+      // Scroll up with the mouse wheel, as a reader would.
+      await page.locator('#chatScroll').hover();
+      for (let i = 0; i < 40 && await page.evaluate(() => document.getElementById('chatScroll').scrollTop) > 0; i++) await page.mouse.wheel(0, -600);
+      const top = await shown();
+      assert.match(top[0].text, /Slack pending-lock report/, `${name}: the first prompt leads the thread`);
+      assert.ok(top[0].inView, `${name}: the first prompt is reachable`);
+
+      const failed = page.locator('.chat-card.chat-output.err', { hasText: 'No such file or directory' });
+      await failed.scrollIntoViewIfNeeded();
+      const hit = await failed.evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return r.height > 0 && el.contains(document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 20)));
+      });
+      assert.ok(hit, `${name}: the failed cd output is painted where it scrolls to`);
+    }
+  } finally {
+    await browser.close();
+    await stop(child, home);
+  }
+});

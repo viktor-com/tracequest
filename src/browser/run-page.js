@@ -1690,33 +1690,6 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
       root.removeAttribute("data-split");
     }
   }
-  // Prior dump leaves leftover into #chatHistory so leftover-owned
-  // pixels are the newest turn. History keeps the same nodes (applyThreadItems
-  // restores first so incremental stamps hold; hidden=false so full-text
-  // innerText still sees L001–L023) but is not leftover-owned — parked
-  // off leftover, not flex:1 leftover. r8 painted user + L001–L023 on leftover.
-  function splitPriorOffLeftover() {
-    var col = historyCol();
-    var root = historyRoot();
-    var newest = lastThreadEl(".chat-assistant");
-    var own = newestTurnOwnFile();
-    if (!col || !root || !newest || !chatThread) return;
-    if (root.getAttribute("data-split") === "1" && newest.parentNode === chatThread) {
-      return;
-    }
-    restoreThreadFromHistory();
-    newest = lastThreadEl(".chat-assistant");
-    own = newestTurnOwnFile();
-    if (!newest) return;
-    var kids = Array.prototype.slice.call(chatThread.children);
-    var i;
-    for (i = 0; i < kids.length; i++) {
-      if (kids[i] === newest || kids[i] === own) break;
-      col.appendChild(kids[i]);
-    }
-    root.hidden = false;
-    root.setAttribute("data-split", "1");
-  }
   function clearLeftoverScrollPad() {
     restoreThreadFromHistory();
     restoreLeftoverViewport();
@@ -1741,9 +1714,8 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     if (chatThread) chatThread.style.paddingBottom = "";
   }
   // File-less newest: leftover-owned pixels are that turn occupying
-  // leftover (prose at leftover top + honest absence + close). First
-  // dump is not leftover-owned — it leaves leftover into hidden
-  // #chatHistory (not a 681px dump-on-fold). Do not stretch the
+  // leftover (prose at leftover top + honest absence + close). Earlier
+  // turns stay in flow above it, scrolled off the top. Do not stretch the
   // caption (r4), do not pin it with margin-top (r6), do not
   // pad-bottom hoist (r7), do not shrink leftover to a 55px pocket
   // that cedes leftover to unused chat-main (r9).
@@ -1752,9 +1724,6 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     var newest = lastThreadEl(".chat-assistant");
     if (!newest) return;
     clearNewestProseLeftover(newest);
-    splitPriorOffLeftover();
-    newest = lastThreadEl(".chat-assistant");
-    if (!newest) return;
     occupyLeftoverAsNewestReading(newest);
     var tr = newest.getBoundingClientRect();
     var sr = chatScroll.getBoundingClientRect();
@@ -1774,6 +1743,8 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     var tr = target.getBoundingClientRect();
     var sr = chatScroll.getBoundingClientRect();
     chatScroll.scrollTop = Math.max(0, chatScroll.scrollTop + (tr.top - sr.top) - 10);
+    // Size the file where the frame put it, not where it sat before.
+    if (lastState !== "running") leftoverSnapNewestTurnReading();
     keepNewestTurnAbovePill();
   }
   // That turn's own file: same data-event-index as the last assistant.
@@ -1954,42 +1925,6 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     }
     if (firstLive >= 0) return firstLive;
     return lastAsst;
-  }
-  // Own-file newest turn: park every node before that turn so leftover
-  // leftover-snaps prose + that file + close (not a 475px prior uncap).
-  function parkFirstDumpOffLeftover() {
-    parkPriorCompletedTurn();
-    if (!chatThread) return;
-    var anchor = newestTurnAnchor();
-    var kids = chatThread.children;
-    var i;
-    for (i = 0; i < kids.length; i++) {
-      if (kids[i] === anchor) break;
-      parkNode(kids[i]);
-    }
-  }
-  // File-less newest: first dump stays in-flow at natural height so
-  // leftover-snap can scroll it off leftover via scrollTop. Prior
-  // fixture stays data-contained=parked (honest absence of a file).
-  // r6 collapsed user + dump to height:0 and then spacer-pinned the
-  // caption — leftover became unused column.
-  function parkPriorFixtureOnly() {
-    var own = newestTurnOwnFile();
-    var anchor = newestTurnAnchor();
-    var scopes = [];
-    if (historyCol()) scopes.push(historyCol());
-    if (chatThread) scopes.push(chatThread);
-    var s;
-    for (s = 0; s < scopes.length; s++) {
-      var kids = scopes[s].children;
-      var i;
-      for (i = 0; i < kids.length; i++) {
-        var el = kids[i];
-        if (el === anchor) break;
-        if (el.classList.contains("chat-output") && el !== own) parkNode(el);
-        else if (el.getAttribute("data-contained") === "parked") unparkNode(el);
-      }
-    }
   }
   // Live generating: keep this turn's cards under the prompt as they
   // grow. Park every earlier event (dump, named file object, and
@@ -2193,52 +2128,31 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
   // leftover.clientHeight). leftover-owned pixels occupying leftover
   // are BAR's named shell-output column — opening prose + named card (Lines 1–6) + closing prose — not user + prior dumps.
   // leftoverAir is leftover − leftoverOwned (BAR leftover has leftover air under closing). leftover occupancy of leftover-owned content is not leftover occupancy of leftover. unparkAll restores
-  // live-parked nodes; leftover layout parks leftover-non-owned
-  // (user, lsof/ps, thoughts) off leftover so leftover-owned opening
-  // + named + closing occupy leftover. The named card fillLeftover-
-  // snaps in place — not a 12-line island under the user prompt, not
-  // data-contained=parked, not split into #chatHistory.
+  // live-parked nodes; earlier blocks (user, lsof/ps, thoughts) stay
+  // in flow above the opening, scrolled off the top. The named card
+  // fillLeftover-snaps in place — not a 12-line island under the user
+  // prompt, not data-contained=parked, not split into #chatHistory.
   function leftoverOccupyingNamedCard() {
     if (!chatThread) return null;
     var cards = chatThread.querySelectorAll(".chat-card.chat-output");
     return cards.length ? cards[cards.length - 1] : null;
   }
+  // Earlier blocks stay in flow at their natural height so scrolling up
+  // reaches them; the column is framed by scrolling it to the top.
   function leftoverSnapNamedColumn() {
     var named = leftoverOccupyingNamedCard();
-    if (!named || !chatThread) return;
-    var cards = chatThread.querySelectorAll(".chat-card.chat-output");
-    var i;
-    for (i = 0; i < cards.length; i++) {
-      if (cards[i] !== named) parkNode(cards[i]);
-    }
-    var kids = chatThread.children;
-    var start = -1;
-    for (i = 0; i < kids.length; i++) {
-      if (kids[i] === named) { start = i; break; }
-    }
-    if (start > 0 && kids[start - 1].classList.contains("chat-assistant")) start--;
-    for (i = 0; i < start; i++) parkNode(kids[i]);
-    var opening = start >= 0 && kids[start] && kids[start] !== named ? kids[start] : null;
-    var closing = null;
-    for (i = kids.length - 1; i > start; i--) {
-      if (kids[i] !== named && kids[i].classList.contains("chat-assistant")) {
-        closing = kids[i];
-        break;
-      }
-    }
-    for (i = start; i < kids.length; i++) {
-      if (kids[i] === named || kids[i] === opening || kids[i] === closing) continue;
-      parkNode(kids[i]);
-    }
-    if (opening) unparkNode(opening);
-    unparkNode(named);
-    if (closing) unparkNode(closing);
+    if (!named || !chatThread || !chatScroll || lastState === "running") return;
+    var opening = named.previousElementSibling;
+    var top = opening && opening.classList.contains("chat-assistant") ? opening : named;
+    clearOutputCap(named);
+    var tr = top.getBoundingClientRect();
+    var sr = chatScroll.getBoundingClientRect();
+    chatScroll.scrollTop = Math.max(0, chatScroll.scrollTop + (tr.top - sr.top) - 20);
     document.body.setAttribute("data-leftover-owned", "named-column");
     snapNamedOutputCard(named, true);
   }
   function containNamedOutput() {
     if (!chatScroll || !chatThread) return;
-    var cards = chatThread.querySelectorAll(".chat-card.chat-output");
     if (lastState === "running") {
       // Do not leftover-snap-uncap: an expanded previous fixture card
       // or 511px assistant dump spends the fold. Park every prior
@@ -2251,39 +2165,16 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
       return;
     }
     if (leftoverSnapIsStale()) {
-      // Leftover-owned pixels are the newest completed turn occupying
-      // leftover as a reading block. Own-file: park the first dump and
-      // leftover-snap prose + that file + close.
-      // File-less: leftover (#chatScroll) fills leftover
-      // (data-leftover-reading) so leftover-owned is that turn at
-      // leftover top + honest absence + close — not a 55px pocket
-      // that cedes leftover to unused chat-main (r9).
-      // First dump is not leftover-owned — #chatHistory keeps the
-      // nodes (full-text innerText) but does not paint leftover
-      // (r8 681px dump-on-fold).
-      // Prior fixture stays parked; do not leftover-snap the first
-      // dump's fixture in place (r5), do not staple it under the
-      // marker (r3), do not stretch the 39px caption (r4 701px air),
-      // do not uncap the 475px fixture (r1), do not claim leftover
-      // with a margin-top spacer (r6), do not pad-bottom hoist (r7
-      // padding-bottom hoisting a 39px caption).
-      if (newestTurnOwnFile()) {
-        clearLeftoverScrollPad();
-        parkFirstDumpOffLeftover();
-        leftoverSnapNewestTurnReading();
-      } else {
-        parkPriorFixtureOnly();
-        splitPriorOffLeftover();
-        occupyLeftoverAsNewestReading(lastThreadEl(".chat-assistant"));
-        clearNewestProseLeftover(lastThreadEl(".chat-assistant"));
-      }
+      // Earlier turns stay in flow; leftoverSnapNewestTurn frames the
+      // newest turn by scrolling and sizes its own file there.
+      unparkAll();
+      if (!newestTurnOwnFile()) occupyLeftoverAsNewestReading(lastThreadEl(".chat-assistant"));
+      clearNewestProseLeftover(lastThreadEl(".chat-assistant"));
       sizeLiveAir();
       return;
     }
     unparkAll();
     sizeLiveAir();
-    if (!cards.length) return;
-    leftoverSnapNamedColumn();
   }
 
   var lastItems = [];
@@ -2337,10 +2228,12 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
       if (shouldFrameCompletedTurn()) frameCompletedTurn();
       containNamedOutput();
       if (leftoverSnapIsStale()) leftoverSnapNewestTurn();
+      else leftoverSnapNamedColumn();
       requestAnimationFrame(function () {
         if (shouldFrameCompletedTurn()) frameCompletedTurn();
         containNamedOutput();
         if (leftoverSnapIsStale()) leftoverSnapNewestTurn();
+        else leftoverSnapNamedColumn();
       });
     } else {
       containNamedOutput();
@@ -2382,6 +2275,7 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     containNamedOutput();
     if (watchFramesLiveTrail() && followTail) frameLiveTrail();
     else if (!watchFramesLiveTrail() && leftoverSnapIsStale() && followTail) leftoverSnapNewestTurn();
+    else if (!watchFramesLiveTrail() && followTail) leftoverSnapNamedColumn();
   });
 `;
 
