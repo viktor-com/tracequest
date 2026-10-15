@@ -1488,7 +1488,7 @@ fn test_index_opencode_basic() {
     )
     .unwrap();
 
-    let error_part = r#"{"type":"tool","status":"error"}"#;
+    let error_part = r#"{"type":"tool","state":{"status":"error"}}"#;
     conn.execute(
         "INSERT INTO part (message_id, data) VALUES (?, ?)",
         [msg_id.to_string(), error_part.to_string()],
@@ -1524,6 +1524,50 @@ fn test_index_opencode_basic() {
     assert_eq!(entry.tool_counts.get("Bash").copied().unwrap_or(0), 1i32);
     assert_eq!(entry.errors, 1);
     assert_eq!(entry.duration_ms, 600_000);
+
+    let _ = std::env::remove_var("TRACEQUEST_OPCODE_DB");
+    let _ = fs::remove_dir_all(&tmp_dir);
+}
+
+#[test]
+fn test_index_opencode_counts_tool_errors_like_detail_view() {
+    let tmp_dir = std::env::temp_dir().join("tracequest_test_opencode_tool_errors");
+    let _ = fs::remove_dir_all(&tmp_dir);
+    fs::create_dir_all(&tmp_dir).unwrap();
+    let db_path = tmp_dir.join("opencode.db");
+
+    let conn = Connection::open(&db_path).unwrap();
+    conn.execute_batch(
+        "CREATE TABLE message (id INTEGER PRIMARY KEY, session_id TEXT, data TEXT, time_created TEXT);
+         CREATE TABLE part (id INTEGER PRIMARY KEY, message_id INTEGER, data TEXT);
+         INSERT INTO message (id, session_id, data, time_created)
+           VALUES (1, 'sess-err', '{\"role\":\"assistant\"}', '2024-01-01T00:00:00Z');",
+    )
+    .unwrap();
+    for part in [
+        // Counted: a failed call, and a completed call whose output reads as an error on any line.
+        r#"{"type":"tool","tool":"bash","state":{"status":"error","error":"boom"}}"#,
+        r#"{"type":"tool","tool":"bash","state":{"status":"completed","output":"building\nError: ENOENT"}}"#,
+        // Not counted: a clean call, and a status outside state (not OpenCode's shape).
+        r#"{"type":"tool","tool":"bash","state":{"status":"completed","output":"ok"}}"#,
+        r#"{"type":"tool","tool":"bash","status":"error"}"#,
+    ] {
+        conn.execute("INSERT INTO part (message_id, data) VALUES (1, ?)", [part])
+            .unwrap();
+    }
+
+    std::env::set_var("TRACEQUEST_OPCODE_DB", db_path.to_str().unwrap());
+    let session = Session {
+        path: "opencode://sess-err".to_string(),
+        project: "p".to_string(),
+        file: "sess-err".to_string(),
+        source: "opencode".to_string(),
+        size: 1024,
+        mtime: chrono::DateTime::from_timestamp(1704153600, 0).unwrap(),
+        parent_session: None,
+        title: None,
+    };
+    assert_eq!(index_opencode(&session).errors, 2);
 
     let _ = std::env::remove_var("TRACEQUEST_OPCODE_DB");
     let _ = fs::remove_dir_all(&tmp_dir);
@@ -2392,7 +2436,7 @@ fn seed_synthetic_opencode_db(
                         serde_json::json!({ "type": "tool", "tool": "bash" }).to_string(),
                     ];
                     if with_error {
-                        parts.push(serde_json::json!({ "type": "tool", "status": "error" }).to_string());
+                        parts.push(serde_json::json!({ "type": "tool", "state": { "status": "error" } }).to_string());
                     }
                     parts
                 },

@@ -79,8 +79,17 @@ export const CLAUDE_SPAN_FORMAT = 1;
  */
 export const ACTIVE_TIME_FORMAT = 2;
 
+/**
+ * OpenCode errors format, stored as index.json's top-level `_ocerr`. Format 1
+ * counts an OpenCode tool part that failed (state.status "error") or whose
+ * output reads as an error, as the detail view does; earlier rows count none.
+ * An index without the marker re-reads its cached OpenCode rows once instead
+ * of an INDEX_VERSION bump.
+ */
+export const OPENCODE_ERRORS_FORMAT = 1;
+
 /** Top-level index.json keys that are not session paths. */
-const INDEX_META_KEYS = new Set(["_v", "_codex", "_spans", "_active"]);
+const INDEX_META_KEYS = new Set(["_v", "_codex", "_spans", "_active", "_ocerr"]);
 
 function markIndexCurrent(cache) {
   cache._v = INDEX_VERSION;
@@ -1102,11 +1111,13 @@ function* buildIndexSteps(sessions, opts = {}) {
   const activeStale = !partial && cache._active !== ACTIVE_TIME_FORMAT;
   const activeCacheHits = [];
   let activeChecked = 0;
+  // Cached OpenCode rows from before OPENCODE_ERRORS_FORMAT counted no tool error.
+  const openCodeErrorsStale = !partial && cache._ocerr !== OPENCODE_ERRORS_FORMAT;
 
   for (const s of sessions) {
     const mtime = sessionMtimeMs(s);
     if (cache[s.path] && cache[s.path].mtime === mtime) {
-      const reread = s.source === "opencode" && openCodeEntryReadNoMessages(cache[s.path]);
+      const reread = s.source === "opencode" && (openCodeErrorsStale || openCodeEntryReadNoMessages(cache[s.path]));
       if (reread) rereadOpenCode.push(s.path);
       if (siNeedsRebuild || !si.has(s.path) || reread) {
         // Existing search.idx load failure emptied SI, or this session is absent
@@ -1204,7 +1215,8 @@ function* buildIndexSteps(sessions, opts = {}) {
     for (const s of sessions) {
       if (!si.has(s.path)) searchStale.push(s.path);
     }
-    // The sidecar also re-reads OpenCode entries that found none of their messages.
+    // The sidecar also re-reads OpenCode entries that found none of their messages
+    // or predate OPENCODE_ERRORS_FORMAT.
     for (const path of rereadOpenCode) {
       if (si.has(path)) searchStale.push(path);
     }
@@ -1277,6 +1289,7 @@ function* buildIndexSteps(sessions, opts = {}) {
       const pruning = _indexCachePathCount > sessions.length;
       if (pruning) pruneIndexCache(cache, new Set(sessions.map(s => s.path)));
       markIndexCurrent(cache);
+      if (openCodeErrorsStale) cache._ocerr = OPENCODE_ERRORS_FORMAT;
       _indexFileCache = cache;
       // A delta merge counted each new path above; recount after a prune or a full run.
       if (pruning || !delta) syncIndexCachePathCount(cache);
@@ -1308,7 +1321,7 @@ function* buildIndexSteps(sessions, opts = {}) {
     if (cache === _indexFileCache && partial) {
       cache = { ..._indexFileCache };
     } else if (cache === _indexFileCache) {
-      const next = { _v: _indexFileCache._v, _codex: _indexFileCache._codex, _spans: _indexFileCache._spans, _active: _indexFileCache._active };
+      const next = { _v: _indexFileCache._v, _codex: _indexFileCache._codex, _spans: _indexFileCache._spans, _active: _indexFileCache._active, _ocerr: _indexFileCache._ocerr };
       for (const s of sessions) {
         const entry = _indexFileCache[s.path];
         if (entry !== undefined) next[s.path] = entry;
@@ -1363,6 +1376,7 @@ function* buildIndexSteps(sessions, opts = {}) {
   if (stale) {
     if (!partial) pruneIndexCache(cache, validPaths);
     markIndexCurrent(cache);
+    if (openCodeErrorsStale) cache._ocerr = OPENCODE_ERRORS_FORMAT;
     _indexFileCache = cache;
     syncIndexCachePathCount(cache);
     scheduleIndexWrite();

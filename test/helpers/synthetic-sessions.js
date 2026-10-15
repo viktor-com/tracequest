@@ -620,7 +620,7 @@ export function makeOpenCodeSessionRows(sessionIndex, opts = {}) {
       parts: [
         { type: "text", text: `Running deploy for ${marker}` },
         { type: "tool", tool: "bash" },
-        ...(withError ? [{ type: "tool", status: "error" }] : []),
+        ...(withError ? [{ type: "tool", state: { status: "error" } }] : []),
       ],
     },
     {

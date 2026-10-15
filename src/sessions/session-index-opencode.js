@@ -1,4 +1,4 @@
-import { normalizeToolName } from "../parse/parse-enrich.js";
+import { errorPattern, normalizeToolName } from "../parse/parse-enrich.js";
 import { collapseWhitespace, isDisplayableUserText, truncateFirstPrompt } from "../parse/parse-utils.js";
 import { emptyIndexMeta, buildIndexMeta } from "./session-meta.js";
 import { accumulateTermFreqs, TOKENIZER_INPUT_CAP } from "./search-tokenizer.js";
@@ -73,8 +73,6 @@ export function accumulateOpenCodeMessages(db, sessionId) {
     }
     if (!part) return;
 
-    if (part.status === "error") errors++;
-
     if (part.type === "step-finish" && part.tokens) {
       inputTokens += part.tokens.input || 0;
       outputTokens += part.tokens.output || 0;
@@ -91,6 +89,9 @@ export function accumulateOpenCodeMessages(db, sessionId) {
         tools.add(tn);
         toolCounts[tn] = (toolCounts[tn] || 0) + 1;
       }
+      // Same rule as the detail view (parseOpenCode): a failed call or an error-shaped output.
+      const state = part.state || {};
+      if (state.status === "error" || errorPattern.test(state.output || "")) errors++;
       return;
     }
 
