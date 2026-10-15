@@ -419,8 +419,21 @@ export function applyOverlayStackInert() {
     applyOverlayStackPaint();
     return;
   }
-  inertOverlaySiblings(top, prev);
+  inertOverlaySiblings(toolbarMenuInertRoot(top), prev);
   applyOverlayStackPaint();
+}
+
+// A toolbar menu leaves its own toolbar row live, so a pointer click on a
+// sibling trigger (Time range, Display) switches or closes the menu instead
+// of landing on an inert button. The page behind the row stays inert.
+function toolbarMenuInertRoot(top) {
+  var pairs = toolbarMenuPairs();
+  for (var i = 0; i < pairs.length; i++) {
+    if (pairs[i][0] !== top.id) continue;
+    var row = typeof top.closest === "function" ? top.closest(".runs-toolbar-actions") : null;
+    return row || top;
+  }
+  return top;
 }
 
 export function disarmPageHotkeyChord() {
@@ -512,9 +525,11 @@ export function closeToolbarMenuOverlays(exceptId) {
     var menu = document.getElementById(pairs[i][0]);
     var btn = document.getElementById(pairs[i][1]);
     if (menu && !menu.hidden) {
+      var active = document.activeElement;
       menu.hidden = true;
       popOverlay(menu);
-      restoreOverlayFocus(menu._tqPrevFocus, menu);
+      // A click on a sibling trigger already moved focus there: keep it.
+      if (!active || active === document.body || menu.contains(active)) restoreOverlayFocus(menu._tqPrevFocus, menu);
       menu._tqPrevFocus = null;
     } else if (menu) {
       menu.hidden = true;
@@ -610,6 +625,7 @@ export const OVERLAY_FOCUS_SRC = [
   restoreOverlayStackPaint,
   applyOverlayStackPaint,
   applyOverlayStackInert,
+  toolbarMenuInertRoot,
   disarmPageHotkeyChord,
   pushOverlay,
   popOverlay,

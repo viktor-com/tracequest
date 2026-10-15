@@ -107,10 +107,20 @@ export const UI_CHAPTERS_JS = `
         el.classList.add('filter-hidden');
       }
     }
+    const hasFilter = activeToolFilters.size > 0 || searchQuery || wasteFilterActive;
     const countEl = document.getElementById('filter-count');
     if (countEl) {
-      const hasFilter = activeToolFilters.size > 0 || searchQuery || wasteFilterActive;
       countEl.textContent = hasFilter ? visible + '/' + chapters.length : '';
+    }
+    const emptyEl = document.querySelector('.chapters-filter-empty');
+    if (emptyEl) {
+      const noneMatch = hasFilter && visible === 0 && chapters.length > 0;
+      emptyEl.hidden = !noneMatch;
+      if (noneMatch) {
+        const title = emptyEl.querySelector('.ui-empty-title');
+        title.textContent = 'No chapters match ';
+        title.appendChild(searchQuery ? h('code', null, searchQuery) : document.createTextNode('these filters'));
+      }
     }
     const chips = document.querySelectorAll('.filter-chip');
     chips.forEach(function(chip) {
@@ -337,6 +347,30 @@ export const UI_CHAPTERS_JS = `
       wrap.appendChild(el);
     });
 
+    // Shown by applyFilters when the filters hide every chapter.
+    wrap.appendChild(h('div', { className: 'chapters-filter-empty ui-empty', hidden: '' },
+      h('div', { className: 'ui-empty-title' }),
+      h('div', { className: 'ui-empty-body' }, 'The search text and the selected tool filters must all match a chapter. Try a shorter word or drop a filter.'),
+      h('div', { className: 'ui-empty-actions' },
+        h('button', { type: 'button', className: 'ui-btn ui-btn--outline ui-btn--sm', onClick: clearChapterFilters }, 'Clear filters')
+      )
+    ));
+
     return wrap;
+  }
+
+  function clearChapterFilters() {
+    searchQuery = '';
+    activeToolFilters.clear();
+    activeToolPerfFilter = null;
+    wasteFilterActive = false;
+    const searchInput = document.querySelector('.filter-search');
+    if (searchInput) searchInput.value = '';
+    document.querySelectorAll('.filter-chip, .tool-perf-row').forEach(function(el) {
+      el.classList.remove('active');
+      el.setAttribute('aria-pressed', 'false');
+    });
+    applyFilters();
+    if (searchInput) searchInput.focus();
   }
 `;
