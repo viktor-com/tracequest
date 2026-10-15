@@ -232,6 +232,12 @@
 - label: rendered diagnostic strips have browser accessibility-tree coverage for tool-flow sequence list semantics and minimap jump/status diagnostics
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "rendered diagnostic strips expose accessibility tree semantics" test/browser/rendered-session-keyboard.playwright.test.js
   tags: [spec, ui, rendered-session, accessibility, playwright, diagnostic-strips, implemented]
+- label: clicking a row in the session view's What went wrong section opens that chapter, lists the failed call even when it sits past the chapter's shown-call limit, and scrolls that failed call with its output into view
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-timeout=120000 --test-name-pattern 'failure jump opens' test/browser/error-summary-jump.playwright.test.js
+  tags: [spec, ui, rendered-session, errors, playwright, implemented]
+- label: each What went wrong row names its Insights error class (ERROR_CLASSES in src/insights/classify.js) and shows the output line that names the specific cause, not a bare 'Exit code N' line; failures group by tool, class and that line
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-timeout=120000 --test-name-pattern 'failure rows name the cause' test/browser/error-summary-jump.playwright.test.js
+  tags: [spec, ui, rendered-session, errors, playwright, implemented]
 
 # cursor
 - id: 2w4

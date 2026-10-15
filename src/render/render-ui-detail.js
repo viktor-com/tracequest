@@ -1,4 +1,18 @@
 export const UI_DETAIL_JS = `
+  // The first limit indices of a list plus every failed one after them, so a
+  // failure that What went wrong points at is always listed in its chapter.
+  function shownWithFailures(list, limit, ok) {
+    var out = [];
+    for (var i = 0; i < list.length; i++) if (i < limit || !ok(list[i])) out.push(i);
+    return out;
+  }
+
+  // Tags a failed call's row so revealFailure can scroll to it.
+  function markFailure(el, ok, ref) {
+    if (!ok) el.setAttribute('data-failure', ref);
+    return el;
+  }
+
   function buildChapterDetail(ch, _idx, detail) {
     var outcome = ch.outcome || 'clean';
 
@@ -212,12 +226,12 @@ export const UI_DETAIL_JS = `
         var statusIcon = a.isError ? '\\u2717' : (a.completed ? '\\u2713' : '\\u25e6');
         var typeBadge = a.subagentType ? h('span', { className: 'chapter-agent-type' }, a.subagentType) : null;
         var toolBadge = a.toolName !== 'Agent' ? h('span', { className: 'chapter-agent-type' }, a.toolName) : null;
-        agentsDiv.appendChild(h('div', { className: 'chapter-agent' },
+        agentsDiv.appendChild(markFailure(h('div', { className: 'chapter-agent' },
           h('span', { className: 'chapter-agent-status ' + statusCls }, statusIcon),
           h('span', { className: 'chapter-agent-desc' }, a.description || '(unnamed)'),
           typeBadge,
           toolBadge
-        ));
+        ), !a.isError, 'agent:' + ai));
         if (a.prompt) {
           agentsDiv.appendChild(h('div', { className: 'chapter-agent-prompt' }, a.prompt.slice(0, 200)));
         }
@@ -262,14 +276,16 @@ export const UI_DETAIL_JS = `
     if (ch.searches.length) {
       var searchDiv = h('div', { className: 'chapter-commands' });
       searchDiv.appendChild(h('div', { className: 'chapter-files-label' }, 'searches'));
-      for (var si = 0; si < ch.searches.length && si < 6; si++) {
+      var shownSearches = shownWithFailures(ch.searches, 6, function(x) { return x.ok; });
+      for (var ssi = 0; ssi < shownSearches.length; ssi++) {
+        var si = shownSearches[ssi];
         var s = ch.searches[si];
         var sLabel = s.matches > 0 ? s.matches + ' match' + (s.matches !== 1 ? 'es' : '') : (s.ok ? 'no matches' : 'error');
-        searchDiv.appendChild(h('div', { className: 'chapter-cmd' },
+        searchDiv.appendChild(markFailure(h('div', { className: 'chapter-cmd' },
           h('span', { className: 'chapter-cmd-status ' + (s.ok ? 'ok' : 'fail') }, s.ok ? '\\u2713' : '\\u2717'),
           s.query.slice(0, 100),
           h('span', { className: 'chapter-search-count' }, sLabel)
-        ));
+        ), s.ok, 'grep:' + si));
         if (s.output) {
           searchDiv.appendChild(h('div', { className: 'chapter-output' }, joinFirstLines(s.output, 3)));
         }
@@ -280,9 +296,11 @@ export const UI_DETAIL_JS = `
     if (ch.webOps.length) {
       var webDiv = h('div', { className: 'chapter-web' });
       webDiv.appendChild(h('div', { className: 'chapter-web-label' }, 'web'));
-      for (var wi = 0; wi < ch.webOps.length && wi < 6; wi++) {
+      var shownWeb = shownWithFailures(ch.webOps, 6, function(x) { return x.ok; });
+      for (var swi = 0; swi < shownWeb.length; swi++) {
+        var wi = shownWeb[swi];
         var w = ch.webOps[wi];
-        var opDiv = h('div', { className: 'chapter-web-op' + (w.ok ? '' : ' error') });
+        var opDiv = markFailure(h('div', { className: 'chapter-web-op' + (w.ok ? '' : ' error') }), w.ok, 'web:' + wi);
         var wTypeBadge = h('span', { className: 'chapter-web-type ' + w.type }, w.type);
         if (w.type === 'fetch') {
           var headerRow = h('div', {});
@@ -328,9 +346,9 @@ export const UI_DETAIL_JS = `
         }
         webDiv.appendChild(opDiv);
       }
-      if (ch.webOps.length > 6) {
+      if (ch.webOps.length > shownWeb.length) {
         webDiv.appendChild(h('div', { className: 'chapter-web-op' },
-          h('span', { className: 'chapter-web-type fetch' }, '... ' + (ch.webOps.length - 6) + ' more')
+          h('span', { className: 'chapter-web-type fetch' }, '... ' + (ch.webOps.length - shownWeb.length) + ' more')
         ));
       }
       detail.appendChild(webDiv);
@@ -339,9 +357,11 @@ export const UI_DETAIL_JS = `
     if (ch.mcpOps.length) {
       var mcpDiv = h('div', { className: 'chapter-mcp' });
       mcpDiv.appendChild(h('div', { className: 'chapter-mcp-label' }, 'integrations'));
-      for (var mi = 0; mi < ch.mcpOps.length && mi < 10; mi++) {
+      var shownMcp = shownWithFailures(ch.mcpOps, 10, function(x) { return x.ok; });
+      for (var smi = 0; smi < shownMcp.length; smi++) {
+        var mi = shownMcp[smi];
         var mop = ch.mcpOps[mi];
-        var mcpCard = h('div', { className: 'chapter-mcp-op' + (mop.ok ? '' : ' mcp-error') });
+        var mcpCard = markFailure(h('div', { className: 'chapter-mcp-op' + (mop.ok ? '' : ' mcp-error') }), mop.ok, 'mcp:' + mi);
         var mcpHeader = h('div', { className: 'chapter-mcp-header' });
         mcpHeader.appendChild(h('span', { className: 'chapter-mcp-server' }, mop.server.replace(/_/g, ' ')));
         mcpHeader.appendChild(h('span', { className: 'chapter-mcp-tool' }, mop.tool.replace(/_/g, ' ')));
@@ -363,32 +383,32 @@ export const UI_DETAIL_JS = `
         }
         mcpDiv.appendChild(mcpCard);
       }
-      if (ch.mcpOps.length > 10) {
+      if (ch.mcpOps.length > shownMcp.length) {
         mcpDiv.appendChild(h('div', { className: 'chapter-mcp-op' },
-          h('span', { className: 'chapter-mcp-tool' }, '\\u2026 ' + (ch.mcpOps.length - 10) + ' more')
+          h('span', { className: 'chapter-mcp-tool' }, '\\u2026 ' + (ch.mcpOps.length - shownMcp.length) + ' more')
         ));
       }
       detail.appendChild(mcpDiv);
     }
 
-    var cmds = ch.commands.slice(0, 8);
+    var cmds = shownWithFailures(ch.commands, 8, function(x) { return x.ok; });
     if (cmds.length) {
       var cmdsDiv = h('div', { className: 'chapter-commands' });
       cmdsDiv.appendChild(h('div', { className: 'chapter-files-label' }, 'commands'));
       for (var cmi = 0; cmi < cmds.length; cmi++) {
-        var cmd = cmds[cmi];
-        cmdsDiv.appendChild(h('div', { className: 'chapter-cmd' },
+        var cmd = ch.commands[cmds[cmi]];
+        cmdsDiv.appendChild(markFailure(h('div', { className: 'chapter-cmd' },
           h('span', { className: 'chapter-cmd-status ' + (cmd.ok ? 'ok' : 'fail') }, cmd.ok ? '\\u2713' : '\\u2717'),
           cmd.cmd.slice(0, 120)
-        ));
+        ), cmd.ok, 'cmd:' + cmds[cmi]));
         if (cmd.output) {
           cmdsDiv.appendChild(h('div', { className: 'chapter-output' }, joinFirstLines(cmd.output, 4)));
         }
       }
-      if (ch.commands.length > 8) {
+      if (ch.commands.length > cmds.length) {
         cmdsDiv.appendChild(h('div', { className: 'chapter-cmd' },
           h('span', { className: 'chapter-cmd-status ok' }, ''),
-          '\\u2026 ' + (ch.commands.length - 8) + ' more'
+          '\\u2026 ' + (ch.commands.length - cmds.length) + ' more'
         ));
       }
       detail.appendChild(cmdsDiv);
@@ -398,10 +418,10 @@ export const UI_DETAIL_JS = `
       var seDiv = h('div', { className: 'chapter-commands' });
       seDiv.appendChild(h('div', { className: 'chapter-files-label' }, 'errors'));
       for (var sei = 0; sei < ch.standaloneErrors.length; sei++) {
-        seDiv.appendChild(h('div', { className: 'chapter-cmd' },
+        seDiv.appendChild(markFailure(h('div', { className: 'chapter-cmd' },
           h('span', { className: 'chapter-cmd-status fail' }, '\\u2717'),
           ch.standaloneErrors[sei].slice(0, 300)
-        ));
+        ), false, 'err:' + sei));
       }
       detail.appendChild(seDiv);
     }

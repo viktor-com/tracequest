@@ -123,6 +123,7 @@ export const SESSION_VIEWER_RULES = `
 .error-list-count { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--bad); text-align: right; }
 .error-list-tool { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .error-list-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.error-list-cause { font-size: var(--text-xs); color: var(--bad); }
 .error-list-text code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .error-list-out { font-size: var(--text-xs); color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .error-list-ch { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3); white-space: nowrap; }
