@@ -13,15 +13,16 @@ export const UI_DETAIL_JS = `
     return el;
   }
 
-  // A call's first lines; for a failed call whose cause comes later (a
-  // traceback ending in FileNotFoundError), fewer of them plus the cause line,
-  // so the cause fits above the output's height cap.
-  function outputPreview(output, maxLines, ok) {
-    var head = joinFirstLines(output, maxLines);
+  // A call's first lines (at most maxChars of them); for a failed call whose
+  // cause comes later (a traceback ending in FileNotFoundError), fewer of them
+  // plus the cause line, which the character cap never cuts.
+  function outputPreview(output, maxLines, ok, maxChars) {
+    var cap = function(s) { return maxChars ? safeSlice(s, maxChars) : s; };
+    var head = cap(joinFirstLines(output, maxLines));
     if (ok) return head;
     var line = failureCause(output).line;
     if (!line || head.indexOf(line) >= 0) return head;
-    return joinFirstLines(output, Math.max(1, maxLines - 2)) + '\\n\\u2026\\n' + line;
+    return cap(joinFirstLines(output, Math.max(1, maxLines - 2))) + '\\n\\u2026\\n' + line;
   }
 
   function buildChapterDetail(ch, _idx, detail) {
@@ -389,7 +390,7 @@ export const UI_DETAIL_JS = `
           mcpCard.appendChild(paramsDiv);
         }
         if (mop.output) {
-          var mcpOut = safeSlice(outputPreview(mop.output, 4, mop.ok), 300);
+          var mcpOut = outputPreview(mop.output, 4, mop.ok, 300);
           mcpCard.appendChild(h('div', { className: 'chapter-mcp-output' }, mcpOut));
         }
         mcpDiv.appendChild(mcpCard);

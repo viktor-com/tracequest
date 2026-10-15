@@ -302,6 +302,7 @@ export const SESSION_VIEWER_RULES = `
   font-family: var(--font-mono); font-size: 11.5px; line-height: 1.6; color: var(--text-3); white-space: pre-wrap; overflow-wrap: anywhere;
   max-height: 96px; overflow: hidden; padding: 0 12px 0 22px;
 }
+.chapter-output.expanded, .chapter-mcp-output.expanded { max-height: none; }
 .expand-toggle {
   align-self: flex-start; height: 22px; padding: 0 8px; margin-left: 22px; border-radius: var(--radius-pill);
   font-size: 11px; color: var(--text-3); background: var(--surface-2); border: 0; cursor: pointer;

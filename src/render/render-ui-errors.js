@@ -22,13 +22,21 @@ export const UI_ERRORS_JS = `
   }
 
   // Open the chapter as a click on it would, then bring the failed call itself
-  // into view instead of leaving the user to hunt for it.
+  // into view, with its output unclipped, instead of leaving the user to hunt for it.
   function revealFailure(idx, ref) {
     var el = document.getElementById('chapter-' + idx);
     if (!el) return;
     if (!expandedSet.has('ch' + idx)) toggleChapterInPlace(getChapters()[idx], idx, el);
     var target = el.querySelector('[data-failure="' + ref + '"]');
     if (!target) { jumpToChapter(idx); return; }
+    var outputs = Array.from(target.querySelectorAll('.chapter-output, .chapter-mcp-output'));
+    for (var n = target.nextElementSibling; n && !n.matches('.chapter-cmd, .chapter-agent'); n = n.nextElementSibling) {
+      if (n.matches('.chapter-output')) outputs.push(n);
+    }
+    outputs.forEach(function(out) {
+      var more = out.nextElementSibling;
+      if (more && more.classList.contains('expand-toggle') && !out.classList.contains('expanded')) more.click();
+    });
     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     el.classList.remove('highlight');
     void el.offsetWidth;

@@ -19,6 +19,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const BIN = join(ROOT, "bin/tracequest.js");
 const MISSING = "cd: /tmp/tq-missing-dir-7f3a: No such file or directory";
 const LATE_CAUSE = "FileNotFoundError: [Errno 2] No such file or directory: '/data/in-7f3a.csv'";
+const MCP_CAUSE = "Error: ENOENT: no such file or directory, open '/srv/data/x-7f3a.json'";
 
 async function allocEphemeralPort() {
   const server = createServer();
@@ -159,11 +160,36 @@ function seedHome() {
       },
     },
   );
+  // A third chapter: an integration call whose long first line would use up the
+  // preview's character cap before its cause.
+  lines.push(
+    {
+      type: "user", sessionId: sid, timestamp: at(80),
+      message: { content: [{ type: "text", text: "read the fixture through the fs server" }] },
+    },
+    {
+      type: "assistant", sessionId: sid, timestamp: at(82),
+      message: {
+        model: "claude-sonnet-4-20250514",
+        usage: { input_tokens: 100, output_tokens: 20 },
+        content: [{ type: "tool_use", id: "mcp-read", name: "mcp__fs__read_file", input: { path: "/srv/data/x-7f3a.json" } }],
+      },
+    },
+    {
+      type: "user", sessionId: sid, timestamp: at(83),
+      message: {
+        content: [{
+          type: "tool_result", tool_use_id: "mcp-read", is_error: true,
+          content: `{"request":"read_file","attempts":[${'"retry",'.repeat(30)}"last"]}\n\n\n\n${MCP_CAUSE}`,
+        }],
+      },
+    },
+  );
   writeJsonl(sessionPath, lines);
   return { home, sessionId: sessionHash(sessionPath) };
 }
 
-async function openView(t) {
+async function openView(t, width = 1280) {
   const { chromium } = PLAYWRIGHT;
   const { home, sessionId } = seedHome();
   const port = await allocEphemeralPort();
@@ -175,10 +201,27 @@ async function openView(t) {
     rmSync(home, { recursive: true, force: true });
   });
   await waitForHttp(port, "/sessions", child);
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const page = await browser.newPage({ viewport: { width, height: 900 } });
   await page.goto(`http://127.0.0.1:${port}/view?id=${sessionId}`, { waitUntil: "load" });
   await page.waitForSelector(".error-list-item");
   return page;
+}
+
+/** Waits until the cause text itself is on screen, not clipped by its output box's height cap. */
+async function waitForCauseOnScreen(page, chapterIdx, cause) {
+  await page.waitForFunction(({ chapterIdx, cause }) => {
+    const out = Array.from(document.querySelectorAll(`#chapter-${chapterIdx} .chapter-detail .chapter-output, #chapter-${chapterIdx} .chapter-detail .chapter-mcp-output`))
+      .find((el) => el.textContent.includes(cause));
+    if (!out) return false;
+    const node = out.firstChild;
+    const range = document.createRange();
+    const start = node.textContent.indexOf(cause);
+    range.setStart(node, start);
+    range.setEnd(node, start + cause.length);
+    const text = range.getBoundingClientRect();
+    const box = out.getBoundingClientRect();
+    return text.height > 0 && text.top >= 0 && text.bottom <= Math.min(box.bottom, window.innerHeight);
+  }, { chapterIdx, cause }, { timeout: 5_000 });
 }
 
 describe("error summary playwright", SKIP_NO_PLAYWRIGHT, () => {
@@ -207,20 +250,15 @@ describe("error summary playwright", SKIP_NO_PLAYWRIGHT, () => {
     await page.locator(".error-list-item", { hasText: "FileNotFoundError" }).click();
 
     await page.waitForFunction(() => document.querySelector("#chapter-1.expanded"), null, { timeout: 5_000 });
-    // The cause text itself must be on screen, not clipped by the output's height cap.
-    await page.waitForFunction((cause) => {
-      const out = Array.from(document.querySelectorAll("#chapter-1 .chapter-detail .chapter-output"))
-        .find((el) => el.textContent.includes(cause));
-      if (!out) return false;
-      const node = out.firstChild;
-      const range = document.createRange();
-      const start = node.textContent.indexOf(cause);
-      range.setStart(node, start);
-      range.setEnd(node, start + cause.length);
-      const text = range.getBoundingClientRect();
-      const box = out.getBoundingClientRect();
-      return text.height > 0 && text.top >= 0 && text.bottom <= Math.min(box.bottom, window.innerHeight);
-    }, LATE_CAUSE, { timeout: 5_000 });
+    await waitForCauseOnScreen(page, 1, LATE_CAUSE);
+  });
+
+  test("failure jump opens on an integration call's cause on a narrow screen", async (t) => {
+    const page = await openView(t, 600);
+    await page.locator(".error-list-item", { hasText: "ENOENT" }).click();
+
+    await page.waitForFunction(() => document.querySelector("#chapter-2.expanded"), null, { timeout: 5_000 });
+    await waitForCauseOnScreen(page, 2, MCP_CAUSE);
   });
 
   test("failure rows name the cause instead of the exit code", async (t) => {
