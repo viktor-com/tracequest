@@ -338,7 +338,7 @@ export const UI_CHAPTERS_JS = `
       wrap.appendChild(el);
     });
 
-    // Shown by applyFilters when the filters hide every chapter.
+    // Shown by showChapterFilterEmpty when the filters hide every chapter.
     wrap.appendChild(h('div', { className: 'chapters-filter-empty ui-empty', hidden: '' },
       h('div', { className: 'ui-empty-title' }),
       h('div', { className: 'ui-empty-body' }, 'A chapter has to match the search text and every active filter. Try a shorter word or drop a filter.'),
