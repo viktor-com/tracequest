@@ -9,14 +9,14 @@ not ok 1 - session grade agrees in Runs, filters, sorting, chat, detail and stan
   error: |-
     detail uses the list's judgment
     + actual - expected
-    
+
       {
     +   letter: 'C',
     +   score: 77
     -   letter: 'B',
     -   score: 84
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
