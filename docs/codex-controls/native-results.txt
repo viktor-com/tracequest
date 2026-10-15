@@ -1,0 +1,91 @@
+BEFORE: origin/main 636d4d2, native Codex v0.161.0
+TAP version 13
+# Subtest: Codex Send submits once (native)
+not ok 1 - Codex Send submits once (native)
+  ---
+  duration_ms: 5175.259476
+  type: 'test'
+  location: '<worktree>/test/browser/codex-controls.playwright.test.js:157:1'
+  failureType: 'testCodeFailure'
+  error: 'Timed out: one Send submits the follow-up'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  operator: 'fail'
+  stack: |-
+    until (file://<worktree>/test/browser/codex-controls.playwright.test.js:28:10)
+    async file://<worktree>/test/browser/codex-controls.playwright.test.js:163:7
+    async withRun (file://<worktree>/test/browser/codex-controls.playwright.test.js:139:5)
+    async TestContext.<anonymous> (file://<worktree>/test/browser/codex-controls.playwright.test.js:158:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Native recording copied into scratch HOME: /tmp/tq-codex-controls-Ql0MMm/.codex/sessions/2026/10/15/rollout-2026-10-15T15-30-22-01a13fc1-b92f-7190-857e-970bd05ee4ff.jsonl
+# tracequest mux → tmux session "tq-controls-3367603-tq-codex-controls-Ql0MMm"\\ntracequest: session durations checked for 0 cached sessions (0 to re-index as worked time)\\ntracequest → http://localhost:35891\\ntracequest: session durations checked for 0 cached sessions (0 to re-index as worked time)\\ntracequest: building index for 1 session (1 stale)...\\ntracequest: indexed 1 session (0 cached) in 3ms\\ntracequest: building index for 1 session (1 stale)...\\ntracequest: indexed 1 session (0 cached) in 1ms\\n
+# Subtest: Codex Stop interrupts once and keeps the run usable (native)
+not ok 2 - Codex Stop interrupts once and keeps the run usable (native)
+  ---
+  duration_ms: 16070.791874
+  type: 'test'
+  location: '<worktree>/test/browser/codex-controls.playwright.test.js:182:1'
+  failureType: 'testCodeFailure'
+  error: 'Timed out: one Stop interrupts generation'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  operator: 'fail'
+  stack: |-
+    until (file://<worktree>/test/browser/codex-controls.playwright.test.js:28:10)
+    async file://<worktree>/test/browser/codex-controls.playwright.test.js:192:7
+    async withRun (file://<worktree>/test/browser/codex-controls.playwright.test.js:139:5)
+    async TestContext.<anonymous> (file://<worktree>/test/browser/codex-controls.playwright.test.js:183:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Native recording copied into scratch HOME: /tmp/tq-codex-controls-2F4QNq/.codex/sessions/2026/10/15/rollout-2026-10-15T15-30-28-01a13fc1-cd52-75e0-bcb8-d62c200e4b81.jsonl
+# tracequest mux → tmux session "tq-controls-3367603-tq-codex-controls-2F4QNq"\\ntracequest: session durations checked for 0 cached sessions (0 to re-index as worked time)\\ntracequest → http://localhost:36919\\ntracequest: session durations checked for 0 cached sessions (0 to re-index as worked time)\\ntracequest: building index for 1 session (1 stale)...\\ntracequest: indexed 1 session (0 cached) in 3ms\\ntracequest: building index for 1 session (1 stale)...\\ntracequest: indexed 1 session (0 cached) in 1ms\\n
+# Subtest: Stop preserves other agents' Ctrl-C and raw input, with existing guards
+ok 3 - Stop preserves other agents' Ctrl-C and raw input, with existing guards
+  ---
+  duration_ms: 4.38379
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 1
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 21593.6063
+
+AFTER: branch, native Codex v0.161.0
+TAP version 13
+# Subtest: Codex Send submits once (native)
+ok 1 - Codex Send submits once (native)
+  ---
+  duration_ms: 4936.940078
+  type: 'test'
+  ...
+# Native recording copied into scratch HOME: /tmp/tq-codex-controls-vKYMD4/.codex/sessions/2026/10/15/rollout-2026-10-15T15-32-59-01a13fc4-1d0e-75e0-a880-a54ec69548c4.jsonl
+# Subtest: Codex Stop interrupts once and keeps the run usable (native)
+ok 2 - Codex Stop interrupts once and keeps the run usable (native)
+  ---
+  duration_ms: 9056.599459
+  type: 'test'
+  ...
+# Native recording copied into scratch HOME: /tmp/tq-codex-controls-b4lAkl/.codex/sessions/2026/10/15/rollout-2026-10-15T15-33-04-01a13fc4-3099-7991-8ac9-e4494b1c373a.jsonl
+# Subtest: Stop preserves other agents' Ctrl-C and raw input, with existing guards
+ok 3 - Stop preserves other agents' Ctrl-C and raw input, with existing guards
+  ---
+  duration_ms: 6.73035
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 14386.21034
