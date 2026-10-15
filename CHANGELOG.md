@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Submit Codex follow-ups with one Send and interrupt generation with one Stop, keeping the run attached.
+
 ## [0.4.0] - 2026-10-14
 
 ### Fixed

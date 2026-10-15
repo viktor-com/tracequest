@@ -23,10 +23,13 @@
   id: lakl
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'kill removes the run window' test/bin/tracequest-launch-integration.test.js
   tags: [spec, launch, launch-s2, api, implemented]
-- label: POST /api/runs/input {id, text?, key?} forwards input into a run via tmux send-keys — text is sent literally (send-keys -l, so tmux never interprets it as key names), key names exactly one special key from the closed set Enter, C-c, Escape, Up, Down, Tab sent as a separate non-literal send-keys AFTER the text (so {text, key:"Enter"} types a line and submits it), at least one of text/key is required, and a key outside the set answers 400 with nothing sent — the key set is a server-side allowlist, never a passthrough of arbitrary tmux key syntax
+- label: POST /api/runs/input {id, text?, key?} sends literal text and a separate allowlisted Enter, C-c, Escape, Up, Down, or Tab key; text/key is required unless the exclusive action:"stop" is provided, which interrupts the agent using its native control; invalid payloads send nothing
   id: lain
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'input sends text and Enter to a run|input rejects an unknown key name' test/bin/tracequest-launch-integration.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/codex-controls.playwright.test.js
   tags: [spec, launch, launch-s5, api, implemented]
+- label: Codex Send submits a literal follow-up once, including multiline text, and Stop interrupts the active task in one action while leaving Codex attached; raw key controls retain their literal meanings
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/codex-controls.playwright.test.js
+  tags: [spec, codex-controls, implemented]
 
 ## security
 - label: POST /api/runs launches ONLY allowlisted agents — the agent field must name a registry entry currently detected on PATH (unknown or undetected agent answers 400 and no window is created) and cwd must be an existing directory (400 otherwise) — so the request chooses among detected agents and supplies prompt/cwd data but never a command line; the executed argv always comes from the registry shape

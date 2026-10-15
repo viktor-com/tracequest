@@ -2483,7 +2483,7 @@ ${APP_TOP_HTML}
         <span class="status-dot"></span>
         <span class="status-text" id="statusText">${composerText}</span><span class="status-dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span>
         <span class="status-spacer"></span>
-        <button class="status-btn" id="stopBtn" type="button" title="Interrupt the agent — sends Ctrl-C to its terminal; the run stays attached"${generating ? "" : " hidden"}>Stop <span class="kbd">^C</span></button>
+        <button class="status-btn" id="stopBtn" type="button" title="Interrupt the current task; the run stays attached"${generating ? "" : " hidden"}>Stop</button>
         <button class="status-btn danger" id="killBtn" type="button" title="End the run — kills its tmux window; the transcript is preserved"${exited ? " hidden" : ""}>Kill run</button>
       </div>
       <form class="composer-card" id="inputRow" data-empty="true"${exited ? " hidden" : ""}>
@@ -2561,7 +2561,7 @@ ${COMMAND_PALETTE_HTML}
       <span class="rm-k">Directory</span><span class="rm-v mono">${esc(cwd)}</span>
       <span class="rm-k">Recording</span><span class="rm-v" id="menuRecording">not linked yet</span>
     </div>
-    <div class="run-menu-note">Agent &amp; model are fixed at launch &mdash; steer the run with follow-ups and keys. Stop sends ^C to interrupt the agent; Kill run ends its tmux window. The transcript is preserved either way.</div>
+    <div class="run-menu-note">Agent &amp; model are fixed at launch &mdash; steer the run with follow-ups and keys. Stop interrupts the current task; Kill run ends its tmux window. The transcript is preserved either way.</div>
   </div>
 </div>
 <script>
@@ -3223,7 +3223,7 @@ ${CHAT_TRANSCRIPT_JS}
         sendBtn.title = "Queue follow-up (Enter) \\u2014 held on this page, typed into the agent's terminal in order when it finishes its current step";
         sendBtn.setAttribute("aria-label", "Queue follow-up");
       } else {
-        sendBtn.title = "Stop generating \\u2014 sends ^C to the agent's terminal (Enter in the input still sends a bare Enter)";
+        sendBtn.title = "Stop generating \\u2014 interrupts the current task (Enter in the input still sends a bare Enter)";
         sendBtn.setAttribute("aria-label", "Stop generating");
       }
     } else {
@@ -3410,7 +3410,7 @@ ${CHAT_TRANSCRIPT_JS}
     // bare-Enter contract. Only really activating the BUTTON stops.
     if (event.detail === 0 && document.activeElement !== sendBtn) return;
     event.preventDefault();
-    sendInput({ key: "C-c" });
+    sendInput({ action: "stop" });
   });
   inputRow.addEventListener("submit", async function (event) {
     event.preventDefault();
@@ -3441,9 +3441,9 @@ ${CHAT_TRANSCRIPT_JS}
     })(keyButtons[i]);
   }
   stopBtn.addEventListener("click", async function () {
-    // Stop = interrupt the agent (Ctrl-C into its tty), not kill the run.
+    // Stop uses the agent's interrupt action; raw keys remain separate.
     stopBtn.disabled = true;
-    await sendInput({ key: "C-c" });
+    await sendInput({ action: "stop" });
     stopBtn.disabled = false;
   });
   killBtn.addEventListener("click", async function () {

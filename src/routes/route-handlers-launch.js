@@ -1021,10 +1021,10 @@ export async function handleApiRunsKill(req, res, _url, _deps = null) {
 export const INPUT_KEYS = ["Enter", "C-c", "Escape", "Up", "Down", "Tab"];
 
 /**
- * POST /api/runs/input {id, text?, key?} → { ok: true }. Forwards input
+ * POST /api/runs/input {id, text?, key?} or {id, action:"stop"} → { ok: true }. Forwards input
  * into a running run via tmux send-keys. Guard chain shared with the other
  * mutating endpoints (405/403/400/413), then in order: malformed id 400;
- * payload 400 (at least one of text/key required; text, when present, a
+ * payload 400 (text/key or the exclusive stop action required; text, when present, a
  * non-empty string; key, when present, from the INPUT_KEYS closed set) —
  * all before touching tmux, so a rejected payload sends NOTHING; unknown
  * id 404; exited run 409. Text is sent literally (send-keys -l — tmux
@@ -1042,8 +1042,12 @@ export async function handleApiRunsInput(req, res, _url, _deps = null) {
   }
   const hasText = body.text !== undefined;
   const hasKey = body.key !== undefined;
-  if (!hasText && !hasKey) {
-    return sendError(res, 400, "at least one of text or key is required");
+  const hasAction = body.action !== undefined;
+  if (hasAction && (body.action !== "stop" || hasText || hasKey)) {
+    return sendError(res, 400, 'action must be "stop" without text or key');
+  }
+  if (!hasText && !hasKey && !hasAction) {
+    return sendError(res, 400, "at least one of text, key or action is required");
   }
   if (hasText && (typeof body.text !== "string" || body.text.length === 0)) {
     return sendError(res, 400, "text must be a non-empty string");
@@ -1066,8 +1070,28 @@ export async function handleApiRunsInput(req, res, _url, _deps = null) {
   // other tmux failure answers 500 JSON, never the plaintext 500.
   const sendKeysImpl = deps.sendKeys || sendKeys;
   try {
-    if (hasText) sendKeysImpl(id, [body.text], { literal: true });
+    const codex = run.options.tq_agent === "codex";
+    // Codex treats a rapid text burst followed by Enter as pasted text,
+    // retaining it in the composer. Explicit bracketed paste ends that
+    // ambiguity, including for multiline input, before the submit key.
+    if (hasText) {
+      const text = codex && body.key === "Enter"
+        ? `\x1b[200~${body.text}\x1b[201~`
+        : body.text;
+      sendKeysImpl(id, [text], { literal: true });
+    }
     if (hasKey) sendKeysImpl(id, [body.key]);
+    // An earlier raw Ctrl-C may have opened Codex's cancellation dialog.
+    // Dismiss that layer first, then interrupt the task underneath it.
+    if (hasAction && codex) {
+      const screen = (deps.capturePane || capturePane)(id);
+      if (screen.includes("Task is still running") && screen.includes("Cancel task")) {
+        sendKeysImpl(id, ["Escape"]);
+      }
+    }
+    // Codex Ctrl-C opens an exit/cancel dialog and leaves output running;
+    // Escape interrupts its active task. Raw key requests stay literal.
+    if (hasAction) sendKeysImpl(id, [codex ? "Escape" : "C-c"]);
   } catch (err) {
     if (!findRunWindow(id, deps)) {
       return sendError(res, 404, `no run with id ${id}`);
