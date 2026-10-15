@@ -803,15 +803,18 @@ export function currentIndexEntry(path, mtimeMs) {
 }
 
 /**
- * currentIndexEntry for a process that runs no index build (a CLI export):
- * null while index.json predates a row format the `source`'s rows depend on,
- * because only a build heals those rows (facts cdxheal, durcl2, durac2).
- * Cursor rows depend on none of them.
+ * currentIndexEntry for a process that runs no index build (a CLI export).
+ * While index.json lacks a row format the `source`'s rows depend on, the row
+ * may still need the heal only a build applies (facts cdxheal, durcl2, durac2):
+ * it keeps its token figures, and its duration (and a Codex row's model) come
+ * from `reindex()`, the entry indexing the recording now would write. Cursor
+ * rows depend on none of those formats.
  */
-export function currentHealedIndexEntry(path, mtimeMs, source) {
-  const cache = _indexFileCache !== null ? _indexFileCache : loadIndexFile(readIndexDiskMtimeMs("currentHealedIndexEntry"));
-  if (!cache || !rowFormatsCurrent(cache, source)) return null;
-  return currentIndexEntry(path, mtimeMs);
+export function currentHealedIndexEntry(path, mtimeMs, source, reindex) {
+  const entry = currentIndexEntry(path, mtimeMs);
+  if (!entry || rowFormatsCurrent(_indexFileCache, source)) return entry;
+  const fresh = reindex();
+  return { ...entry, durationMs: fresh.durationMs, ...(source === "codex" ? { model: fresh.model } : {}) };
 }
 
 function rowFormatsCurrent(cache, source) {

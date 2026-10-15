@@ -158,11 +158,23 @@ test("Cursor CLI render shows the served view's duration, tokens and cost", SKIP
   assert.deepEqual(await figures(renderFromCli(home, cursorRel, "indexed")), reindexed, "render with the session index in place");
 });
 
-test("CLI render never shows an index row a server build would heal", SKIP_NO_PLAYWRIGHT, async () => {
+test("CLI render never shows an index row duration a server build would heal", SKIP_NO_PLAYWRIGHT, async () => {
   await stopServer();
   const unindexed = await figures(renderFromCli(freshHome, codexRel, "codex-unindexed"));
-  editIndex((index) => { index[join(home, codexRel)].durationMs = 5 * 3600_000; });
-  assert.equal((await figures(renderFromCli(home, codexRel, "codex-current"))).duration, "5h", "a current-format row is shown");
+  // A row whose token figures differ from the CLI's own indexer (as a native
+  // indexer's may) and whose duration an older format measured as a wall span.
+  editIndex((index) => {
+    const row = index[join(home, codexRel)];
+    row.durationMs = 5 * 3600_000;
+    row.outputTokens += 400000;
+    row.totalTokens += 400000;
+    row.billingTokens.output += 400000;
+  });
+  const current = await figures(renderFromCli(home, codexRel, "codex-current"));
+  assert.equal(current.duration, "5h", "a current-format row is shown");
+  assert.notEqual(current.cost, unindexed.cost);
   editIndex((index) => { delete index._active; });
-  assert.deepEqual(await figures(renderFromCli(home, codexRel, "codex-old-format")), unindexed, "an old-format row is indexed afresh");
+  assert.deepEqual(await figures(renderFromCli(home, codexRel, "codex-old-format")),
+    { ...current, duration: unindexed.duration, metaDuration: unindexed.metaDuration },
+    "an old-format row keeps its tokens and takes the duration indexing the recording now measures");
 });

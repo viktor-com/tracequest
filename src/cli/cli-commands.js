@@ -505,10 +505,11 @@ export function parseAndRender(inputFile, values) {
   }
   printSessionStats(session);
   // The export shows the summary the served session view shows: the session's
-  // current index entry, or (no entry, or one a server build would heal first)
-  // the entry indexing the recording now would write.
+  // current index entry (healed as a server build would), or with none the
+  // entry indexing the recording now would write.
+  const reindex = () => indexSession(session);
   attachSessionSummary(session, (path, mtimeMs) =>
-    currentHealedIndexEntry(path, mtimeMs, session.source || "claude") ?? indexSession(session));
+    currentHealedIndexEntry(path, mtimeMs, session.source || "claude", reindex) ?? reindex());
   renderAndWrite(session, values.out, values.open);
 }
 
