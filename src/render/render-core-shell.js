@@ -247,94 +247,6 @@ export const CORE_SHELL_JS = `
     };
   }
 
-  function computeSessionGrade(chapters, metrics) {
-    const s = session.stats;
-    const totalChapters = chapters.length;
-    if (totalChapters === 0) return null;
-
-    const m = metrics || aggregateChapterMetrics(chapters);
-    const totalToolCalls = sumToolCounts(s.toolCounts);
-    const totalErrors = m.totalErrors;
-    const totalRetries = m.totalRetries;
-    const totalSelfCorrections = m.totalSelfCorrections;
-    const cleanCount = m.cleanCount;
-    const correctedCount = m.correctedCount;
-    const isSubagent = totalChapters === 1;
-
-    // Factor 1: Error rate (35%) — gentler curve, 5% errors is still good
-    // 0% = 100, 5% = 88, 10% = 75, 20% = 50, 40%+ = 0
-    const errorRatio = totalToolCalls > 0 ? totalErrors / totalToolCalls : 0;
-    const errorScore = Math.max(0, 100 - errorRatio * 250);
-
-    // Factor 2: Chapter quality (20%) — count corrected chapters as partial credit
-    // Subagent sessions (1 chapter): corrected = 80% credit to avoid 0 score
-    // Multi-chapter: clean = 100%, corrected = 60%, struggling = 0%
-    const qualityNumerator = cleanCount + correctedCount * (isSubagent ? 0.8 : 0.6);
-    const qualityRatio = qualityNumerator / totalChapters;
-    const qualityScore = Math.min(100, qualityRatio * 100);
-
-    // Factor 3: Retry ratio (10%) — only penalize excessive retries (>20% of tool calls)
-    // Normal iteration is expected; only flag when >20% of calls are retries
-    // <20% = 100, 30% = 67, 50% = 0
-    const retryRatio = totalToolCalls > 0 ? totalRetries / totalToolCalls : 0;
-    const retryScore = retryRatio <= 0.20 ? 100
-      : Math.max(0, 100 - (retryRatio - 0.20) * 333);
-
-    // Factor 4: Self-correction rate (15%) — higher is better when errors exist
-    const correctionScore = totalErrors === 0 ? 100
-      : Math.min(100, (totalSelfCorrections / totalErrors) * 100);
-
-    // Factor 5: Cache efficiency (20%)
-    // Neutral (75) when insufficient input data (<10K tokens) to judge cache usage
-    const cacheHit = s.totalCacheHit || 0;
-    const totalInput = s.totalInputTokens || 0;
-    const cacheRatio = totalInput > 0 ? cacheHit / totalInput : 0;
-    const cacheScore = totalInput < 10000 ? 75 : Math.min(100, cacheRatio * 125);
-    // 80%+ cache hit = 100, 0% = 0
-
-    const score = Math.round(
-      errorScore * 0.35 +
-      qualityScore * 0.20 +
-      retryScore * 0.10 +
-      correctionScore * 0.15 +
-      cacheScore * 0.20
-    );
-
-    const clampedScore = Math.max(0, Math.min(100, score));
-    let letter, letterCls;
-    if (clampedScore >= 90) { letter = 'A'; letterCls = 'grade-a'; }
-    else if (clampedScore >= 80) { letter = 'B'; letterCls = 'grade-b'; }
-    else if (clampedScore >= 70) { letter = 'C'; letterCls = 'grade-c'; }
-    else if (clampedScore >= 60) { letter = 'D'; letterCls = 'grade-d'; }
-    else { letter = 'F'; letterCls = 'grade-f'; }
-
-    const notes = [];
-    if (errorScore >= 90) notes.push('low error rate');
-    else if (errorScore < 50) notes.push('high error rate');
-    if (qualityRatio >= 0.8) notes.push('mostly clean');
-    else if (qualityRatio < 0.4 && totalChapters > 2) notes.push('many troubled chapters');
-    if (cacheScore >= 80 && totalInput > 0) notes.push('good cache usage');
-    else if (cacheScore < 40 && totalInput > 0) notes.push('low cache efficiency');
-    if (correctionScore >= 80 && totalErrors > 0) notes.push('good recovery');
-    else if (correctionScore < 30 && totalErrors > 2) notes.push('poor error recovery');
-    if (retryScore >= 90) notes.push('few retries');
-    else if (retryScore < 50) notes.push('many retries');
-
-    return {
-      score: clampedScore,
-      letter,
-      letterCls,
-      note: notes.slice(0, 3).join(', '),
-      factors: [
-        { name: 'errors', score: Math.round(errorScore), weight: 35 },
-        { name: 'quality', score: Math.round(qualityScore), weight: 20 },
-        { name: 'retries', score: Math.round(retryScore), weight: 10 },
-        { name: 'recovery', score: Math.round(correctionScore), weight: 15 },
-        { name: 'cache', score: Math.round(cacheScore), weight: 20 },
-      ],
-    };
-  }
-
   function renderSessionSummary() {
     const s = session.stats;
     const chapters = getChapters();
@@ -406,28 +318,14 @@ export const CORE_SHELL_JS = `
       items.push(summaryItem('waste', wasteLabel, 'ss-waste'));
     }
 
-    const grade = computeSessionGrade(chapters, m);
+    const grade = session.grade && session.grade.letter !== '-' ? session.grade : null;
     if (grade) {
       const gradeEl = h('div', { className: 'session-grade' });
-      gradeEl.appendChild(h('span', { className: 'session-grade-letter ' + grade.letterCls }, grade.letter));
+      gradeEl.appendChild(h('span', { className: 'session-grade-letter ' + grade.cls }, grade.letter));
       const detailEl = h('div', { className: 'session-grade-detail' });
       detailEl.appendChild(h('span', { className: 'session-grade-score' }, grade.score + '/100'));
-      const breakdownEl = h('div', { className: 'session-grade-breakdown' });
-      for (const f of grade.factors) {
-        const factorEl = h('span', { className: 'session-grade-factor' });
-        factorEl.textContent = f.name + ' ';
-        const barWrap = h('span', { className: 'session-grade-factor-bar' });
-        const fillCls = f.score >= 70 ? 'fill-good' : f.score >= 40 ? 'fill-ok' : 'fill-bad';
-        const fill = h('span', { className: 'session-grade-factor-fill ' + fillCls });
-        fill.style.width = Math.max(2, f.score) + '%';
-        barWrap.appendChild(fill);
-        factorEl.appendChild(barWrap);
-        breakdownEl.appendChild(factorEl);
-      }
-      detailEl.appendChild(breakdownEl);
-      if (grade.note) {
-        detailEl.appendChild(h('span', { className: 'session-grade-note' }, grade.note));
-      }
+      detailEl.appendChild(h('span', { className: 'session-grade-note' },
+        'From tool-call error rate, errors per indexed chapter and cache hit rate'));
       gradeEl.appendChild(detailEl);
       wrap.appendChild(gradeEl);
       if (items.length > 0) {

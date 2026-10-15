@@ -1,3 +1,4 @@
+import { sessionGrade } from "../sessions/session-grade.js";
 import { sessionHash } from "../sessions/session-hash.js";
 
 /**
@@ -11,5 +12,6 @@ export function viewerSessionData(session) {
   if (!sessionForViewer.sessionHash && sessionForViewer.path) {
     sessionForViewer.sessionHash = sessionHash(sessionForViewer.path);
   }
+  sessionForViewer.grade = sessionGrade(session);
   return sessionForViewer;
 }

@@ -11,6 +11,7 @@
  * remainder after cache reads and writes, and the total is input plus output
  * with every cached token included.
  */
+import { sessionGrade } from "./session-grade.js";
 import { statSync } from "node:fs";
 import { join } from "node:path";
 import { currentIndexEntry } from "./index-writers.js";
@@ -157,6 +158,7 @@ function alignEstimatedTokens(session, summary) {
 export function attachSessionSummary(session, indexEntry = currentIndexEntry) {
   const summary = sessionSummary(session, indexEntry);
   session.summary = summary;
+  session.grade = sessionGrade(session, indexEntry);
   alignEstimatedTokens(session, summary);
   return session;
 }
