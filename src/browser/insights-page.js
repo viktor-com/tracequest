@@ -247,7 +247,7 @@ function rateBars(groups, id, now) {
 
 const STATE_LABEL = { local: "this machine", fresh: "up to date", stale: "stale", failing: "pull failing", never: "never pulled" };
 
-function hubTable(hub, now) {
+function hubTable(hub, now, query) {
   const rows = hub.map((h) => {
     const pulled = h.state === "local"
       ? "not needed"
@@ -256,7 +256,7 @@ function hubTable(hub, now) {
       ? `${h.error}${h.consecutiveFailures > 1 ? ` (${h.consecutiveFailures} failed pulls in a row)` : ""}`
       : h.spec && h.spec !== h.host ? h.spec : "";
     return `<tr data-host="${esc(h.host)}" data-state="${esc(h.state)}">
-  <td><a href="/insights?host=${encodeURIComponent(h.host)}">${esc(h.host)}</a>${detail ? `<div class="ins-cell-sub">${esc(detail)}</div>` : ""}</td>
+  <td><a href="${esc(scopeHref(query, { host: h.host }))}">${esc(h.host)}</a>${detail ? `<div class="ins-cell-sub">${esc(detail)}</div>` : ""}</td>
   <td><span class="ins-state" data-state="${esc(h.state)}"><span class="ins-state-dot"></span>${esc(STATE_LABEL[h.state] || h.state)}</span></td>
   <td class="num">${num(h.sessions)}</td>
   <td class="num">${esc(h.newestSessionAt ? ago(h.newestSessionAt, now) : "—")}</td>
@@ -381,7 +381,7 @@ ${appTopStaticHtml("insights")}
   <section class="ins-section">
     <div class="ins-section-title">Machines</div>
     <div class="ins-section-sub">Which machines feed this view and how fresh each one is. A machine is stale after a day without a good pull.</div>
-    ${hubTable(data.hub, now)}
+    ${hubTable(data.hub, now, q)}
   </section>
 
   <div class="ins-body"${t.analyzed === 0 ? " hidden" : ""}>

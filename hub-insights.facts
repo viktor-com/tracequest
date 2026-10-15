@@ -3,3 +3,9 @@
   id: hubps
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'summary reports checked, fetched, imported, updated, skipped, and failed counts' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, hub-insights, cli, implemented]
+
+# scope
+- label: Selecting, switching, or clearing a machine in Insights preserves the active filter expression and time range
+  id: insms
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/insights-machine-scope.playwright.test.js
+  tags: [insights-machine-scope, implemented]
