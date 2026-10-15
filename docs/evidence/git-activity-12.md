@@ -35,7 +35,7 @@ The source hash and second commit label are unchanged; the file restore is corre
 TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/git-activity.playwright.test.js
 ```
 
-This launches the real server with synthetic Claude JSONL in a temporary HOME, opens `/view` in Chromium, and asserts visible Git activity labels and no browser errors. Coverage includes quiet checkout/switch, file restore, ordinary branch creation, combined `-qam`, unrelated Python heredocs before and after a commit, a genuine commit-message heredoc, and authoritative commit output.
+This launches the real server with synthetic Claude JSONL in a temporary HOME, opens `/view` in Chromium, and asserts visible Git activity labels and no browser errors. Coverage includes quiet checkout/switch, file restore, ordinary branch creation, combined `-qam`, unrelated Python heredocs before and after a commit, a genuine commit-message heredoc, authoritative commit output, newline-separated commands, trailing checkout separators, semicolons in heredoc subjects, and `git -C` heredocs.
 
 With the unchanged main implementation, the same test fails:
 
@@ -54,3 +54,11 @@ With the unchanged main implementation, the same test fails:
 ```
 
 With the fix, the regression test and existing session-flyout browser test both pass (2 tests, 0 failures, 0 skips). Both `git-activity-12` facts pass. No existing tests or CI configuration were edited, and no dependencies were added. Facts: `zyu`, `mpv`.
+
+## Review and CI
+
+The fresh-context reviewer identified regressions in newline-separated branch commands, semicolon-containing heredocs, `git -C` heredocs, and trailing checkout separators. Each was fixed and added to the browser regression test.
+
+CI is externally blocked: the existing CI workflow (`.github/workflows/ci.yml`) reports `disabled_manually`. `gh pr checks 26 --watch --fail-fast` reported no checks. A manual dispatch attempt returned HTTP 422: `Cannot trigger a workflow_dispatch on a disabled workflow`. No workflow state or CI configuration was changed; the PR must remain unmerged until green CI is available.
+
+Fresh-context reviewer final verdict: **PASS, no unresolved findings**. Independently read the entire diff, inspected the real recording inputs/results and browser output, reran Git activity and existing flyout browser tests (2 passed, 0 skipped), verified unchanged source-recording hash and clean diff, and reran tagged facts in isolation (2 passed). One earlier facts invocation run concurrently with browser tests failed before the isolated rerun passed. Reviewer made no code or source-recording changes and closed all browsers.

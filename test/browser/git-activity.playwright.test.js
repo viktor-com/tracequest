@@ -17,13 +17,17 @@ test('git activity labels respect checkout flags and the commit message boundary
   const commands = [
     ['git checkout -q main', ''],
     ['git switch --quiet topic', ''],
+    ['git checkout main\npython3 -V', ''],
+    ['git switch topic\npython3 -V', ''],
     ['git checkout -q HEAD -- file.py', ''],
     ['git checkout file.py', ''],
+    ['git checkout main --', ''],
     ['git checkout -b feature/create', ''],
     ['git switch -c feature/switch', ''],
     ["git commit -qam 'preserve the actual subject' && python3 - <<'EOF'\nimport re\nEOF", 'abc1234'],
     ["python3 - <<'EOF'\nimport os\nEOF\ntrue; git commit -m \"plain subject\"", 'def5678'],
-    ["git commit -m \"$(cat <<'EOF'\nheredoc subject\n\nbody\nEOF\n)\"", ''],
+    ["git commit -m \"$(cat <<'EOF'\nheredoc subject; keep the full subject\n\nbody\nEOF\n)\"", ''],
+    ["git -C /repo commit -m \"$(cat <<'EOF'\nsubject with git directory\nEOF\n)\"", ''],
     ['git commit -m "subject from flag"', '[topic 123abcd] subject from output'],
   ];
   const rows = [{ type: 'user', sessionId: 'git-activity', cwd: '/repo', timestamp: '2026-10-15T10:00:00Z', message: { role: 'user', content: 'Check git activity' } }];
@@ -62,8 +66,8 @@ test('git activity labels respect checkout flags and the commit message boundary
     if (await page.locator('.tool-perf-header').count()) await page.locator('.tool-perf-header').click();
     const labels = await page.locator('.git-op-detail').allTextContents();
     assert.deepEqual(labels.map(label => label.trim()), [
-      'switch to main', 'switch to topic', 'create feature/create', 'create feature/switch', 'abc1234preserve the actual subject',
-      'def5678plain subject', 'heredoc subject', '123abcdsubject from output',
+      'switch to main', 'switch to topic', 'switch to main', 'switch to topic', 'switch to main', 'create feature/create', 'create feature/switch', 'abc1234preserve the actual subject',
+      'def5678plain subject', 'heredoc subject; keep the full subject', 'subject with git directory', '123abcdsubject from output',
     ]);
     assert.deepEqual(errors, [], 'rendered helpers execute without browser errors');
   } finally {

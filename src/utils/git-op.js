@@ -45,7 +45,7 @@ export function extractCommitMessageFromMFlag(gitPart) {
   var mMatch = gitPart.match(/(?:^|\s)(?:-[a-zA-Z]*m|--message)(?:\s+|=)(?:"([^"]*)"|'([^']*)'|(\S+))/);
   var message = mMatch ? (mMatch[1] ?? mMatch[2] ?? mMatch[3]) : null;
   // A command substitution is not the literal commit subject.
-  return message && !message.startsWith('$(') ? message : null;
+  return message && !/^["']?\$\(/.test(message) ? message : null;
 }
 
 /** True when the working tree has staged, unstaged, or untracked changes. */
@@ -85,6 +85,7 @@ export function detectGitOp(cmd, output) {
     }
     if (!gitPart) return null;
   }
+  var gitStart = c.indexOf(gitPart);
   // Strip git -C <path> prefix so the rest of the regex patterns work
   gitPart = gitPart.replace(/^git\s+(-C\s+\S+\s+)+/, 'git ');
 
@@ -115,7 +116,10 @@ export function detectGitOp(cmd, output) {
     if (!op.message) {
       // Only use a heredoc supplied as this commit's message, never one
       // belonging to another command (for example a Python script).
-      var heredocMatch = gitPart.match(/(?:^|\s)(?:-[a-zA-Z]*m|--message)(?:\s+|=)"?\$\(cat\s+<<['"]?(\w+)['"]?\n([\s\S]*?)\n\1(?:\n|$)/);
+      var heredocPrefix = /(?:^|\s)(?:-[a-zA-Z]*m|--message)(?:\s+|=)"?\$\(cat\s+<<['"]?\w+['"]?\n/;
+      // Chain splitting may cut the message body at a semicolon. Start at
+      // this commit, but only read a heredoc whose argument begins here.
+      var heredocMatch = heredocPrefix.test(gitPart) && c.slice(gitStart).match(/(?:^|\s)(?:-[a-zA-Z]*m|--message)(?:\s+|=)"?\$\(cat\s+<<['"]?(\w+)['"]?\n([\s\S]*?)\n\1(?:\n|$)/);
       if (heredocMatch) {
         op.message = safeSlice(heredocMatch[2].split('\n')[0].trim(), 120);
       }
@@ -155,13 +159,16 @@ export function detectGitOp(cmd, output) {
 
   // Options are not branch names; checkout <tree> -- <paths> restores files.
   if (/^git\s+(?:checkout|switch)\s/.test(gitPart)) {
-    var tokens = gitPart.match(/"[^"]*"|'[^']*'|\S+/g).slice(2);
+    var tokens = gitPart.split('\n')[0].match(/"[^"]*"|'[^']*'|\S+/g).slice(2);
     var branch = null;
     var create = false;
     for (var ti = 0; ti < tokens.length; ti++) {
       var token = tokens[ti];
       if (token === '--') {
-        if (/^git\s+checkout\b/.test(gitPart)) return null;
+        if (/^git\s+checkout\b/.test(gitPart)) {
+          if (ti + 1 < tokens.length) return null;
+          break;
+        }
         branch = tokens[ti + 1];
         break;
       }
