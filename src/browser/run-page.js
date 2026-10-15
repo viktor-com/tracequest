@@ -1714,9 +1714,8 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     if (chatThread) chatThread.style.paddingBottom = "";
   }
   // File-less newest: leftover-owned pixels are that turn occupying
-  // leftover (prose at leftover top + honest absence + close). First
-  // dump is not leftover-owned — it leaves leftover into hidden
-  // #chatHistory (not a 681px dump-on-fold). Do not stretch the
+  // leftover (prose at leftover top + honest absence + close). Earlier
+  // turns stay in flow above it, scrolled off the top. Do not stretch the
   // caption (r4), do not pin it with margin-top (r6), do not
   // pad-bottom hoist (r7), do not shrink leftover to a 55px pocket
   // that cedes leftover to unused chat-main (r9).
@@ -2129,11 +2128,10 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
   // leftover.clientHeight). leftover-owned pixels occupying leftover
   // are BAR's named shell-output column — opening prose + named card (Lines 1–6) + closing prose — not user + prior dumps.
   // leftoverAir is leftover − leftoverOwned (BAR leftover has leftover air under closing). leftover occupancy of leftover-owned content is not leftover occupancy of leftover. unparkAll restores
-  // live-parked nodes; leftover layout parks leftover-non-owned
-  // (user, lsof/ps, thoughts) off leftover so leftover-owned opening
-  // + named + closing occupy leftover. The named card fillLeftover-
-  // snaps in place — not a 12-line island under the user prompt, not
-  // data-contained=parked, not split into #chatHistory.
+  // live-parked nodes; earlier blocks (user, lsof/ps, thoughts) stay
+  // in flow above the opening, scrolled off the top. The named card
+  // fillLeftover-snaps in place — not a 12-line island under the user
+  // prompt, not data-contained=parked, not split into #chatHistory.
   function leftoverOccupyingNamedCard() {
     if (!chatThread) return null;
     var cards = chatThread.querySelectorAll(".chat-card.chat-output");
@@ -2277,6 +2275,7 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     containNamedOutput();
     if (watchFramesLiveTrail() && followTail) frameLiveTrail();
     else if (!watchFramesLiveTrail() && leftoverSnapIsStale() && followTail) leftoverSnapNewestTurn();
+    else if (!watchFramesLiveTrail() && followTail) leftoverSnapNamedColumn();
   });
 `;
 

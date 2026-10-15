@@ -263,6 +263,7 @@ test('earlier chat blocks stay reachable by scrolling up in a finished conversat
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     for (const [name, rows] of Object.entries(recordings)) {
       const path = join(home, `.claude/projects/proj/${name}.jsonl`);
+      await page.setViewportSize({ width: 1280, height: 800 });
       await page.goto(base + '/run?session=' + encodeURIComponent(path));
       await page.waitForFunction(text => document.querySelector('.chat-app').textContent.includes(text), rows[rows.length - 1].message.content[0].text);
       await pause(500);
@@ -277,6 +278,10 @@ test('earlier chat blocks stay reachable by scrolling up in a finished conversat
       assert.ok(initial[initial.length - 1].inView, `${name}: the final reply is framed on open`);
       assert.deepEqual(initial.filter(b => b.height === 0).map(b => b.text), [], `${name}: no block is collapsed to zero height`);
       assert.equal(await page.locator('#chatHistoryCol > *').count(), 0, `${name}: no block is moved off screen`);
+      await page.setViewportSize({ width: 1280, height: 520 });
+      await pause(300);
+      const resized = await shown();
+      assert.ok(resized[resized.length - 1].inView, `${name}: the final reply stays framed after the window shrinks`);
 
       // Scroll up with the mouse wheel, as a reader would.
       await page.locator('#chatScroll').hover();
