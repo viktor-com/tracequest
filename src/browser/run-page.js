@@ -6,13 +6,17 @@
  * conversation surface is the page: the client polls
  * /api/runs/session?id=@N[&etag=…] roughly every second and renders the
  * run's unified Session as a chat — user bubbles, assistant prose
- * (markdown-lite), thought markers, tool-call cards with human titles and
- * muted binary names, "Explored N searches" grouping for consecutive
- * search-type calls, edit/write file cards with +N/−N stats, and a
+ * (markdown-lite), collapsed thought rows, and tool calls folded Cursor-style
+ * (chat-tool-groups.js): consecutive calls of one kind become one summary
+ * row ("Read 4 files", "Ran 3 commands", "Edited app.ts +12 −3") that opens
+ * in place to compact rows and then to a call's full input and output, long
+ * output cut behind "show more". Failed calls stay marked while collapsed;
+ * Expand all / Collapse all (remembered in localStorage), a find box and
+ * #tool-<id> / #event-<n> links open the rows they point at. A
  * shimmering in-progress marker ("Thinking" / "Planning next moves")
  * while the run is generating (detectLiveSessions / runIsLive — never a
  * tmux-alive linked pane alone). The etag flow means unchanged polls cost nothing
- * and the thread is patched incrementally (existing message/tool-card
+ * and the thread is patched incrementally (existing message/tool-group
  * nodes keep their element identity) when the recording actually grew;
  * the scroller sticks to the bottom unless the user scrolled up. The
  * page stays loaded: SSE data-update kicks a session poll via
@@ -69,6 +73,7 @@ import { CHAT_SHELL_CSS, CHAT_PAGE_CSS } from "./chat-page-css.js";
 import { ansiPaletteCss } from "../render/ansi-html.js";
 import { RUN_UNLINKED_RUNNING_MS } from "../sessions/run-generating-status.js";
 import { esc } from "../server/server-html-helpers.js";
+import { fnSrc } from "../utils/fn-src.js";
 import {
   computeGrade,
   prettyProject,
@@ -110,6 +115,26 @@ import {
 } from "./app-chrome.js";
 import { applyThreadItems } from "./chat-thread-apply.js";
 import {
+  toolKind,
+  inputField,
+  patchSummary,
+  toolTarget,
+  toolVerb,
+  diffCounts,
+  toolRow,
+  groupToolBlocks,
+  baseName,
+  groupSummary,
+  groupDetail,
+  textMatches,
+  rowMatches,
+  isOpen,
+  parseDeepLink,
+  deepLinkKeys,
+  outputPreview,
+  groupOpenState,
+} from "./chat-tool-groups.js";
+import {
   ANALYTICS_PANEL_CSS,
   ANALYTICS_PANEL_HTML,
   ANALYTICS_PANEL_JS,
@@ -117,6 +142,20 @@ import {
 } from "./run-analytics-panel.js";
 
 const APPLY_THREAD_ITEMS_SRC = applyThreadItems.toString().replace(/^export /, "");
+/** Find box + Expand all above the thread; hidden until the transcript has tool calls to fold. */
+const CHAT_FIND_BAR_HTML = `<div class="chat-find-bar" id="chatFindBar" hidden>
+    <div class="chat-find-inner">
+      <input class="chat-find-input" id="chatFind" type="search" placeholder="Find in this conversation" aria-label="Find in this conversation" autocomplete="off" spellcheck="false">
+      <span class="chat-find-count" id="chatFindCount" role="status" aria-live="polite"></span>
+      <button class="chat-expand-btn" id="chatToggleAll" type="button" aria-pressed="false">Expand all</button>
+    </div>
+  </div>`;
+// The tool-grouping helpers run in the page too, in dependency-free form.
+const TOOL_GROUPS_SRC = [
+  toolKind, inputField, patchSummary, toolTarget, toolVerb, diffCounts, toolRow, groupToolBlocks,
+  baseName, groupSummary, groupDetail, textMatches, rowMatches, isOpen, parseDeepLink, deepLinkKeys,
+  outputPreview, groupOpenState,
+].map(fnSrc).join("\n");
 
 /** Snapshot poll cadence in ms for the raw terminal block. */
 export const RUN_POLL_MS = 600;
@@ -1064,7 +1103,7 @@ ${ansiPaletteCss()}
  * BOTH the run watch page and the read-only live-session watch page, so a
  * live session opened by hash gets the IDENTICAL transcript treatment as a
  * tracequest-launched run. The chunk assumes its embedding page declared:
- * runCwd, chatScroll/chatThread/chatActivity, openThoughts, lastBlocks,
+ * runCwd, chatScroll/chatThread/chatActivity, lastBlocks,
  * lastSession, lastState, lastThreadHtml, lastActivityHtml, stopped, and a
  * mode-specific activityHtml() (hoisting makes declaration order moot).
  */
@@ -1073,22 +1112,11 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
   function escHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-  function truncate(s, n) {
-    s = String(s);
-    return s.length > n ? s.slice(0, n - 1) + "\\u2026" : s;
-  }
   function relPath(p) {
     p = String(p || "");
     if (runCwd && p.indexOf(runCwd + "/") === 0) return p.slice(runCwd.length + 1);
     if (runCwd && p === runCwd) return ".";
     return p;
-  }
-  function baseName(p) {
-    var parts = String(p || "").split("/");
-    return parts[parts.length - 1] || p;
-  }
-  function countLines(s) {
-    return s ? String(s).split("\\n").length : 0;
   }
 
   /* ---- markdown-lite (assistant prose): escape FIRST, then decorate ---- */
@@ -1147,159 +1175,132 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     return out;
   }
 
-  /* ---- tool presentation ---- */
-  var ICON_TERM = '<svg class="card-icon" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor"/><path d="M4.5 6l2 2-2 2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 10.5h3" stroke="currentColor" stroke-linecap="round"/></svg>';
-  var ICON_FILE = '<svg class="card-icon" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 1.5h5.5L13 5v9.5H4z" stroke="currentColor" stroke-linejoin="round"/><path d="M9.5 1.5V5H13" stroke="currentColor" stroke-linejoin="round"/></svg>';
+  /* ---- tool groups: Cursor-style collapsed rows ----
+     Consecutive calls of one kind read as one summary row; a click opens a
+     group to one compact line per call, and a call to its full input and
+     output. The grouping and the open/closed rules live in
+     chat-tool-groups.js (unit-tested); this is the markup and the clicks. */
+  function iconSvg(inner) {
+    return '<svg class="card-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">' + inner + "</svg>";
+  }
+  var ICON_FILE = iconSvg('<path d="M4 1.5h5.5L13 5v9.5H4z" stroke="currentColor" stroke-linejoin="round"/><path d="M9.5 1.5V5H13" stroke="currentColor" stroke-linejoin="round"/>');
+  var KIND_ICON = {
+    read: ICON_FILE,
+    edit: iconSvg('<path d="M10.5 2.5l3 3L6 13H3v-3z" stroke="currentColor" stroke-linejoin="round"/>'),
+    command: iconSvg('<rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor"/><path d="M4.5 6l2 2-2 2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 10.5h3" stroke="currentColor" stroke-linecap="round"/>'),
+    search: iconSvg('<circle cx="7" cy="7" r="4.5" stroke="currentColor"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-linecap="round"/>'),
+    web: iconSvg('<circle cx="8" cy="8" r="6" stroke="currentColor"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12" stroke="currentColor"/>'),
+    wait: iconSvg('<circle cx="8" cy="8" r="6" stroke="currentColor"/><path d="M8 4.5V8l2.5 1.5" stroke="currentColor" stroke-linecap="round"/>'),
+    agent: iconSvg('<circle cx="8" cy="5" r="2.5" stroke="currentColor"/><path d="M3 14c0-3 2-4.5 5-4.5s5 1.5 5 4.5" stroke="currentColor" stroke-linecap="round"/>'),
+    other: iconSvg('<circle cx="3.5" cy="8" r="1.2" fill="currentColor"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="12.5" cy="8" r="1.2" fill="currentColor"/>')
+  };
+  var ICON_CARET = '<span class="tg-caret" aria-hidden="true"></span>';
+  var ICON_CHECK = '<span class="tg-ok" role="img" aria-label="done"></span>';
+  var TOOL_MODE_KEY = "tq-chat-tool-mode";
+  var FIND_HIT_BUDGET = 400;
+  var OUTPUT_PREVIEW_LINES = 12;
+  var OUTPUT_FULL_CHARS = 300000;
+  function readToolMode() {
+    try {
+      var v = window.localStorage.getItem(TOOL_MODE_KEY);
+      return v === "all" || v === "none" ? v : "auto";
+    } catch (e) { return "auto"; }
+  }
+  /* mode: "auto" | "all" | "none" (Expand all / Collapse all); overrides: the
+     reader's own clicks; forced: what a #tool- / #event- link opened; more:
+     rows whose long output is shown in full; query: the find text. */
+  var toolState = { mode: readToolMode(), overrides: {}, forced: {}, more: {}, query: "" };
+  var itemBuilders = {};
+  var lastEntries = [];
 
-  function bashBins(cmd) {
-    var segs = String(cmd).split(/\\s*(?:\\|\\|?|&&|;)\\s*/);
-    var bins = [];
-    for (var i = 0; i < segs.length && bins.length < 3; i++) {
-      var tok = segs[i].replace(/^\\s*(?:sudo\\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=\\S*\\s+)*/, "").split(/\\s+/)[0] || "";
-      tok = baseName(tok);
-      if (tok && bins.indexOf(tok) < 0) bins.push(tok);
-    }
-    return bins;
-  }
-  function workspacePath(p) {
-    p = relPath(String(p || "").replace(/^["']|["']$/g, ""));
-    if (!p || p === "." || p === "./" || p === "/" || p === "./.") return "";
-    return p;
-  }
-  function bashTitle(cmd) {
-    // Verb-object investigation title from the first pipeline segment;
-    // muted bins already name the rest ("ls, head" under the object).
-    cmd = String(cmd).trim().split(/\\s*\\|\\s*/)[0].trim().replace(/^(?:sudo\\s+)/, "");
-    var m;
-    if (/^(?:rg|grep)\\b/.test(cmd)) {
-      var pattern = "";
-      var searchPath = "";
-      if ((m = /["']([^"']{1,48})["']/.exec(cmd))) pattern = m[1];
-      else if ((m = /^(?:rg|grep)\\s+(?:-\\S+\\s+)*(\\S{1,48})/.exec(cmd))) pattern = m[1];
-      if ((m = /["'][^"']+["']\\s+(\\S+)/.exec(cmd))) searchPath = workspacePath(m[1]);
-      else {
-        var rest = cmd.replace(/^(?:rg|grep)\\s+(?:-\\S+\\s+)*/, "");
-        var bits = rest.split(/\\s+/);
-        if (!pattern && bits[0]) pattern = bits[0];
-        if (bits[1]) searchPath = workspacePath(bits[1]);
-      }
-      var title = (/^rg\\b/.test(cmd) ? "Ripgrep for " : "Search for ") + (pattern || "strings");
-      if (searchPath) title += " in " + searchPath;
-      return title;
-    }
-    if (/^find\\b/.test(cmd)) {
-      var name = "";
-      var findPath = "";
-      if ((m = /(?:-name|-iname)\\s+["']?([^\\s"']+)/.exec(cmd))) {
-        name = m[1].replace(/^\\*+|\\*+$/g, "");
-      }
-      if ((m = /^find\\s+(\\S+)/.exec(cmd))) {
-        if (m[1].charAt(0) !== "-") findPath = workspacePath(m[1]);
-      }
-      if (name && findPath) return "Find " + name + " files under " + findPath;
-      if (name) return "Find " + name + " files";
-      if (findPath) return "Find all files under " + findPath;
-      return "Find all files under workspace";
-    }
-    if ((m = /^ls\\b\\s*(.*)/.exec(cmd))) {
-      var lsArgs = (m[1] || "").replace(/^(?:-\\S+\\s*)+/, "").trim();
-      var lsPath = workspacePath((lsArgs.split(/\\s+/)[0]) || "");
-      if (!lsPath) return "List workspace root directory";
-      return "List " + truncate(lsPath, 40) + " directory";
-    }
-    if ((m = /^(?:cat|head|tail|less)\\s+(?:-\\S+\\s+)*(\\S+)/.exec(cmd))) return "Read " + baseName(m[1]);
-    if ((m = /^git\\s+(\\S+)/.exec(cmd))) return "Git " + m[1];
-    if ((m = /^(?:npm|pnpm|yarn|npx)\\s+(.{1,36})/.exec(cmd))) return "Run " + m[1];
-    if ((m = /^node\\s+(?:-\\S+\\s+)*(\\S+)/.exec(cmd))) return "Run " + baseName(m[1]);
-    if (/^mkdir\\b/.test(cmd)) return "Create directory";
-    if (/^(?:cp|rsync)\\b/.test(cmd)) return "Copy files";
-    if (/^mv\\b/.test(cmd)) return "Move files";
-    if (/^rm\\b/.test(cmd)) return "Remove files";
-    if ((m = /^(?:curl|wget)\\b.*?(?:https?:\\/\\/([^\\/\\s"']+))/.exec(cmd))) return "Fetch " + m[1];
-    return null;
-  }
-  var EXPLORE_TOOLS = { Grep: 1, Glob: 1, SemanticSearch: 1, ToolSearch: 1, WebSearch: 1 };
-  function isExplore(tc) {
-    if (EXPLORE_TOOLS[tc.name]) return true;
-    if (tc.name === "Bash") return /^(?:rg|grep|find|ls|fd|head|tail|cat|wc|which|tree)\\b/.test(String(tc.input || "").trim());
-    return false;
-  }
-  function toolTitle(tc) {
-    var input = String(tc.input || "").trim();
-    switch (tc.name) {
-      case "Bash": {
-        var t = bashTitle(input);
-        if (t) return { title: truncate(t, 64), bins: bashBins(input) };
-        return { title: truncate(input || "shell command", 64), bins: [], mono: true };
-      }
-      case "Grep": {
-        var gBits = input.split(/\\s+/);
-        var gPat = gBits[0] || "strings";
-        var gPath = workspacePath(gBits.slice(1).join(" "));
-        var gTitle = "Search for " + gPat + (gPath ? " in " + gPath : "");
-        return { title: truncate(gTitle, 64), bins: ["grep"] };
-      }
-      case "Glob": return { title: truncate("Find files matching " + (input || "pattern"), 64), bins: ["glob"] };
-      case "WebSearch": return { title: truncate("Search web for " + input, 64), bins: ["web"] };
-      case "WebFetch": return { title: truncate("Fetch " + input, 64), bins: ["web"] };
-      case "Agent": return { title: truncate(input || "Run subagent task", 64), bins: ["agent"] };
-      case "TodoWrite": return { title: "Update todo list", bins: ["todo"] };
-      case "Plan": return { title: "Update plan", bins: ["plan"] };
-      case "Skill": return { title: truncate("Run skill " + input, 64), bins: ["skill"] };
-      case "Ask": return { title: truncate(input || "Ask a question", 64), bins: ["ask"] };
-      default: {
-        var mcp = /^mcp__([^_]+(?:_[^_]+)*)__(.+)$/.exec(tc.name);
-        if (mcp) return { title: truncate(mcp[2].replace(/_/g, " ") + (input ? " " + input : ""), 64), bins: [mcp[1]] };
-        return { title: truncate(tc.name + (input ? " " + input : ""), 64), bins: [] };
-      }
-    }
+  function spinnerHtml() { return '<span class="spinner"></span>'; }
+  function failedBadge(n) {
+    return '<span class="tg-err">' + (n > 1 ? n + " failed" : "failed") + "</span>";
   }
   function threadItem(key, role, className, inner, eventIndex) {
     var item = { key: key, role: role, className: className, innerHTML: inner };
     if (typeof eventIndex === "number") item.eventIndex = eventIndex;
     return item;
   }
-  function toolResultHtml(b) {
-    var text = b.res && b.res.text;
-    if (!text) return "";
-    return '<pre class="chat-tool-body">' + escHtml(text) + "</pre>";
-  }
-  function outputLineMeta(text) {
-    var n = countLines(String(text).replace(/\\n$/, ""));
-    return n <= 1 ? "1 line" : "Lines 1-" + n;
-  }
-  function outputCardName(tc) {
-    var input = String(tc.input || "").trim();
-    if (tc.name === "Read" || tc.name === "Edit" || tc.name === "Write") {
-      return relPath(input) || tc.name;
+  function prePart(text, cls, key) {
+    var more = !!toolState.more[key];
+    var shown = text;
+    var hidden = 0;
+    if (!more) {
+      var pv = outputPreview(text, OUTPUT_PREVIEW_LINES);
+      shown = pv.text;
+      hidden = pv.hidden;
+    } else if (shown.length > OUTPUT_FULL_CHARS) {
+      shown = shown.slice(0, OUTPUT_FULL_CHARS) + "\\n\u2026 (" + (text.length - OUTPUT_FULL_CHARS) + " more characters not shown)";
     }
-    if (tc.name === "Bash") {
-      var file = /^(?:sudo\\s+)?(?:cat|head|tail|less|bat|nl)\\s+(?:-\\S+\\s+)*(\\S+)/.exec(input);
-      if (file) return relPath(file[1]) || file[1];
-      var titled = bashTitle(input);
-      return titled || "shell output";
-    }
-    return tc.name || "output";
+    return '<pre class="tg-pre' + (cls ? " " + cls : "") + '">' + escHtml(shown) + "</pre>" +
+      (hidden || more && text.split("\\n").length > OUTPUT_PREVIEW_LINES
+        ? '<button class="tg-more" type="button" data-more="' + escHtml(key) + '">' + (more ? "show less" : "show more (" + hidden + " more line" + (hidden === 1 ? "" : "s") + ")") + "</button>"
+        : "");
   }
-  function outputCardItem(b, key) {
-    var tc = b.tc;
-    var text = b.res.text;
-    var err = !!(b.res && b.res.isError);
-    var running = b.running ? " running" : "";
-    var icon = b.running ? '<span class="spinner"></span>' : ICON_FILE;
-    var name = outputCardName(tc);
-    var meta = outputLineMeta(text);
-    // Named card after the complete assistant prose: header + actual body.
-    var item = threadItem(key, "tool", "chat-card chat-output tool-card" + (err ? " err" : "") + running,
-      '<div class="chat-card-head chat-output-head">' +
-        icon +
-        '<span class="chat-output-name">' + escHtml(name) + "</span>" +
-        '<span class="chat-output-meta">' + escHtml(meta) + "</span>" +
-        (err ? '<span class="card-err">error</span>' : "") +
-      "</div>" +
-      '<pre class="chat-tool-body">' + escHtml(text) + "</pre>");
-    item.output = { name: name, meta: meta, text: text, err: err };
-    return item;
+  function sectionHtml(label, inner) {
+    return '<div class="tg-sec"><div class="tg-label">' + escHtml(label) + "</div>" + inner + "</div>";
+  }
+  function rowBodyHtml(it) {
+    var r = it.row;
+    var tc = it.block.tc;
+    var html = '<div class="tg-body">';
+    if (r.kind === "edit" && tc.diffInfo) {
+      var di = tc.diffInfo;
+      if (di.oldStr) html += sectionHtml("Removed", prePart(String(di.oldStr), "del", "old:" + it.key));
+      var added = di.newStr || di.content;
+      if (added) html += sectionHtml(r.verb === "Wrote" ? "Written" : "Added", prePart(String(added), "add", "new:" + it.key));
+    } else if (r.kind !== "read" && r.input && r.input.trim() !== r.target) {
+      html += sectionHtml("Input", prePart(r.input, "", "in:" + it.key));
+    }
+    if (r.output) html += sectionHtml(r.error ? "Error" : "Output", prePart(r.output, r.error ? "err" : "", "out:" + it.key));
+    else if (r.running) html += '<div class="tg-none">Running…</div>';
+    else html += '<div class="tg-none">No output recorded</div>';
+    if (tc.id) html += '<a class="tg-link" href="#tool-' + encodeURIComponent(tc.id) + '" title="Link to this call">link</a>';
+    return html + "</div>";
+  }
+  function rowHeadInner(r, withIcon) {
+    var status = r.running ? spinnerHtml() : r.error ? failedBadge(1) : r.done ? ICON_CHECK : "";
+    var diff = r.added || r.removed
+      ? '<span class="tg-diff"><span class="plus">+' + r.added + '</span><span class="minus">−' + r.removed + "</span></span>"
+      : "";
+    return (withIcon ? KIND_ICON[r.kind] : "") + '<span class="tg-verb' + (r.running ? " shimmer" : "") + '">' + escHtml(r.verb) + "</span>" +
+      '<span class="tg-target' + (r.kind === "command" ? " mono" : "") + '">' + escHtml(r.target) + "</span>" + diff + status;
+  }
+  function rowHtml(it, open, withIcon) {
+    var r = it.row;
+    var id = it.block.tc && it.block.tc.id;
+    return '<div class="tg-row' + (r.error ? " err" : "") + (r.running ? " running" : "") + (open ? " open" : "") + '" data-row="' + escHtml(it.key) + '"' + (id ? ' data-tool-id="' + escHtml(id) + '"' : "") + ">" +
+      '<button class="tg-row-head" type="button" data-tg="' + escHtml(it.key) + '" aria-expanded="' + open + '">' + rowHeadInner(r, withIcon) + ICON_CARET + "</button>" +
+      (open ? rowBodyHtml(it) : "") + "</div>";
+  }
+  function thoughtHtml(b, key, open) {
+    return '<button class="chat-thought-toggle" type="button" data-tg="' + escHtml(key) + '" aria-expanded="' + open + '">' +
+      '<span class="m1">Thought</span> <span class="m2">' + (b.dur ? "for " + escHtml(b.dur) : "briefly") + "</span></button>" +
+      (open ? '<div class="chat-thinking">' + escHtml(b.text) + "</div>" : "");
+  }
+  function groupItem(g) {
+    var st = groupOpenState(g, toolState, toolState.query);
+    var el = g.items[0];
+    // A lone call is its own row: its head already says what the group would.
+    if (g.items.length === 1) {
+      return threadItem(g.key, "tools", "chat-tools tg-single", rowHtml(el, st.items[el.key], true), g.eventIndex);
+    }
+    var detail = groupDetail(g);
+    var status = g.running ? spinnerHtml() : g.failed ? failedBadge(g.failed) : "";
+    var head = '<button class="tg-head" type="button" data-tg="' + escHtml(g.key) + '" aria-expanded="' + st.group + '">' +
+      KIND_ICON[g.kind] + '<span class="tg-sum' + (g.running ? " shimmer" : "") + '">' + escHtml(groupSummary(g)) + "</span>" +
+      (detail ? '<span class="tg-detail">' + escHtml(detail) + "</span>" : "") + status + ICON_CARET + "</button>";
+    var body = "";
+    if (st.group) {
+      body = '<div class="tg-rows">';
+      for (var i = 0; i < g.items.length; i++) {
+        var it = g.items[i];
+        body += it.type === "row" ? rowHtml(it, st.items[it.key], false) : '<div class="chat-thought">' + thoughtHtml(it.block, it.key, st.items[it.key]) + "</div>";
+      }
+      body += "</div>";
+    }
+    return threadItem(g.key, "tools", "chat-tools" + (g.failed ? " has-err" : "") + (st.group ? " open" : ""), head + body, g.eventIndex);
   }
   function outputPaneHtml(o) {
     var text = o.text;
@@ -1354,46 +1355,6 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
       if (cards[i].getAttribute("data-block-key") === last.key) cards[i].setAttribute("data-shown", "1");
       else cards[i].removeAttribute("data-shown");
     }
-  }
-  function toolBlockItem(b, idx, key) {
-    var tc = b.tc;
-    var running = b.running ? " running" : "";
-    var body = toolResultHtml(b);
-    var hasBody = !!(b.res && b.res.text);
-    // Long (or any) result body becomes a named output card that paints
-    // every advertised line. Edit/Write keep their file +N/-N head.
-    if (hasBody && tc.name !== "Edit" && tc.name !== "Write") return outputCardItem(b, key);
-    if (tc.name === "Read") {
-      var label = b.running ? '<span class="shimmer">Read</span>' : '<span class="tl1">Read</span>';
-      return threadItem(key, "tool", "chat-toolline tool-card",
-        '<span class="chat-toolline-head">' + label + ' <span class="tl2">' + escHtml(relPath(tc.input)) + "</span></span>" + body);
-    }
-    if (tc.name === "Edit" || tc.name === "Write") {
-      var di = tc.diffInfo || {};
-      var added = tc.name === "Write" ? countLines(di.content) : countLines(di.newStr);
-      var removed = tc.name === "Write" ? 0 : countLines(di.oldStr);
-      var icon = b.running ? '<span class="spinner"></span>' : ICON_FILE;
-      return threadItem(key, "tool", "chat-card file tool-card" + running,
-        '<div class="chat-card-head">' +
-        icon +
-        '<span class="file-name">' + escHtml(relPath(tc.input)) + "</span>" +
-        '<span class="plus">+' + added + '</span><span class="minus">-' + removed + "</span>" +
-        (b.res && b.res.isError ? '<span class="card-err">error</span>' : "") +
-        "</div>" + body);
-    }
-    var t = toolTitle(tc);
-    var iconHtml = b.running ? '<span class="spinner"></span>' : ICON_TERM;
-    var titleCls = "card-title" + (t.mono ? " mono" : "");
-    var titleHtml = b.running
-      ? '<span class="' + titleCls + '"><span class="shimmer">' + escHtml(t.title) + "</span></span>"
-      : '<span class="' + titleCls + '">' + escHtml(t.title) + "</span>";
-    var err = b.res && b.res.isError;
-    return threadItem(key, "tool", "chat-card tool-card" + (err ? " err" : "") + running,
-      '<div class="chat-card-head">' +
-      iconHtml + titleHtml +
-      (t.bins.length ? '<span class="card-bins">' + escHtml(t.bins.join(", ")) + "</span>" : "") +
-      (err ? '<span class="card-err">error</span>' : "") +
-      "</div>" + body);
   }
 
   /* ---- session -> blocks ---- */
@@ -1479,7 +1440,7 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     return '<div class="chat-marker"><span class="m1">' + escHtml(m1) + '</span> <span class="m2">' + escHtml(m2) + "</span></div>";
   }
   function blockItem(b, idx) {
-    var key = (b.kind === "tool" && b.tc && b.tc.id) ? "tool:" + b.tc.id : b.kind + ":" + idx;
+    var key = b.kind + ":" + idx;
     var ev = b.eventIndex;
     var item;
     if (b.kind === "user") item = threadItem(key, "user", "chat-user chat-message", escHtml(b.text), ev);
@@ -1487,39 +1448,28 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
       item = threadItem(key, "assistant", "chat-assistant chat-message", md(b.text), ev);
       item.sourceText = b.text;
     } else if (b.kind === "thought") {
-      var open = !!openThoughts[idx];
       item = threadItem(key, "thought", "chat-thought",
-        '<button class="chat-thought-toggle" type="button" data-ti="' + idx + '">' +
-        '<span class="m1">Thought</span> <span class="m2">' + (b.dur ? escHtml(b.dur) : "briefly") + "</span></button>" +
-        '<div class="chat-thinking"' + (open ? "" : " hidden") + ">" + escHtml(b.text) + "</div>", ev);
-    } else if (b.kind === "errnote") {
-      item = threadItem(key, "error", "chat-errnote chat-message", escHtml(b.text), ev);
+        thoughtHtml(b, key, isOpen(key, toolState, textMatches(b.text, toolState.query), false)), ev);
     } else {
-      item = toolBlockItem(b, idx, key);
-      if (typeof ev === "number") item.eventIndex = ev;
+      item = threadItem(key, "error", "chat-errnote chat-message", escHtml(b.text), ev);
     }
     return item;
   }
+  /* Blocks to thread items: tool calls become groups, everything else stays a
+     message. itemBuilders lets a click rebuild just the item it opened. */
   function renderItems(blocks) {
+    var entries = groupToolBlocks(blocks, relPath);
     var items = [];
-    var i = 0;
-    while (i < blocks.length) {
-      var b = blocks[i];
-      if (b.kind === "tool" && isExplore(b.tc)) {
-        var j = i;
-        while (j < blocks.length && blocks[j].kind === "tool" && isExplore(blocks[j].tc)) j++;
-        var n = j - i;
-        if (n >= 2) {
-          items.push(threadItem("explore:" + i, "marker", "chat-marker",
-            '<span class="m1">Explored</span> <span class="m2">' + escHtml(n + " searches") + "</span>",
-            blocks[i].eventIndex));
-        }
-        for (; i < j; i++) items.push(blockItem(blocks[i], i));
-        continue;
-      }
-      items.push(blockItem(b, i));
-      i++;
-    }
+    itemBuilders = {};
+    lastEntries = entries;
+    entries.forEach(function (entry) {
+      var build = entry.type === "group"
+        ? function () { return groupItem(entry); }
+        : function () { return blockItem(entry.block, entry.index); };
+      var item = build();
+      itemBuilders[item.key] = build;
+      items.push(item);
+    });
     return items;
   }
   function renderBlocks(blocks) {
@@ -1534,6 +1484,7 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     return html;
   }
   ${APPLY_THREAD_ITEMS_SRC}
+  ${TOOL_GROUPS_SRC}
 
   /* ---- sticky scroll: live sticks to the generating trail; a
      completed idle turn frames the last user bubble so the prompt
@@ -2177,6 +2128,198 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     sizeLiveAir();
   }
 
+  /* ---- tool-row interaction: open/close, Expand all, find, deep links ---- */
+  function findHitMarks() { return chatThread ? chatThread.querySelectorAll("mark.chat-hit") : []; }
+  function clearFindMarks(root) {
+    var marks = root.querySelectorAll("mark.chat-hit");
+    for (var i = 0; i < marks.length; i++) {
+      var parent = marks[i].parentNode;
+      parent.replaceChild(document.createTextNode(marks[i].textContent), marks[i]);
+      parent.normalize();
+    }
+  }
+  /* Highlight every occurrence of the find text in a rendered subtree. Rows
+     that hold a hit are already open (groupOpenState), so the hit is in the DOM. */
+  function applyFindMarks(root) {
+    clearFindMarks(root);
+    var q = toolState.query.toLowerCase();
+    if (!q) return;
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    var budget = FIND_HIT_BUDGET;
+    for (var i = 0; i < nodes.length && budget > 0; i++) {
+      var node = nodes[i];
+      var text = node.nodeValue;
+      var lower = text.toLowerCase();
+      var at = lower.indexOf(q);
+      if (at < 0) continue;
+      var frag = document.createDocumentFragment();
+      var from = 0;
+      while (at >= 0 && budget-- > 0) {
+        if (at > from) frag.appendChild(document.createTextNode(text.slice(from, at)));
+        var mark = document.createElement("mark");
+        mark.className = "chat-hit";
+        mark.textContent = text.slice(at, at + q.length);
+        frag.appendChild(mark);
+        from = at + q.length;
+        at = lower.indexOf(q, from);
+      }
+      if (from < text.length) frag.appendChild(document.createTextNode(text.slice(from)));
+      node.parentNode.replaceChild(frag, node);
+    }
+  }
+  var currentHit = -1;
+  function syncFindCount() {
+    var el = document.getElementById("chatFindCount");
+    if (!el) return;
+    var n = findHitMarks().length;
+    el.textContent = toolState.query ? (n ? (currentHit >= 0 ? currentHit + 1 + " / " : "") + n + (n >= FIND_HIT_BUDGET ? "+" : "") : "no matches") : "";
+  }
+  function stepHit(dir) {
+    var marks = findHitMarks();
+    if (!marks.length) return;
+    var prev = chatThread.querySelector("mark.chat-hit.current");
+    if (prev) prev.classList.remove("current");
+    currentHit = (currentHit + dir + marks.length) % marks.length;
+    marks[currentHit].classList.add("current");
+    marks[currentHit].scrollIntoView({ block: "center" });
+    followTail = false;
+    syncFindCount();
+  }
+  function syncToolbar() {
+    var bar = document.getElementById("chatFindBar");
+    if (!bar) return;
+    var any = lastEntries.some(function (e) { return e.type === "group" || e.block.kind === "thought"; });
+    bar.hidden = !any && !toolState.query;
+    var btn = document.getElementById("chatToggleAll");
+    if (btn) {
+      btn.textContent = toolState.mode === "all" ? "Collapse all" : "Expand all";
+      btn.setAttribute("aria-pressed", toolState.mode === "all" ? "true" : "false");
+    }
+    syncFindCount();
+  }
+  /* Keep what the reader is looking at in place while rows above it change height. */
+  function withScrollAnchor(fn) {
+    var anchor = null;
+    var offset = 0;
+    if (chatScroll && chatThread) {
+      var top = chatScroll.getBoundingClientRect().top;
+      for (var i = 0; i < chatThread.children.length; i++) {
+        var r = chatThread.children[i].getBoundingClientRect();
+        if (r.bottom > top + 1) { anchor = chatThread.children[i]; offset = r.top - top; break; }
+      }
+    }
+    fn();
+    if (anchor && anchor.isConnected) {
+      chatScroll.scrollTop += anchor.getBoundingClientRect().top - chatScroll.getBoundingClientRect().top - offset;
+    }
+  }
+  /* Rebuild the whole thread from the blocks already in hand (no framing,
+     no scroll jump): Expand all, the find text, a deep link. */
+  function repaintThread() {
+    if (!lastSession) return;
+    withScrollAnchor(function () {
+      var items = renderItems(lastBlocks);
+      lastItems = items;
+      lastThreadHtml = itemsHtml(items);
+      applyThreadItems(chatThread, items);
+    });
+    syncOutputPane(lastItems);
+    afterThreadPatch(true);
+  }
+  /* Rebuild only the item a click touched, and keep keyboard focus on its button. */
+  function patchToolItem(from) {
+    var el = from.closest("[data-block-key]");
+    var build = el && itemBuilders[el.getAttribute("data-block-key")];
+    if (!build) return;
+    var attr = from.hasAttribute("data-more") ? "data-more" : "data-tg";
+    var focusKey = from.getAttribute(attr);
+    var item = build();
+    el.className = item.className;
+    el.innerHTML = item.innerHTML;
+    el._tqHtml = item.innerHTML;
+    for (var i = 0; i < lastItems.length; i++) {
+      if (lastItems[i].key === item.key) { lastItems[i] = item; break; }
+    }
+    lastThreadHtml = itemsHtml(lastItems);
+    if (toolState.query) applyFindMarks(el);
+    var again = el.querySelectorAll("[" + attr + "]");
+    for (var j = 0; j < again.length; j++) {
+      if (again[j].getAttribute(attr) === focusKey) { again[j].focus(); break; }
+    }
+    syncFindCount();
+  }
+  function setToolMode(mode) {
+    toolState.mode = mode;
+    toolState.overrides = {};
+    toolState.forced = {};
+    toolState.more = {};
+    try { window.localStorage.setItem(TOOL_MODE_KEY, mode); } catch (e) { /* private mode */ }
+    repaintThread();
+  }
+  var deepLink = parseDeepLink(window.location.hash);
+  /* A #tool-<id> / #event-<n> link opens its row and scrolls to it. The
+     transcript may not carry it yet (a live run), so try again on each patch. */
+  function applyDeepLink() {
+    if (!deepLink) return;
+    var keys = deepLinkKeys(lastEntries, deepLink);
+    var rowKeys = Object.keys(keys).filter(function (k) { return k.indexOf("group:") !== 0; });
+    if (!rowKeys.length) return;
+    deepLink = null;
+    toolState.forced = keys;
+    repaintThread();
+    var rows = chatThread.querySelectorAll(".tg-row");
+    var target = null;
+    for (var i = 0; i < rows.length && !target; i++) {
+      if (rowKeys.indexOf(rows[i].getAttribute("data-row")) >= 0) target = rows[i];
+    }
+    if (!target) return;
+    target.classList.add("flash");
+    followTail = false;
+    var show = function () { target.scrollIntoView({ block: "center" }); };
+    show();
+    requestAnimationFrame(function () { requestAnimationFrame(show); });
+    setTimeout(show, 120);
+    setTimeout(function () { target.classList.remove("flash"); }, 2400);
+  }
+  function afterThreadPatch(changed) {
+    if (changed && (toolState.query || findHitMarks().length)) applyFindMarks(chatThread);
+    syncToolbar();
+    applyDeepLink();
+  }
+  window.addEventListener("hashchange", function () {
+    deepLink = parseDeepLink(window.location.hash);
+    applyDeepLink();
+  });
+  (function bindToolbar() {
+    var toggle = document.getElementById("chatToggleAll");
+    var input = document.getElementById("chatFind");
+    if (toggle) toggle.addEventListener("click", function () { setToolMode(toolState.mode === "all" ? "none" : "all"); });
+    if (!input) return;
+    try { toolState.query = (new URLSearchParams(window.location.search).get("q") || "").trim(); } catch (e) { /* no query */ }
+    input.value = toolState.query;
+    var timer = null;
+    input.addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        toolState.query = input.value.trim();
+        currentHit = -1;
+        try {
+          var params = new URLSearchParams(window.location.search);
+          if (toolState.query) params.set("q", toolState.query); else params.delete("q");
+          var qs = params.toString();
+          history.replaceState(null, "", window.location.pathname + (qs ? "?" + qs : "") + window.location.hash);
+        } catch (e) { /* ignore */ }
+        repaintThread();
+      }, 150);
+    });
+    input.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") { ev.preventDefault(); stepHit(ev.shiftKey ? -1 : 1); }
+      else if (ev.key === "Escape" && input.value) { input.value = ""; input.dispatchEvent(new Event("input")); }
+    });
+  })();
+
   var lastItems = [];
   var framedTurnKey = "";
   // Live-trail framing is identity generating, or in-flight unmatched
@@ -2195,13 +2338,15 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     // The thread's HTML from the items just built, not a second render pass.
     var threadHtml = itemsHtml(items);
     var stick = followTail || isAtBottom();
-    if (threadHtml !== lastThreadHtml) {
+    var threadChanged = threadHtml !== lastThreadHtml;
+    if (threadChanged) {
       restoreThreadFromHistory();
       restoreLeftoverViewport();
       applyThreadItems(chatThread, items);
       lastThreadHtml = threadHtml;
     }
     syncOutputPane(items);
+    afterThreadPatch(threadChanged);
     var aHtml = activityHtml();
     if (aHtml !== lastActivityHtml) {
       chatActivity.innerHTML = aHtml;
@@ -2253,14 +2398,12 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
   };
 
   chatThread.addEventListener("click", function (ev) {
-    var t = ev.target && ev.target.closest ? ev.target.closest(".chat-thought-toggle") : null;
+    var t = ev.target && ev.target.closest ? ev.target.closest("[data-tg], [data-more]") : null;
     if (t) {
-      var idx = t.getAttribute("data-ti");
-      var pre = t.parentNode.querySelector(".chat-thinking");
-      if (!pre) return;
-      pre.hidden = !pre.hidden;
-      if (pre.hidden) delete openThoughts[idx];
-      else openThoughts[idx] = true;
+      var moreKey = t.getAttribute("data-more");
+      if (moreKey) toolState.more[moreKey] = !toolState.more[moreKey];
+      else toolState.overrides[t.getAttribute("data-tg")] = t.getAttribute("aria-expanded") !== "true";
+      patchToolItem(t);
       return;
     }
     var card = ev.target && ev.target.closest ? ev.target.closest(".chat-card.chat-output") : null;
@@ -2275,7 +2418,10 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     containNamedOutput();
     if (watchFramesLiveTrail() && followTail) frameLiveTrail();
     else if (!watchFramesLiveTrail() && leftoverSnapIsStale() && followTail) leftoverSnapNewestTurn();
-    else if (!watchFramesLiveTrail() && followTail) leftoverSnapNamedColumn();
+    else if (!watchFramesLiveTrail() && followTail) {
+      if (leftoverOccupyingNamedCard()) leftoverSnapNamedColumn();
+      else { frameCompletedTurn(); keepNewestTurnAbovePill(); }
+    }
   });
 `;
 
@@ -2347,6 +2493,7 @@ ${APP_TOP_HTML}
   </header>
   <div class="chat-body">
   <div class="chat-main">
+${CHAT_FIND_BAR_HTML}
   <div class="chat-history" id="chatHistory" hidden>
     <div class="chat-col" id="chatHistoryCol"></div>
   </div>
@@ -2530,7 +2677,6 @@ ${shellClientScript({ current: { type: "run", id }, defaultCwd: cwd || "" })}
   var lastBlocks = [];
   var lastThreadHtml = "";
   var lastActivityHtml = null;
-  var openThoughts = {};
   var continueMode = false;
   var continueBusy = false;
   var lastGrowthAt = Date.now(); // last poll where the recording actually grew
@@ -3465,6 +3611,7 @@ ${APP_TOP_HTML}
   </header>
   <div class="chat-body">
   <div class="chat-main">
+${CHAT_FIND_BAR_HTML}
   <div class="chat-history" id="chatHistory" hidden>
     <div class="chat-col" id="chatHistoryCol"></div>
   </div>
@@ -3571,7 +3718,6 @@ ${shellClientScript({ current: { type: "session", id: hash }, defaultCwd: "" })}
   var lastBlocks = [];
   var lastThreadHtml = "";
   var lastActivityHtml = null;
-  var openThoughts = {};
   var lastGrowthAt = 0;
   var QUIET_MS = 4000;
   var apiLive = ${JSON.stringify(!!live)};

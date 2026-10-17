@@ -19,3 +19,17 @@
   id: cipw
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/launch-ui.playwright.test.js
   tags: [spec, chat-integration, ui, tests, implemented]
+
+# chat-tool-rows
+- label: the chat transcript groups tool calls Cursor-style: consecutive calls of the same kind (read, command, edit, search, web, wait, agent, other) collapse into one summary row ("Read 4 files", "Ran 3 commands", "Edited app.ts +12 −3", "Searched 'foo'"), a user or assistant message ends a group while a thought between two same-kind calls does not, a failed call is flagged on its row and on its group, and every source's tool names (Claude Bash/Read/Edit, Codex Exec/Sleep, Cursor Grep/Glob/AwaitShell, OpenCode TodoWrite, Grok Use_tool) map to the same kinds
+  id: tgrp
+  command: node --test test/browser/chat-tool-groups.test.js
+  tags: [spec, chat-ui, ui, tests, implemented]
+- label: a tool group opens by default only when it holds a failed call, Expand all and Collapse all override that and clear per-row choices, a row the reader opened or closed keeps that state, and a search hit or a #tool-<id> / #event-<n> deep link opens the row (and its group) that holds it even under Collapse all
+  id: topn
+  command: node --test test/browser/chat-tool-groups.test.js
+  tags: [spec, chat-ui, ui, tests, implemented]
+- label: the tool rows are proven in a real browser on /run?session= for Claude, Codex and Cursor recordings: tool output is not in the page until a row is opened, a group header opens in place to compact rows and a row to its full input and output with long output cut at 12 lines behind show more, a failed call stays visible and marked while collapsed, Expand all / Collapse all works and is remembered across a reload, find (?q=) opens the row that holds the hit and highlights it, #tool-<id> opens and scrolls to its row, and the same layout holds at 390px (skips cleanly without playwright)
+  id: tpw1
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/chat-tool-rows.playwright.test.js
+  tags: [spec, chat-ui, ui, tests, implemented]

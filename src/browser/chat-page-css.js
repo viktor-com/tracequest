@@ -240,8 +240,6 @@ body { overflow: hidden; }
 /* A parked block shows nothing, so the browser skips laying out its content:
    in a long transcript most blocks are parked. */
 [data-block-key][data-contained="parked"] { content-visibility: hidden; }
-.chat-assistant + .tool-card { margin-top: 10px; }
-.tool-card + .tool-card { margin-top: 6px; }
 .chat-assistant p { margin: 6px 0; white-space: pre-wrap; }
 .chat-assistant code { font-family: var(--font-mono); font-size: 12.5px; background: var(--surface-2); border-radius: var(--radius-xs); padding: 1px 5px; }
 .chat-h { font-weight: var(--weight-medium); margin: 16px 0 6px; letter-spacing: var(--track-tight); }
@@ -267,46 +265,75 @@ body { overflow: hidden; }
   color: var(--text-2); font-size: var(--text-sm); line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-sans);
 }
 
-/* ---- tool cards ---- */
-.chat-card {
-  display: flex; flex-direction: column; align-items: stretch; gap: 8px; min-width: 0;
-  margin: 6px 0; padding: 9px 14px; border-radius: var(--radius-md);
-  background: var(--surface-1); box-shadow: inset 0 0 0 1px var(--line-1); font-size: var(--text-sm);
+/* ---- tool groups (Cursor-style collapsed rows) ---- */
+.chat-find-bar { flex: none; box-shadow: inset 0 -1px 0 var(--line-1); background: var(--bg); }
+.chat-find-inner { display: flex; align-items: center; gap: 10px; max-width: 760px; margin: 0 auto; padding: 6px 28px; }
+.chat-find-input {
+  flex: 1; min-width: 0; height: 28px; padding: 0 10px; border: none; border-radius: var(--radius-sm);
+  background: var(--surface-1); box-shadow: inset 0 0 0 1px var(--line-1); color: var(--text); font: inherit; font-size: var(--text-sm);
 }
-.chat-card-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.chat-card .card-icon { flex: none; color: var(--text-3); }
-.chat-card .card-title { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.chat-card .card-title.mono { font-family: var(--font-mono); font-size: 12.5px; }
-.chat-card .card-bins { color: var(--text-3); flex: none; }
-.chat-card .card-err { flex: none; margin-left: auto; color: var(--bad); font-size: 11px; }
-.chat-card.err { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 38%, transparent); }
-.chat-card.running .card-title { color: var(--text); }
-.chat-card.file .file-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-card.file .plus { color: var(--ok); font-family: var(--font-mono); font-size: 12px; flex: none; }
-.chat-card.file .minus { color: var(--bad); font-family: var(--font-mono); font-size: 12px; flex: none; }
-.chat-toolline { font-size: var(--text-sm); margin: 8px 2px; }
-.chat-toolline-head { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-toolline .tl1 { color: var(--text-2); }
-.chat-toolline .tl2 { color: var(--text-3); }
+.chat-find-input:focus { outline: none; box-shadow: inset 0 0 0 1px var(--focus); }
+.chat-find-count { flex: none; color: var(--text-3); font-size: var(--text-xs); white-space: nowrap; }
+.chat-expand-btn {
+  flex: none; height: 28px; padding: 0 10px; border: none; border-radius: var(--radius-sm); cursor: pointer;
+  background: none; box-shadow: inset 0 0 0 1px var(--line-2); color: var(--text-2); font: inherit; font-size: var(--text-sm);
+}
+.chat-expand-btn:hover { color: var(--text); background: var(--surface-1); }
+@media (max-width: 520px) { .chat-find-inner { padding: 6px 14px; gap: 6px; } .chat-find-count { display: none; } }
 
-/* named output: a closed file object (header + line-snapped body) */
-.chat-card.chat-output { padding: 0 0 12px; gap: 0; overflow: visible; cursor: pointer; }
-.chat-output-head { padding: 9px 14px; }
-.chat-output-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.chat-output-meta { color: var(--text-3); font-size: 11.5px; font-family: var(--font-mono); flex: none; margin-left: auto; }
-.chat-card.chat-output[data-shown="1"] { box-shadow: inset 0 0 0 1px var(--line-3); }
-.chat-tool-body {
-  margin: 0; padding: 9px 12px; max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
-  font-family: var(--font-mono); font-size: 12px; line-height: 1.55; color: var(--text-2);
-  background: var(--bg-sunken); border-radius: var(--radius-sm);
+.chat-tools { margin: 4px 0; font-size: var(--text-sm); }
+.chat-assistant + .chat-tools, .chat-user + .chat-tools { margin-top: 8px; }
+.tg-head, .tg-row-head {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; margin: 0; padding: 5px 8px;
+  background: none; border: none; border-radius: var(--radius-sm); color: var(--text-2); font: inherit; text-align: left; cursor: pointer;
 }
-.chat-card.chat-output .chat-tool-body {
-  overflow: auto; overflow-x: auto; overflow-y: scroll; white-space: pre; border-radius: 0;
-  background: var(--bg-sunken); box-shadow: inset 0 1px 0 var(--line-1); padding: 9px 14px 0;
-  font-size: 11.5px; line-height: 1.4; scrollbar-gutter: stable; scrollbar-width: thin;
+.tg-head:hover, .tg-row-head:hover { background: var(--surface-1); }
+.tg-head:focus-visible, .tg-row-head:focus-visible, .tg-more:focus-visible, .chat-thought-toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.tg-head .card-icon, .tg-row-head .card-icon { flex: none; color: var(--text-3); }
+.tg-sum, .tg-verb { flex: none; color: var(--text-2); white-space: nowrap; }
+.tg-detail, .tg-target { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); }
+.tg-target { flex: 1; }
+.tg-detail { flex: 1; }
+.tg-target.mono { font-family: var(--font-mono); font-size: 12px; }
+.tg-diff { flex: none; font-family: var(--font-mono); font-size: 12px; }
+.tg-diff .plus { color: var(--ok); margin-right: 6px; }
+.tg-diff .minus { color: var(--bad); }
+.tg-ok { flex: none; width: 10px; height: 10px; opacity: 0.7; }
+.tg-ok::before { content: ""; display: block; width: 3px; height: 7px; margin: 0 0 0 3px; border: solid var(--text-3); border-width: 0 1.5px 1.5px 0; transform: rotate(40deg); }
+.tg-err { flex: none; color: var(--bad); font-size: 11px; }
+.tg-caret { flex: none; margin: 0 4px 0 auto; width: 6px; height: 6px; border: solid var(--text-3); border-width: 0 1.5px 1.5px 0; transform: rotate(-45deg); transition: transform var(--dur-1) var(--ease-out); }
+.tg-err + .tg-caret { margin-left: 8px; }
+[aria-expanded="true"] > .tg-caret { transform: rotate(45deg); }
+.tg-row.err > .tg-row-head .tg-verb, .chat-tools.has-err > .tg-head .tg-sum { color: var(--text); }
+.chat-tools.has-err > .tg-head, .tg-row.err > .tg-row-head { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 38%, transparent); }
+.tg-rows { margin: 2px 0 6px 12px; padding-left: 6px; border-left: 1px solid var(--line-1); }
+.tg-rows .chat-thought { margin: 2px 8px; }
+.tg-row.flash { background: var(--accent-soft); border-radius: var(--radius-sm); }
+.tg-body { margin: 2px 0 10px 30px; min-width: 0; }
+.tg-label { margin: 8px 0 2px; color: var(--text-3); font-size: var(--text-2xs); letter-spacing: 0.04em; text-transform: uppercase; }
+.tg-pre {
+  margin: 0; padding: 8px 12px; max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.5; color: var(--text-2);
+  background: var(--bg-sunken); border-radius: var(--radius-sm); box-shadow: inset 0 0 0 1px var(--line-1);
 }
-.chat-card.chat-output .chat-tool-body::-webkit-scrollbar { width: 8px; }
-.chat-card.chat-output .chat-tool-body::-webkit-scrollbar-thumb { background: var(--line-3); border-radius: var(--radius-xs); }
+.tg-pre.err { color: var(--text); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 38%, transparent); }
+.tg-pre.add { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 38%, transparent); }
+.tg-pre.del { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 38%, transparent); }
+.tg-more { margin: 4px 0 0; padding: 2px 0; background: none; border: none; color: var(--text-3); font: inherit; font-size: var(--text-xs); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.tg-more:hover { color: var(--text); }
+.tg-none { margin: 6px 0 0; color: var(--text-3); font-size: var(--text-xs); }
+.tg-link { display: inline-block; margin-top: 6px; color: var(--text-3); font-size: var(--text-xs); text-decoration: none; opacity: 0; }
+.tg-row:hover .tg-link, .tg-link:focus-visible { opacity: 1; }
+.tg-link:hover { color: var(--text); text-decoration: underline; }
+mark.chat-hit { background: var(--warn-soft); color: inherit; border-radius: 2px; box-shadow: 0 0 0 1px var(--warn-soft); }
+mark.chat-hit.current { background: var(--warn); color: var(--bg); }
+.chat-tools[data-contained="parked"] { max-height: 0 !important; overflow: hidden !important; margin: 0 !important; }
+@media (max-width: 520px) {
+  .tg-body { margin-left: 8px; }
+  .tg-rows { margin-left: 6px; }
+  .tg-head .tg-detail { display: none; }
+}
+
 .chat-errnote {
   margin: 10px 0; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--bad-soft);
   color: var(--text); font-size: var(--text-sm); white-space: pre-wrap; overflow-wrap: anywhere;
