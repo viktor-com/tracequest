@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Read a run's chat like Cursor's agent chat: consecutive tool calls fold into one summary row ("Read 4 files", "Ran 3 commands", "Edited app.ts +12 −3") that opens in place to the full input and output. Failed calls stay marked while folded. Add Expand all / Collapse all, a find box that opens the rows holding a match, and `#tool-<id>` links.
+
 ### Fixed
 
 - Submit Codex follow-ups with one Send and interrupt generation with one Stop, keeping the run attached.

@@ -290,7 +290,7 @@ test('earlier chat blocks stay reachable by scrolling up in a finished conversat
       assert.match(top[0].text, /Slack pending-lock report/, `${name}: the first prompt leads the thread`);
       assert.ok(top[0].inView, `${name}: the first prompt is reachable`);
 
-      const failed = page.locator('.chat-card.chat-output.err', { hasText: 'No such file or directory' });
+      const failed = page.locator('.tg-row.err', { hasText: 'No such file or directory' });
       await failed.scrollIntoViewIfNeeded();
       const hit = await failed.evaluate(el => {
         const r = el.getBoundingClientRect();
