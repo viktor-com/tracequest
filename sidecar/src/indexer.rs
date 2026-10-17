@@ -2762,6 +2762,11 @@ fn index_grok_chat_lines(
 }
 
 pub(crate) fn index_grok(session_dir: &str) -> IndexEntry {
+    index_grok_family(session_dir, "grok")
+}
+
+/// Index a grok-layout session dir; `source` ("grok" | "vktr") is the model fallback.
+pub(crate) fn index_grok_family(session_dir: &str, source: &str) -> IndexEntry {
     let session_path = Path::new(session_dir);
     let mut model: Option<String> = None;
     let mut first_prompt: Option<String> = None;
@@ -2789,7 +2794,7 @@ pub(crate) fn index_grok(session_dir: &str) -> IndexEntry {
         }
     }
     if model.is_none() {
-        model = Some("grok".to_string());
+        model = Some(source.to_string());
     }
 
     // Read events.jsonl for timestamps, tools, errors (compact indexed objs, like chat_history).
@@ -3032,7 +3037,7 @@ impl std::fmt::Display for UnknownSourceError {
 impl std::error::Error for UnknownSourceError {}
 
 /// Every `source` value this build can index. Kept in sync with `indexer_for`.
-pub const KNOWN_SOURCES: [&str; 7] = [
+pub const KNOWN_SOURCES: [&str; 8] = [
     "claude",
     "codex",
     "cursor",
@@ -3040,6 +3045,7 @@ pub const KNOWN_SOURCES: [&str; 7] = [
     "factory",
     "grok",
     "opencode",
+    "vktr",
 ];
 
 /// Resolve the indexer for a session source, or `None` when the source is unknown.
@@ -3054,6 +3060,7 @@ fn indexer_for(source: &str) -> Option<fn(&Session) -> IndexEntry> {
         "cursor-cloud" => Some(|s| index_cursor_cloud(Path::new(&s.path))),
         "factory" => Some(|s| index_factory(Path::new(&s.path))),
         "grok" => Some(|s| index_grok(&s.path)),
+        "vktr" => Some(|s| index_grok_family(&s.path, "vktr")),
         "opencode" => Some(index_opencode),
         _ => None,
     }

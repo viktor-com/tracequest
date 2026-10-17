@@ -46,6 +46,7 @@ export const SOURCE_COLORS = {
   "cursor-cloud": "var(--hue-cursor-cloud)",
   opencode: "var(--hue-opencode)",
   grok: "var(--hue-grok)",
+  vktr: "var(--hue-vktr)",
 };
 
 /** Pill color for a source/agent name. */

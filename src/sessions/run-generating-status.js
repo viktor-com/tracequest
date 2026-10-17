@@ -18,6 +18,7 @@ const AGENT_SOURCE = {
   "cursor-agent": "cursor",
   codex: "codex",
   grok: "grok",
+  vktr: "vktr",
   opencode: "opencode",
   droid: "factory",
 };

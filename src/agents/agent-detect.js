@@ -14,7 +14,7 @@ import { spawnSync } from "node:child_process";
 // dash-leading prompt ("- fix these bullets", "--some-flag") is always
 // read as the prompt, never parsed as an agent CLI option. Verified safe:
 // the positional-prompt agents use commander (claude, cursor-agent) or
-// clap (codex, grok) style parsers, which all honor "--". An empty prompt
+// clap (codex, grok, vktr) style parsers, which all honor "--". An empty prompt
 // emits no argv at all — never a bare "--".
 const positionalPrompt = (prompt) => (prompt ? ["--", prompt] : []);
 
@@ -28,6 +28,7 @@ const positionalPrompt = (prompt) => (prompt ? ["--", prompt] : []);
 //   grok    -s, --session-id <ID> "Use a specific session UUID for a NEW
 //                                  conversation (must be a valid UUID and
 //                                  must not already exist)"
+//   vktr    the same flag, verbatim (vktr 1.0.38 is a fork of the Grok CLI)
 // codex, cursor-agent, opencode, droid, and gemini expose no such flag
 // (cursor-agent's create-chat subcommand mints ids but needs a network
 // round-trip, so it is not a spawn argv shape) — those agents omit
@@ -46,11 +47,13 @@ const uuidSessionId = (sessionId) => (sessionId ? ["--session-id", sessionId] : 
 //                 -s, --session-id      "With --resume/--continue, only valid
 //                                        together with --fork-session (names
 //                                        the forked session)"
+//   vktr          same -r/--resume, --fork-session and -s/--session-id as
+//                 grok (vktr 1.0.38 --help; it accepts a title too)
 //   codex         `codex resume [SESSION_ID] [PROMPT]` subcommand ("Resume a
 //                 previous interactive session")
 //   cursor-agent  --resume [chatId]     "Select a session to resume"
 //   opencode      -s, --session <id>    "session id to continue"
-// claude and grok resume as a FORK named by a launcher-minted uuid
+// claude, grok and vktr resume as a FORK named by a launcher-minted uuid
 // (--resume <src> --fork-session --session-id <new>), so the new run's
 // recording identity is deterministic before its first byte — the fork
 // begins with the source conversation and continues from there. droid and
@@ -65,6 +68,7 @@ export const AGENT_REGISTRY = [
   { id: "cursor-agent", binary: "cursor-agent", promptArgs: positionalPrompt, resumeArgs: (resumeId) => ["--resume", resumeId] },
   { id: "opencode", binary: "opencode", promptArgs: (prompt) => (prompt ? ["--prompt", prompt] : []), resumeArgs: (resumeId) => ["--session", resumeId] },
   { id: "grok", binary: "grok", promptArgs: positionalPrompt, sessionIdArgs: uuidSessionId, resumeArgs: resumeFork },
+  { id: "vktr", binary: "vktr", promptArgs: positionalPrompt, sessionIdArgs: uuidSessionId, resumeArgs: resumeFork },
   { id: "droid", binary: "droid", promptArgs: positionalPrompt },
   { id: "gemini", binary: "gemini", promptArgs: positionalPrompt },
 ];
@@ -80,6 +84,7 @@ export const SOURCE_AGENTS = {
   cursor: "cursor-agent",
   codex: "codex",
   grok: "grok",
+  vktr: "vktr",
   opencode: "opencode",
   factory: "droid",
 };

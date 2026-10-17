@@ -38,6 +38,7 @@ import {
   visitFactoryUserTextBlocks,
 } from "../parse/parse-factory.js";
 import { collapseWhitespace, isDisplayableUserText, truncateFirstPrompt } from "../parse/parse-utils.js";
+import { isGrokFamily } from "./session-layout.js";
 import { parseJsonlLine, forEachPartialJsonlLine } from "../parse/jsonl-read.js";
 import { accumulateTermFreqs, TOKENIZER_INPUT_CAP } from "./search-tokenizer.js";
 import { withOpenCodeDb } from "./session-discovery-paths.js";
@@ -67,7 +68,7 @@ export function peekSession(session) {
   const source = session.source || "claude";
 
   if (source === "opencode") return peekOpenCode(session);
-  if (source === "grok") return peekGrok(filePath);
+  if (isGrokFamily(source)) return peekGrok(filePath, source);
   if (source === "codex") return peekCodex(filePath, fileSize);
   if (source === "cursor") return peekCursor(filePath, fileSize);
   if (source === "cursor-cloud") return peekCursorCloud(filePath, fileSize);
@@ -356,7 +357,8 @@ export function peekFactory(filePath, fileSize) {
   }
 }
 
-export function peekGrok(sessionDir) {
+/** Peek a grok-family session dir; `source` ("grok" | "vktr") names the model fallback. */
+export function peekGrok(sessionDir, source = "grok") {
   try {
     let model = null;
     let firstPrompt = null;
@@ -366,7 +368,7 @@ export function peekGrok(sessionDir) {
     const ctxPath = join(sessionDir, "prompt_context.json");
     if (existsSync(ctxPath)) {
       const ctx = JSON.parse(readFileSync(ctxPath, "utf-8"));
-      model = ctx.model_id || "grok";
+      model = ctx.model_id || source;
     }
 
     const eventsPath = join(sessionDir, "events.jsonl");

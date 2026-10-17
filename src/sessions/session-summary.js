@@ -15,7 +15,7 @@ import { sessionGrade } from "./session-grade.js";
 import { statSync } from "node:fs";
 import { join } from "node:path";
 import { currentIndexEntry } from "./index-writers.js";
-import { GROK_CHAT_FILE } from "./session-layout.js";
+import { GROK_CHAT_FILE, isGrokFamily } from "./session-layout.js";
 import { measuredDurationMs } from "./session-duration.js";
 import { indexedWorkedMs } from "./session-index-jsonl.js";
 import { indexOpenCode } from "./session-index-opencode.js";
@@ -72,9 +72,9 @@ function summaryFromParse(session) {
   };
 }
 
-/** The file whose mtime discovery records for a session (a Grok session is a directory; its chat file). */
+/** The file whose mtime discovery records for a session (a Grok/vktr session is a directory; its chat file). */
 function indexedFileOf(session) {
-  return session.source === "grok" ? join(session.path, GROK_CHAT_FILE) : session.path;
+  return isGrokFamily(session.source) ? join(session.path, GROK_CHAT_FILE) : session.path;
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   factorySessionsRoot,
   grokSessionsRoot,
   isCodexRolloutFile,
+  vktrSessionsRoot,
 } from "./session-layout.js";
 
 export { loadDatabaseSync, resolveOpenCodeDbPath, resolveCursorCloudRoot, resolveHostsRoot, listImportedHosts, stampImportedHost, isImportedHostSession, parseOpenCodeUri, openCodeUri, resolveOpenCodeDbForUri, openOpenCodeDbReadOnly, withOpenCodeDb } from "./session-discovery-paths.js";
@@ -33,6 +34,7 @@ export function getDiscoveryPaths() {
     cursorCloudDir: resolveCursorCloudRoot(home),
     factoryDir: factorySessionsRoot(home),
     grokDir: grokSessionsRoot(home),
+    vktrDir: vktrSessionsRoot(home),
     openCodeDb: resolveOpenCodeDbPath(home),
   };
 }
@@ -45,6 +47,7 @@ function filesystemRootsForHome(home) {
     codexSessionsRoot(home),
     factorySessionsRoot(home),
     grokSessionsRoot(home),
+    vktrSessionsRoot(home),
     resolveOpenCodeDbPath(home),
   ];
 }
@@ -68,6 +71,7 @@ export function discoveryRoots() {
     p.cursorCloudDir,
     p.factoryDir,
     p.grokDir,
+    p.vktrDir,
     p.openCodeDb,
     ...extraHostDiscoveryRoots(),
   ];
@@ -150,6 +154,7 @@ function discoveryPathsForHome(home, host = null) {
     cursorDir: cursorProjectsRoot(home),
     factoryDir: factorySessionsRoot(home),
     grokDir: grokSessionsRoot(home),
+    vktrDir: vktrSessionsRoot(home),
     openCodeDb: resolveOpenCodeDbPath(home),
     host,
   };
@@ -162,6 +167,7 @@ export function discoverSessions(projectFilter, out = []) {
   findCursorSessions(projectFilter, out, paths);
   findFactorySessions(projectFilter, out, paths);
   findGrokSessions(projectFilter, out, paths);
+  findVktrSessions(projectFilter, out, paths);
   findCursorCloudSessions(projectFilter, out, paths);
   findOpenCodeSessions(projectFilter, out, paths);
   // Imported SSH hosts: walk mirrored filesystem trees plus OpenCode DBs.
@@ -173,6 +179,7 @@ export function discoverSessions(projectFilter, out = []) {
     findCursorSessions(projectFilter, out, hostPaths);
     findFactorySessions(projectFilter, out, hostPaths);
     findGrokSessions(projectFilter, out, hostPaths);
+    findVktrSessions(projectFilter, out, hostPaths);
     findOpenCodeSessions(projectFilter, out, hostPaths);
   }
   return out;
@@ -326,12 +333,17 @@ export function findFactorySessions(projectFilter, out = [], paths = getDiscover
   return out;
 }
 
-export function findGrokSessions(projectFilter, out = [], paths = getDiscoveryPaths()) {
-  const { grokDir } = paths;
-  const wsEntries = readDirEntries(grokDir);
+/**
+ * Grok-format sessions under one grok-family root: `source` "grok" walks
+ * paths.grokDir (~/.grok/sessions), "vktr" walks paths.vktrDir (~/.vktr/sessions).
+ */
+export function findGrokSessions(projectFilter, out = [], paths = getDiscoveryPaths(), source = "grok") {
+  const root = paths[`${source}Dir`];
+  if (!root) return out;
+  const wsEntries = readDirEntries(root);
   for (const wsEntry of wsEntries) {
     const wsName = wsEntry.name;
-    const wsDir = join(grokDir, wsName);
+    const wsDir = join(root, wsName);
     if (!dirEntryIsDirectory(wsDir, wsEntry)) continue;
     const decoded = decodeURIComponent(wsName);
     const project = shortenProjectPath(decoded);
@@ -344,15 +356,20 @@ export function findGrokSessions(projectFilter, out = [], paths = getDiscoveryPa
       if (!stat?.isFile()) continue;
       out.push({
         path: join(wsDir, name),
-        project: project || "grok",
+        project: project || source,
         file: name,
         size: stat.size,
         mtime: stat.mtime,
-        source: "grok",
+        source,
       });
     }
   }
   return out;
+}
+
+/** vktr (Viktor's Grok CLI fork) sessions: the grok layout under ~/.vktr/sessions. */
+export function findVktrSessions(projectFilter, out = [], paths = getDiscoveryPaths()) {
+  return findGrokSessions(projectFilter, out, paths, "vktr");
 }
 
 export function findOpenCodeSessions(projectFilter, out = [], paths = getDiscoveryPaths()) {

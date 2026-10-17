@@ -305,6 +305,7 @@ export function startLiveReloadWatchers(opts) {
 export function defaultDataRoots(home = homedir()) {
   return [
     join(home, ".grok"),
+    join(home, ".vktr"),
     claudeProjectsRoot(home),
     codexSessionsRoot(home),
     cursorProjectsRoot(home),

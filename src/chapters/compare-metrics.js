@@ -21,6 +21,7 @@ const SOURCE_COLORS = {
   factory: "var(--hue-factory)",
   opencode: "var(--hue-opencode)",
   grok: "var(--hue-grok)",
+  vktr: "var(--hue-vktr)",
 };
 
 const TOOL_COLORS_CMP = {

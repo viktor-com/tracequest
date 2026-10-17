@@ -11,7 +11,10 @@ import { collectCursorUsage } from "./collect-cursor.js";
 import { collectGrokUsage } from "./collect-grok.js";
 import { validateSnapshotShape } from "./snapshot.js";
 
-export const UNAVAILABLE_HARNESSES = Object.freeze(["factory", "opencode", "gemini"]);
+// vktr authenticates with a Viktor API key (~/.vktr/config.toml or
+// VIKTOR_API_KEY), not grok's ~/.grok/auth.json, and Viktor exposes no
+// remaining-window endpoint: an honest "unavailable" row, not a guessed fetch.
+export const UNAVAILABLE_HARNESSES = Object.freeze(["factory", "opencode", "gemini", "vktr"]);
 
 function unavailableRow(id) {
   return harnessRow({

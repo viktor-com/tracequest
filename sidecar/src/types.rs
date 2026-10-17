@@ -126,6 +126,8 @@ pub enum Source {
     CursorCloud,
     Factory,
     Grok,
+    /// vktr, Viktor's fork of the Grok CLI: the grok session layout under ~/.vktr.
+    Vktr,
     OpenCode,
 }
 

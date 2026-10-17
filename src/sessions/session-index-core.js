@@ -19,7 +19,8 @@ const INDEX_SESSION_BY_SOURCE = new Map([
   ["cursor", (session) => indexCursorJsonl(session.path)],
   ["cursor-cloud", (session) => indexCursorCloudJsonl(session.path)],
   ["factory", (session) => indexFactoryJsonl(session.path)],
-  ["grok", (session) => indexGrokJsonl(session.path)],
+  ["grok", (session) => indexGrokJsonl(session.path, "grok")],
+  ["vktr", (session) => indexGrokJsonl(session.path, "vktr")],
   ["opencode", (session) => indexOpenCode(session)],
   ["claude", (session) => indexClaudeJsonl(session.path)],
 ]);

@@ -1,10 +1,10 @@
 use crate::indexer::{
     build_index, collapse_whitespace, extract_prompt, index_claude, index_codex, index_cursor,
-    index_cursor_cloud, index_factory, index_grok, index_opencode, is_claude_index_skippable_line,
+    index_cursor_cloud, index_factory, index_grok, index_grok_family, index_opencode, is_claude_index_skippable_line,
     is_codex_index_skippable_line, is_factory_index_skippable_line, is_grok_chat_indexed_line,
     is_grok_events_indexed_line, looks_like_code_or_path, normalize_tool_name, process_file_lines,
     read_index_cache, tokenize, unescape_json_string, write_index_cache, MESSAGE_MODEL_RE,
-    TEXT_BLOCK_RE,
+    TEXT_BLOCK_RE, KNOWN_SOURCES,
 };
 use crate::types::{IndexEntry, Session};
 use rusqlite::Connection;
@@ -3123,4 +3123,35 @@ fn test_index_codex_status_and_output_errors() {
         assert_eq!(index_codex(&file).errors, errors, "{payload}");
     }
     fs::remove_dir_all(tmp_dir).unwrap();
+}
+
+#[test]
+fn test_index_vktr_session_uses_grok_indexer() {
+    assert!(KNOWN_SOURCES.contains(&"vktr"));
+    let tmp_dir = std::env::temp_dir().join(format!("tracequest_test_index_vktr_{}", std::process::id()));
+    let session = tmp_dir.join("%2Fhome%2Fdev%2Fvk").join("vktr-sess");
+    fs::create_dir_all(&session).unwrap();
+    fs::write(
+        session.join("chat_history.jsonl"),
+        [
+            serde_json::json!({"type": "system", "content": "You are vktr."}),
+            serde_json::json!({"type": "user", "content": "vktr indexed prompt"}),
+            serde_json::json!({"type": "assistant", "content": "done", "tool_calls": [
+                {"id": "c1", "name": "run_terminal_cmd", "arguments": "{\"command\":\"ls\"}"}
+            ]}),
+            serde_json::json!({"type": "tool_result", "tool_call_id": "c1", "content": "ok"}),
+        ]
+        .iter()
+        .map(|v| v.to_string() + "\n")
+        .collect::<String>(),
+    )
+    .unwrap();
+
+    // No model_id anywhere: the fallback is the source id, not "grok".
+    let entry = index_grok_family(session.to_str().unwrap(), "vktr");
+    assert_eq!(entry.model.as_deref(), Some("vktr"));
+    assert_eq!(entry.first_prompt.as_deref(), Some("vktr indexed prompt"));
+    assert_eq!(index_grok(session.to_str().unwrap()).model.as_deref(), Some("grok"));
+
+    let _ = fs::remove_dir_all(&tmp_dir);
 }

@@ -46,8 +46,8 @@ const text = t => [{ type: 'text', text: t }];
 const query = t => ({ type: 'user', content: text(`<user_query>\n${t}\n</user_query>`), prompt_index: 0 });
 const reminder = { type: 'user', content: text('<system-reminder>\nThe following skills are available for use:\n</system-reminder>'), synthetic_reason: 'system_reminder' };
 const ts = n => `2026-10-15T13:23:4${n}.000Z`;
-function writeGrok(home, cwd, id, { chat, events, updates }) {
-  const dir = grokSessionDir(home, cwd, id);
+function writeGrok(home, cwd, id, { chat, events, updates }, source = 'grok') {
+  const dir = grokSessionDir(home, cwd, id, source);
   writeJsonl(join(dir, 'chat_history.jsonl'), chat);
   if (events) writeJsonl(join(dir, 'events.jsonl'), events);
   if (updates) writeJsonl(join(dir, 'updates.jsonl'), updates);
@@ -82,6 +82,40 @@ test('Grok finished reply followed by a system reminder reads as idle while the 
     assert.equal(await state(pending), 'running');
   } finally {
     await stop(child, grok);
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('vktr finished reply reads idle and an unanswered vktr prompt reads running from ~/.vktr/active_sessions.json', async () => {
+  const home = mkTmp('tq-run-status-vktr-');
+  const cwd = join(home, 'work');
+  mkdirSync(cwd);
+  const realCwd = realpathSync(cwd);
+  // vktr 1.0.38 rows: grok's shapes minus the reasoning/model_fingerprint fields.
+  const finished = writeGrok(home, realCwd, 'vktr-finished', {
+    chat: [{ type: 'system', content: 'You are vktr.' }, query('Reply with exactly VK-SENTINEL.'),
+      { type: 'assistant', content: 'VK-SENTINEL', model_id: 'viktor', tool_calls: [] }],
+    events: [{ ts: ts(0), type: 'turn_started', model_id: 'viktor' }, { ts: ts(1), type: 'phase_changed', phase: 'streaming_text' },
+      { ts: ts(2), type: 'turn_ended', outcome: 'completed', cancellation_category: null, cancellation_context: null }],
+    updates: [{ params: { update: { sessionUpdate: 'agent_message_chunk' } } }, { params: { update: { sessionUpdate: 'turn_completed' } } }],
+  }, 'vktr');
+  const pending = writeGrok(home, realCwd, 'vktr-pending', {
+    chat: [{ type: 'system', content: 'You are vktr.' }, query('Still thinking about this one.')],
+  }, 'vktr');
+  const vktr = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1e9)'], { cwd: realCwd, stdio: 'ignore' });
+  writeFileSync(join(home, '.vktr', 'active_sessions.json'), JSON.stringify(['vktr-finished', 'vktr-pending'].map(session_id => (
+    { session_id, pid: vktr.pid, cwd: realCwd, opened_at: ts(0) }))));
+  const { get, child } = await serve(home);
+  try {
+    const { sessions } = await (await get('/api/sessions')).json();
+    assert.deepEqual(sessions.map(s => s.source), ['vktr', 'vktr']);
+    const live = Object.fromEntries(sessions.map(s => [s.path, s.live === true]));
+    assert.deepEqual(live, { [finished]: false, [pending]: true });
+    const state = async path => (await (await get('/api/sessions/live?path=' + encodeURIComponent(path))).json()).state;
+    assert.equal(await state(finished), 'idle');
+    assert.equal(await state(pending), 'running');
+  } finally {
+    await stop(child, vktr);
     rmSync(home, { recursive: true, force: true });
   }
 });

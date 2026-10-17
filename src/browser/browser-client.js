@@ -49,7 +49,8 @@ function getToolClr(name) {
 }
 var SOURCE_COLORS = {
   claude: 'var(--hue-claude)', codex: 'var(--hue-codex)', factory: 'var(--hue-factory)',
-  cursor: 'var(--hue-cursor)', 'cursor-cloud': 'var(--hue-cursor-cloud)', opencode: 'var(--hue-opencode)', grok: 'var(--hue-grok)'
+  cursor: 'var(--hue-cursor)', 'cursor-cloud': 'var(--hue-cursor-cloud)', opencode: 'var(--hue-opencode)', grok: 'var(--hue-grok)',
+  vktr: 'var(--hue-vktr)'
 };
 var KEY_COLORS = {
   project: 'var(--text-2)', source: 'var(--text-2)', host: 'var(--text-2)', tool: 'var(--text-2)',
@@ -617,7 +618,7 @@ ${LIVE_NOW_SRC}
    — honest absence). SOURCE_AGENTS mirrors the server-side map. */
 var SOURCE_AGENTS = {
   claude: 'claude', cursor: 'cursor-agent', codex: 'codex',
-  grok: 'grok', opencode: 'opencode', factory: 'droid'
+  grok: 'grok', vktr: 'vktr', opencode: 'opencode', factory: 'droid'
 };
 var _agentsInfo = { mux: false, resumable: {} };
 fetch('/api/agents')
@@ -1222,7 +1223,7 @@ function emptyStateHtml() {
   }
   return '<div class="empty ui-empty">' + mark(inbox)
     + '<div class="ui-empty-title">No runs recorded yet</div>'
-    + '<div class="ui-empty-body">tracequest reads sessions from Claude Code, Codex CLI, Cursor, Droid, OpenCode and Grok CLI on this machine. Run any of them, or start one here.</div>'
+    + '<div class="ui-empty-body">tracequest reads sessions from Claude Code, Codex CLI, Cursor, Droid, OpenCode, Grok CLI and vktr on this machine. Run any of them, or start one here.</div>'
     + '<div class="ui-empty-actions"><button type="button" class="ui-btn ui-btn--primary" data-empty-action="new-run">New run</button></div>'
     + '</div>';
 }

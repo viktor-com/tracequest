@@ -4,7 +4,7 @@ import { computeGrade } from "../filter/filter-formats.js";
 import { buildSessionChapters } from "../chapters/session-chapters.js";
 import { currentIndexEntry } from "./index-writers.js";
 import { indexSession } from "./session-index-core.js";
-import { GROK_CHAT_FILE } from "./session-layout.js";
+import { GROK_CHAT_FILE, isGrokFamily } from "./session-layout.js";
 
 const gradeCache = new Map();
 const MAX_CACHED_GRADES = 5;
@@ -18,7 +18,7 @@ const MAX_CACHED_GRADES = 5;
 export function sessionGrade(session, indexEntry = currentIndexEntry) {
   let mtime = session.sourceMtimeMs;
   if (session.path && !session.path.includes("://")) {
-    const file = session.source === "grok" ? join(session.path, GROK_CHAT_FILE) : session.path;
+    const file = isGrokFamily(session.source) ? join(session.path, GROK_CHAT_FILE) : session.path;
     try { mtime = statSync(file).mtimeMs; } catch { mtime = null; }
   }
   if (mtime != null || session.path?.startsWith("opencode://")) {

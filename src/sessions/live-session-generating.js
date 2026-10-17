@@ -520,7 +520,8 @@ export function openCodeSessionIsGenerating(uri, home) {
 export function recordingIsGenerating(source, path, extra = {}) {
   if (!path) return false;
   switch (source) {
-    case "grok": return grokSessionIsGenerating(path);
+    case "grok":
+    case "vktr": return grokSessionIsGenerating(path);
     case "claude": return claudeSessionIsGenerating(path, extra);
     case "cursor": return jsonlPathIsGenerating(path, cursorJsonlIsGenerating);
     case "codex": return jsonlPathIsGenerating(path, codexJsonlIsGenerating);

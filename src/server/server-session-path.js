@@ -6,7 +6,7 @@ import { isOpenCodeSessionId, parseOpenCodeUri, resolveCursorCloudRoot, resolveH
 
 /** Agent config dirs under $HOME that may contain session logs (trailing slash). */
 export function agentSessionRootPrefixes(home = homedir()) {
-  return [".claude", ".codex", ".cursor", ".factory", ".grok"].map((dir) => `${home}/${dir}/`);
+  return [".claude", ".codex", ".cursor", ".factory", ".grok", ".vktr"].map((dir) => `${home}/${dir}/`);
 }
 
 /**
@@ -65,6 +65,7 @@ export function sourceForSessionPath(p) {
   if (s.includes("/.cursor/")) return "cursor";
   if (s.includes("/.codex/")) return "codex";
   if (s.includes("/.factory/")) return "factory";
+  if (s.includes("/.vktr/")) return "vktr";
   if (s.includes("/.grok/")) return "grok";
   try {
     if (s.startsWith(cursorCloudRootPrefix())) return "cursor-cloud";

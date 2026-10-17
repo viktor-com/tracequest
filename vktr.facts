@@ -1,0 +1,52 @@
+# vktr
+
+## format
+- label: vktr (Viktor's fork of the Grok CLI) is a grok-family agent — src/sessions/session-layout.js GROK_FAMILY lists grok (~/.grok, binary grok) and vktr (~/.vktr, binary vktr), and every grok code path takes the agent id instead of a second copy of the code
+  id: vkfam
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'vktr grok family registry' test/bin/vktr-support.test.js
+  tags: [spec, vktr, implemented]
+- label: vktr sessions live at ~/.vktr/sessions/<url-encoded cwd>/<uuid>/ with the same file set as grok (chat_history.jsonl, events.jsonl, updates.jsonl, prompt_context.json, signals.json, summary.json, usage.json); their rows are a subset of grok's fields (verified against 38 real vktr 1.0.38 sessions on 2026-10-17), so parseGrok, indexGrokJsonl, peekGrok and scanGrokForQuery read them unchanged
+  id: vkfmt
+  tags: [spec, vktr, implemented]
+
+## discovery
+- label: findSessions discovers every ~/.vktr/sessions/<enc-cwd>/<uuid>/ directory holding chat_history.jsonl as one session with source vktr, the decoded cwd as its project and the directory as its path, alongside grok sessions from ~/.grok
+  id: vkdis
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'vktr sessions are discovered' test/bin/vktr-support.test.js
+  tags: [spec, vktr, implemented]
+- label: the Rust sidecar maps a .vktr/sessions root to Source::Vktr, scans it with the grok scanner labelled vktr, lists vktr in KNOWN_SOURCES and indexes vktr sessions with the grok indexer
+  id: vkrs
+  command: cd sidecar && cargo test vktr
+  tags: [spec, vktr, sidecar, implemented]
+
+## parse
+- label: parseSession on a ~/.vktr session dir infers source vktr from the path and returns the grok parse (user prompts, assistant text, tool calls with results, signals.json context tokens) with source vktr; the model falls back to "vktr" when no model_id is recorded
+  id: vkpar
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'vktr session parses' test/bin/vktr-support.test.js
+  tags: [spec, vktr, implemented]
+- label: the session index, peek and search treat vktr like grok — indexSession dispatches vktr to indexGrokJsonl, KNOWN_SESSION_SOURCES includes vktr, and /api/search finds a phrase only in a vktr chat_history.jsonl with result source vktr
+  id: vkidx
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'vktr' test/bin/vktr-support.test.js test/routes/api-search-integration.test.js
+  tags: [spec, vktr, search, implemented]
+
+## live
+- label: live detection reads ~/.vktr/active_sessions.json next to ~/.grok/active_sessions.json; a vktr session whose pid runs in its recorded cwd is live only while its recording shows a generating turn, and a finished vktr reply reads idle
+  id: vkliv
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'vktr finished reply' test/bin/run-status.e2e.test.js
+  tags: [spec, vktr, live, implemented]
+
+## launch
+- label: the launch registry has a vktr agent (binary vktr) with the grok argv shapes — positional prompt after --, --session-id <uuid> at spawn, resume as --resume <id> --fork-session — SOURCE_AGENTS maps source vktr to it, and run attribution expects its recording at ~/.vktr/sessions/<enc-cwd>/<uuid>
+  id: vklau
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'vktr launch' test/bin/vktr-support.test.js
+  tags: [spec, vktr, launch, implemented]
+
+## surfaces
+- label: vktr has its own UI hue (--hue-vktr in light and dark tokens, sourceHueVar, SOURCE_COLORS in app chrome, the dashboard client and compare metrics), is accepted by hub config sources, is copied by import ssh from .vktr/sessions, and is named in CLI help, README and docs/cli-reference.md
+  id: vksur
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'vktr surfaces' test/bin/vktr-support.test.js
+  tags: [spec, vktr, implemented]
+- label: usage limits list vktr as an unavailable harness ("no remaining-window collector") — vktr authenticates with a Viktor API key from ~/.vktr/config.toml or VIKTOR_API_KEY, has no ~/.vktr/auth.json, and Viktor exposes no remaining-window endpoint, so no grok subscription fetch is attempted for it
+  id: vkuse
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'vktr usage' test/bin/vktr-support.test.js
+  tags: [spec, vktr, usage-limits, implemented]

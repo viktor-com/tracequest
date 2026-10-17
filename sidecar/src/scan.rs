@@ -43,6 +43,10 @@ pub(crate) fn infer_source(root: &str) -> Option<Source> {
         Some(Source::Cursor)
     } else if lower.contains(".factory") && lower.contains("sessions") {
         Some(Source::Factory)
+    } else if lower.contains(".vktr/sessions") || lower.contains(".vktr\\sessions") {
+        // vktr shares grok's layout; matched on the whole ".vktr/sessions" segment
+        // (checked before grok) so a host id like "box.vktr" cannot claim a grok root.
+        Some(Source::Vktr)
     } else if lower.contains(".grok") && lower.contains("sessions") {
         Some(Source::Grok)
     } else if lower.contains("opencode.db") {
@@ -107,6 +111,7 @@ pub fn scan(roots: &[String], filter: Option<&str>) -> Vec<Session> {
                 Source::CursorCloud => scan_cursor_cloud(root, filter),
                 Source::Factory => scan_factory(root, filter),
                 Source::Grok => scan_grok(root, filter),
+                Source::Vktr => scan_grok_family(root, filter, "vktr"),
                 Source::OpenCode => scan_opencode(root, filter),
             };
             Some(sessions)
@@ -502,6 +507,12 @@ pub(crate) fn decode_grok_workspace(encoded: &str) -> String {
 }
 
 pub(crate) fn scan_grok(root: &str, filter: Option<&str>) -> Vec<Session> {
+    scan_grok_family(root, filter, "grok")
+}
+
+/// Grok-layout sessions (<root>/<enc-cwd>/<id>/chat_history.jsonl) labelled `source`
+/// ("grok" for ~/.grok/sessions, "vktr" for ~/.vktr/sessions).
+pub(crate) fn scan_grok_family(root: &str, filter: Option<&str>, source: &str) -> Vec<Session> {
     let mut sessions = Vec::new();
     let root_path = Path::new(root);
 
@@ -557,7 +568,7 @@ pub(crate) fn scan_grok(root: &str, filter: Option<&str>) -> Vec<Session> {
                 path: session_path,
                 project: project_display,
                 file: session_dir.clone(),
-                source: "grok".to_string(),
+                source: source.to_string(),
                 size: metadata.len(),
                 mtime,
                 parent_session: None,

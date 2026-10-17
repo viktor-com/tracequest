@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { homedir } from "node:os";
 
-const SOURCE_IDS = new Set(["claude", "cursor", "codex", "factory", "grok", "opencode"]);
+const SOURCE_IDS = new Set(["claude", "cursor", "codex", "factory", "grok", "vktr", "opencode"]);
 let activeConfig = null;
 export function hubConfig() { return activeConfig; }
 
