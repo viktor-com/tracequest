@@ -29,7 +29,7 @@
   id: sshpr
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'prints a per-host plan before rsyncing that host' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, cli, implemented]
-- label: sessions materialised by `import ssh` flow through the normal pipeline with no extra flag or rescan command — findSessions discovers them with their original source (claude/cursor/codex/factory/grok) plus host, buildIndex indexes them, and search returns hits whose source is the original agent source
+- label: sessions materialised by `import ssh` flow through the normal pipeline with no extra flag or rescan command — findSessions discovers them with their original source (claude/cursor/codex/factory/grok/vktr) plus host, buildIndex indexes them, and search returns hits whose source is the original agent source
   id: sshis
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'imported ssh sessions are indexed and searchable with original source and host' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, cli, implemented]
@@ -45,7 +45,7 @@
   tags: [spec, ssh-import, cli, implemented]
 
 ## materialisation
-- label: each host copies the five filesystem session trees plus OpenCode's opencode.db from remote $HOME — .claude/projects, .cursor/projects, .codex/sessions, .factory/sessions, .grok/sessions, .local/share/opencode/opencode.db — and never copies the cursor-cloud import root or credential files outside those session trees
+- label: each host copies the six filesystem session trees plus OpenCode's opencode.db from remote $HOME — .claude/projects, .cursor/projects, .codex/sessions, .factory/sessions, .grok/sessions, .vktr/sessions, .local/share/opencode/opencode.db — and never copies the cursor-cloud import root or credential files outside those session trees
   id: sshly
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'copies the filesystem session trees including opencode and not cursor-cloud' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, sessions, implemented]
@@ -55,7 +55,7 @@
   tags: [spec, ssh-import, sessions, implemented]
 
 ## source
-- label: ssh import does not add a new KNOWN_SESSION_SOURCE — copied files keep source claude, cursor, codex, factory, or grok so source:claude matches local and imported Claude sessions alike
+- label: ssh import does not add a new KNOWN_SESSION_SOURCE — copied files keep source claude, cursor, codex, factory, grok, or vktr so source:claude matches local and imported Claude sessions alike
   id: sshsv
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'imported ssh sessions are indexed and searchable with original source and host' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, ssh-import, sessions, implemented]

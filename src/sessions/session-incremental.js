@@ -17,6 +17,7 @@
 import { existsSync, lstatSync, statSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { sortSessionsByMtimeDesc } from "./session-list.js";
+import { isGrokFamily } from "./session-layout.js";
 
 const OPENCODE_URI = "opencode://";
 const GROK_TRANSCRIPT = "chat_history.jsonl";
@@ -117,7 +118,7 @@ function lstatOrNull(path) {
 function restat(s) {
   let st;
   try {
-    st = statSync(s.source === "grok" ? join(s.path, GROK_TRANSCRIPT) : s.path, { bigint: true });
+    st = statSync(isGrokFamily(s.source) ? join(s.path, GROK_TRANSCRIPT) : s.path, { bigint: true });
   } catch {
     return null;
   }
@@ -163,7 +164,7 @@ export async function applySessionChanges(base, changes, { roots, watchedRoots, 
       touched.add(path);
       continue;
     }
-    if (basename(path) === GROK_TRANSCRIPT && base.byPath.get(dirname(path))?.source === "grok") {
+    if (basename(path) === GROK_TRANSCRIPT && isGrokFamily(base.byPath.get(dirname(path))?.source)) {
       touched.add(dirname(path));
       continue;
     }

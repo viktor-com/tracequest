@@ -1,6 +1,6 @@
 use crate::scan::{
     decode_grok_workspace, extract_codex_project, infer_source, normalize_project_folder, scan,
-    scan_claude, scan_cursor, scan_cursor_cloud, scan_factory, scan_grok, scan_opencode,
+    scan_claude, scan_cursor, scan_cursor_cloud, scan_factory, scan_grok, scan_grok_family, scan_opencode,
 };
 use crate::types::Session;
 use rusqlite::Connection;
@@ -443,6 +443,40 @@ fn test_scan_grok_structure() {
     assert_eq!(sessions[0].source, "grok");
     assert_eq!(sessions[0].file, "session-abc");
     assert!(sessions[0].path.ends_with("session-abc"));
+
+    let _ = fs::remove_dir_all(&tmp_dir);
+}
+
+#[test]
+fn test_infer_source_vktr() {
+    assert_eq!(
+        infer_source("/home/user/.vktr/sessions"),
+        Some(crate::types::Source::Vktr)
+    );
+    assert_eq!(
+        infer_source("/home/user/.local/share/tracequest/hosts/gpu/.vktr/sessions"),
+        Some(crate::types::Source::Vktr)
+    );
+    // A host id that merely contains ".vktr" never claims a grok root.
+    assert_eq!(
+        infer_source("/home/user/.local/share/tracequest/hosts/box.vktr/.grok/sessions"),
+        Some(crate::types::Source::Grok)
+    );
+}
+
+#[test]
+fn test_scan_vktr_structure() {
+    let tmp_dir = std::env::temp_dir().join(format!("tracequest_test_vktr_{}", std::process::id()));
+    let session = tmp_dir.join("%2Fhome%2Fdev%2Fvk").join("01a120b4-324e-7e70-8bfe-a7af41b40a2b");
+    fs::create_dir_all(&session).unwrap();
+    fs::write(session.join("chat_history.jsonl"), "{}\n").unwrap();
+
+    let sessions = scan_grok_family(tmp_dir.to_str().unwrap(), None, "vktr");
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(sessions[0].source, "vktr");
+    assert_eq!(sessions[0].file, "01a120b4-324e-7e70-8bfe-a7af41b40a2b");
+    assert!(sessions[0].project.ends_with("vk"));
+    assert_eq!(scan_grok(tmp_dir.to_str().unwrap(), None)[0].source, "grok");
 
     let _ = fs::remove_dir_all(&tmp_dir);
 }

@@ -4,7 +4,7 @@ How the UI is organised and how to change it. The visual system (tokens, compone
 
 ## Who uses tracequest, and for what
 
-People who run coding agents (Claude Code, Codex, Cursor, Droid, OpenCode, Grok) on one or more machines. They come to do five jobs:
+People who run coding agents (Claude Code, Codex, Cursor, Droid, OpenCode, Grok, vktr) on one or more machines. They come to do five jobs:
 
 | Job | Starts at | The answer is |
 | --- | --- | --- |

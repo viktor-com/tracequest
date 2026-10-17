@@ -10,6 +10,7 @@ import {
   SHARED_QUERY,
   FACTORY_DISK_ONLY,
   GROK_DISK_ONLY,
+  VKTR_DISK_ONLY,
 } from "../helpers/multi-source-fixtures.js";
 import { withMultiSourceHarness } from "../helpers/multi-source-harness.js";
 
@@ -99,15 +100,15 @@ describe("/api/search HTTP integration with real session fixtures", () => {
     });
   });
 
-  test("unfiltered search hits all seven sources (eight sessions) for shared needle", async () => {
+  test("unfiltered search hits all eight sources (nine sessions) for shared needle", async () => {
     await withApiSearchServer(async ({ get }) => {
       const res = await get(`/api/search?q=${SHARED_QUERY}`);
       assert.equal(res.status, 200);
       assert.match(res.headers["content-type"], /application\/json/);
       const data = JSON.parse(res.body);
-      assert.equal(data.results.length, 8);
+      assert.equal(data.results.length, 9);
       const sources = new Set(data.results.map((r) => r.source));
-      assert.deepEqual(sources, new Set(["claude", "cursor", "cursor-cloud", "codex", "factory", "grok", "opencode"]));
+      assert.deepEqual(sources, new Set(["claude", "cursor", "cursor-cloud", "codex", "factory", "grok", "vktr", "opencode"]));
       assert.ok(data.results.every((r) => Array.isArray(r.matches) && r.matches.length >= 1));
     });
   });
@@ -152,7 +153,7 @@ describe("/api/search HTTP integration with real session fixtures", () => {
       const upper = SHARED_QUERY.toUpperCase();
       const res = await get(`/api/search?q=${upper}`);
       const data = JSON.parse(res.body);
-      assert.equal(data.results.length, 8);
+      assert.equal(data.results.length, 9);
     });
   });
 
@@ -183,6 +184,16 @@ describe("/api/search HTTP integration with real session fixtures", () => {
       assert.equal(data.results.length, 1);
       assert.equal(data.results[0].source, "grok");
       assert.equal(data.results[0].path, paths.grokSessDir);
+    });
+  });
+
+  test("vktr chat_history-only phrase is findable through the API route with source vktr", async () => {
+    await withApiSearchServer(async ({ get, paths }) => {
+      const res = await get(`/api/search?q=${VKTR_DISK_ONLY}`);
+      const data = JSON.parse(res.body);
+      assert.equal(data.results.length, 1);
+      assert.equal(data.results[0].source, "vktr");
+      assert.equal(data.results[0].path, paths.vktrSessDir);
     });
   });
 

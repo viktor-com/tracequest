@@ -71,6 +71,7 @@ import {
   trackIndexTool,
 } from "./session-meta.js";
 import { cursorModelFromStateDb } from "./cursor-state-db.js";
+import { isGrokFamily } from "./session-layout.js";
 import {
   addActiveRecord,
   claudeRecordKind,
@@ -340,9 +341,10 @@ function readNewWorkedLines(fd, size, read, onLine) {
  */
 export function indexedWorkedMs(path, source) {
   const opts = WORKED_TIME_BY_SOURCE[source];
-  if (source !== "grok" && !opts) return null;
-  const file = source === "grok" ? join(path, "events.jsonl") : path;
-  const onLine = source === "grok" ? grokWorkedLine : (text, start, end, state) => jsonlWorkedLine(opts, text, start, end, state);
+  const grokFamily = isGrokFamily(source);
+  if (!grokFamily && !opts) return null;
+  const file = grokFamily ? join(path, "events.jsonl") : path;
+  const onLine = grokFamily ? grokWorkedLine : (text, start, end, state) => jsonlWorkedLine(opts, text, start, end, state);
   const key = `${source}\u0000${file}`;
   let fd;
   try {
@@ -1008,7 +1010,8 @@ function processGrokEventsLine(text, start, end, state, toolOutcomes) {
   });
 }
 
-export function indexGrokJsonl(sessionDir) {
+/** Index a grok-family session dir; `source` ("grok" | "vktr") names the model fallback. */
+export function indexGrokJsonl(sessionDir, source = "grok") {
   try {
     const state = createIndexState();
     state.inputChars = 0;
@@ -1018,7 +1021,7 @@ export function indexGrokJsonl(sessionDir) {
     if (existsSync(ctxPath)) {
       try {
         const ctx = JSON.parse(readFileSync(ctxPath, "utf-8"));
-        state.model = ctx.model_id || "grok";
+        state.model = ctx.model_id || source;
       } catch (err) {
         if (err instanceof SyntaxError) {
           console.error(`indexGrok: failed to parse ${ctxPath}:`, err.message);

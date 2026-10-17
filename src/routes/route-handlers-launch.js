@@ -497,7 +497,7 @@ async function handleApiRunsCreate(req, res, _url, _deps = null) {
   }
 
   // Spawn-time session identity: for agents whose CLI accepts a session
-  // UUID (claude/grok --session-id), generate one HERE and hand it to the
+  // UUID (claude/grok/vktr --session-id), generate one HERE and hand it to the
   // agent — it names its recording after the uuid, so run↔session
   // attribution is deterministic before the first byte is written. The
   // uuid is persisted as @tq_session_id below; the linker then only ever
@@ -586,7 +586,7 @@ function captureResponse() {
  * names the missing mechanism, not the missing binary); the source session
  * is parsed for its native sessionId (the value the agent's resume flag
  * takes — 400 when it exposes none); cwd defaults to the source session's
- * recorded cwd (explicit body cwd overrides). claude/grok resumes mint a
+ * recorded cwd (explicit body cwd overrides). claude/grok/vktr resumes mint a
  * fresh fork uuid (--session-id, persisted as @tq_session_id) so the
  * resumed run's recording identity is deterministic by construction; other
  * agents fall to the existing probe/heuristic attribution tiers. The source
