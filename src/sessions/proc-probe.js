@@ -162,7 +162,7 @@ export function procCwds(pids, deps) {
 }
 
 /**
- * Pids reach us from ~/.grok/active_sessions.json, so they are untrusted input.
+ * Pids reach us from ~/.grok (or ~/.vktr) active_sessions.json, so they are untrusted input.
  * `lsof -p` rejects the entire comma-joined list if any entry is non-numeric,
  * which would silently drop every other pid in the batch.
  */

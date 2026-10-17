@@ -157,7 +157,7 @@ export const CANDIDATE_SLACK_MS = 2000;
  * the same agent competes for the same recursive candidate space, so
  * rivalry ignores cwd.
  */
-const CWD_SCOPED_AGENTS = new Set(["claude", "cursor-agent", "grok"]);
+const CWD_SCOPED_AGENTS = new Set(["claude", "cursor-agent", "grok", "vktr"]);
 
 function pick(deps, name, fallback) {
   return deps?.[name] ?? fallback;
@@ -315,14 +315,17 @@ function factoryCandidates(home, deps) {
   return out;
 }
 
-/** Grok layout: <root>/<enc(cwd)>/<id>/chat_history.jsonl — the session path is the DIRECTORY. */
-function grokCandidates(home, cwd, deps) {
+/**
+ * Grok layout: <root>/<enc(cwd)>/<id>/chat_history.jsonl — the session path is
+ * the DIRECTORY. `agent` picks the grok-family root (~/.grok or ~/.vktr).
+ */
+function grokCandidates(home, cwd, deps, agent = "grok") {
   const out = [];
   const seen = new Set();
   for (const spelling of cwdSpellings(cwd, deps)) {
-    const dir = grokWorkspaceDir(home, spelling);
+    const dir = grokWorkspaceDir(home, spelling, agent);
     for (const sub of quietReaddir(dir, deps)) {
-      const sessionDir = grokSessionDir(home, spelling, sub);
+      const sessionDir = grokSessionDir(home, spelling, sub, agent);
       if (seen.has(sessionDir)) continue;
       const chat = join(sessionDir, GROK_CHAT_FILE);
       const st = quietStat(chat, deps);
@@ -361,7 +364,8 @@ export function runSessionCandidates({ agent, cwd, home = homedir() }, deps = {}
     case "droid":
       return factoryCandidates(home, deps);
     case "grok":
-      return grokCandidates(home, cwd, deps);
+    case "vktr":
+      return grokCandidates(home, cwd, deps, agent);
     default:
       return [];
   }
@@ -386,10 +390,11 @@ export function expectedSessionPaths({ agent, cwd, sessionId, home = homedir() }
       }
       break;
     case "grok":
+    case "vktr":
       // The grok session path is the DIRECTORY named by the uuid; freshness
       // and probing go through chat_history.jsonl inside it.
       for (const spelling of cwdSpellings(cwd, deps)) {
-        out.add(grokSessionDir(home, spelling, sessionId));
+        out.add(grokSessionDir(home, spelling, sessionId, agent));
       }
       break;
     default:
@@ -423,6 +428,7 @@ const AGENT_PEEK_SOURCE = {
   codex: "codex",
   droid: "factory",
   grok: "grok",
+  vktr: "vktr",
 };
 
 /**

@@ -14,6 +14,8 @@ import {
   cursorTranscriptsDir,
   factoryWorkspaceDir,
   grokSessionDir,
+  GROK_FAMILY,
+  grokFamilySourceForPath,
 } from "./session-layout.js";
 import { recordingIsGenerating } from "./live-session-generating.js";
 import { isImportedHostSession } from "./session-discovery-paths.js";
@@ -49,11 +51,14 @@ export function grokProcCwdMatches(entryCwd, procCwd) {
   return procCwd === `${entryCwd} (deleted)`;
 }
 
-/** The well-formed entries of ~/.grok/active_sessions.json ([] when absent or unreadable). */
-function grokActiveEntries(home) {
+/**
+ * The well-formed entries of ~/.grok/active_sessions.json (or ~/.vktr/... for
+ * source "vktr"; [] when absent or unreadable).
+ */
+function grokActiveEntries(home, member = GROK_FAMILY[0]) {
   let entries;
   try {
-    entries = JSON.parse(readFileSync(join(home, ".grok", "active_sessions.json"), "utf-8"));
+    entries = JSON.parse(readFileSync(join(home, member.homeDir, "active_sessions.json"), "utf-8"));
   } catch (err) {
     if (!isIndexDiskExpectedErr(err)) console.error("findLiveGrok: failed to read active_sessions.json:", err.message);
     return [];
@@ -70,19 +75,32 @@ function grokActiveEntries(home) {
  * @property {Map<string, string>} cwds pid → cwd for every pid any family matched
  */
 
-/** @param {ProbeFacts | null} [facts] */
+/** Every grok-family agent's active_sessions.json entries, each tagged with its member. */
+function grokFamilyActiveEntries(home) {
+  const out = [];
+  for (const member of GROK_FAMILY) {
+    for (const entry of grokActiveEntries(home, member)) out.push({ member, entry });
+  }
+  return out;
+}
+
+/**
+ * Live grok-family sessions (grok and vktr): each agent's active_sessions.json
+ * names candidate pids, live needs the pid's cwd to match and a generating turn.
+ * @param {ProbeFacts | null} [facts]
+ */
 export function findLiveGrok(facts = null) {
   const home = homeDir();
   const live = [];
-  const valid = grokActiveEntries(home);
+  const valid = grokFamilyActiveEntries(home);
   if (!valid.length) return live;
-  const cwds = facts?.cwds ?? procCwds(valid.map((e) => e.pid), _findLiveClaudeDeps ?? undefined);
+  const cwds = facts?.cwds ?? procCwds(valid.map(({ entry }) => entry.pid), _findLiveClaudeDeps ?? undefined);
 
-  for (const entry of valid) {
+  for (const { member, entry } of valid) {
     const procCwd = cwds.get(String(entry.pid));
     if (!procCwd || !grokProcCwdMatches(entry.cwd, procCwd)) continue;
-    const dir = grokSessionDir(home, entry.cwd, entry.session_id);
-    if (recordingIsGenerating("grok", dir)) live.push(dir);
+    const dir = grokSessionDir(home, entry.cwd, entry.session_id, member.id);
+    if (recordingIsGenerating(member.id, dir)) live.push(dir);
   }
   return live;
 }
@@ -246,7 +264,7 @@ function generatingClaudeSubagents(parentPath) {
  * has a recording is a candidate only: live additionally requires that
  * recording to show a generating or tool-executing turn. Binary names
  * mirror the launch registry (src/agents/agent-detect.js SOURCE_AGENTS).
- * grok is absent (active_sessions.json is a better candidate signal — findLiveGrok);
+ * grok and vktr are absent (active_sessions.json is a better candidate signal — findLiveGrok);
  * cursor-cloud is absent DELIBERATELY: a cloud agent has no local process
  * to probe, and reporting an imported recording as RUNNING from mere import
  * freshness would be a lie, so cursor-cloud sessions are never live.
@@ -546,7 +564,7 @@ export async function detectLiveSessionsAsync(sessions) {
   // takes); the cwd lookup for their pids then runs while the argv scans do,
   // and a second lookup covers only pids that an argv scan alone matched.
   const byName = invocations.filter((args) => !args.includes("-f")).map(run);
-  const named = new Set(grokActiveEntries(homeDir()).map((e) => String(e.pid)));
+  const named = new Set(grokFamilyActiveEntries(homeDir()).map(({ entry }) => String(entry.pid)));
   for (const pids of await Promise.all(byName)) for (const pid of pids) named.add(pid);
   const namedCwds = procCwdsAsync(named);
   const byArgv = invocations.filter((args) => args.includes("-f")).map(run);
@@ -624,7 +642,8 @@ function sourceForCarriedPath(path) {
   if (typeof path !== "string") return null;
   if (path.startsWith("opencode://")) return "opencode";
   if (path.includes("/.codex/")) return "codex";
-  if (path.includes("/.grok/")) return "grok";
+  const grokFamily = grokFamilySourceForPath(path);
+  if (grokFamily) return grokFamily;
   if (path.includes("/.factory/")) return "factory";
   if (path.includes("/.cursor/")) return "cursor";
   if (path.includes("/.claude/")) return "claude";

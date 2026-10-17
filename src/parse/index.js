@@ -33,7 +33,8 @@ export function parseSession(filePath, source, opts = {}) {
       case "cursor": session = parseCursor(filePath); break;
       case "cursor-cloud": session = parseCursorCloud(filePath); break;
       case "factory": session = parseFactory(filePath); break;
-      case "grok": session = parseGrok(filePath); break;
+      case "grok":
+      case "vktr": session = parseGrok(filePath, source); break;
       case "opencode": session = parseOpenCode(filePath); break;
       default: session = parseClaude(filePath); break;
     }
@@ -57,6 +58,7 @@ function detectSource(filePath) {
   if (isUnderCursorCloudRoot(filePath)) return "cursor-cloud";
   if (filePath.includes(".cursor/")) return "cursor";
   if (filePath.includes(".factory/")) return "factory";
+  if (filePath.includes(".vktr/")) return "vktr";
   if (filePath.includes(".grok/")) return "grok";
   return "claude";
 }

@@ -536,7 +536,7 @@ function resolveCliSessionInputInfo(inputFile) {
         die(`Expected a specific session file or session directory, not top-level agent dir '${base}': ${resolved}`);
       }
       if (!existsSync(join(resolved, "chat_history.jsonl"))) {
-        die(`Not a session file: '${resolved}' is a directory.\nPass a .jsonl session file (or a Grok session directory containing chat_history.jsonl).`);
+        die(`Not a session file: '${resolved}' is a directory.\nPass a .jsonl session file (or a Grok/vktr session directory containing chat_history.jsonl).`);
       }
     }
     return { path: resolved, discovery: null };

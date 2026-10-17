@@ -5,6 +5,7 @@ import { forEachJsonlLineFromFile, parseJsonlLine, parseJsonlLineAt } from "./js
 import { isGrokChatIndexedLine, isGrokEventsIndexedLine } from "./grok-chat-index.js";
 import { errorPattern, normalizeToolName, enrichToolEvent } from "./parse-enrich.js";
 import { buildSession } from "./parse-session-build.js";
+import { grokFamilySourceForPath } from "../sessions/session-layout.js";
 
 export function extractUserQuery(text) {
   const trimmed = text.trim();
@@ -23,7 +24,11 @@ export function extractUserQuery(text) {
   return trimmed;
 }
 
-export function parseGrok(sessionDir) {
+/**
+ * Parse a grok-family session directory. `source` is "grok" or "vktr" (vktr,
+ * Viktor's Grok CLI fork, writes the same files); it defaults from the path.
+ */
+export function parseGrok(sessionDir, source = grokFamilySourceForPath(sessionDir) || "grok") {
   const events = [];
   let assistantCount = 0;
   let sessionId = null;
@@ -36,7 +41,7 @@ export function parseGrok(sessionDir) {
     try {
       const ctx = JSON.parse(readFileSync(ctxPath, "utf-8"));
       cwd = ctx.working_directory;
-      model = ctx.model_id || "grok";
+      model = ctx.model_id || source;
     } catch (err) {
       console.error(`parseGrok: failed to parse ${ctxPath}:`, err.message);
     }
@@ -212,5 +217,5 @@ export function parseGrok(sessionDir) {
     }
   }
 
-  return buildSession({ sessionId, cwd, model, gitBranch, events, source: "grok" });
+  return buildSession({ sessionId, cwd, model, gitBranch, events, source });
 }

@@ -13,6 +13,7 @@ export const SEVEN_WAY_MARKER = SIX_WAY_MARKER;
 export const BM25_RANK_NEEDLE = "multi-src-bm25-rank-needle";
 export const FACTORY_DISK_ONLY = "msrc-factory-disk-cmd-42";
 export const GROK_DISK_ONLY = "msrc-grok-disk-phrase-99";
+export const VKTR_DISK_ONLY = "msrc-vktr-disk-phrase-77";
 /** Post-edit disk-fallback needles (not present in baseline seed). */
 export const FACTORY_POST_EDIT_DISK = "df-inv-factory-post-edit-cmd-77";
 export const GROK_POST_EDIT_DISK = "df-inv-grok-post-edit-phrase-88";
@@ -283,8 +284,23 @@ export function seedMultiSourceFixture(tmpDir) {
     { type: "turn_started", ts: "2026-06-03T10:00:00Z", model_id: "grok-3" },
   ]);
 
+  // vktr (Viktor's Grok CLI fork): the grok layout under ~/.vktr, its own source.
+  const vktrSessDir = path.join(tmpDir, ".vktr", "sessions", "ws-msrc-vktr", "vktr-sess-1");
+  fs.mkdirSync(vktrSessDir, { recursive: true });
+  writeJsonl(
+    path.join(vktrSessDir, "chat_history.jsonl"),
+    grokChatLines({
+      prompt: "vktr indexed prompt",
+      bodyPhrase: "vktr indexed body",
+      diskOnlyPhrase: VKTR_DISK_ONLY,
+    })
+  );
+  writeJsonl(path.join(vktrSessDir, "events.jsonl"), [
+    { type: "turn_started", ts: "2026-06-03T10:00:00Z", model_id: "viktor" },
+  ]);
+
   const recent = new Date(FIXED_NOW - 2 * 3600000);
-  for (const p of [alphaPath, cursorPath, cursorCloudPath, codexPath, factoryPath, factoryErrPath, path.join(grokSessDir, "chat_history.jsonl")]) {
+  for (const p of [alphaPath, cursorPath, cursorCloudPath, codexPath, factoryPath, factoryErrPath, path.join(grokSessDir, "chat_history.jsonl"), path.join(vktrSessDir, "chat_history.jsonl")]) {
     fs.utimesSync(p, recent, recent);
   }
 
@@ -296,6 +312,7 @@ export function seedMultiSourceFixture(tmpDir) {
     factoryPath,
     factoryErrPath,
     grokSessDir,
+    vktrSessDir,
     factoryProject: "msrc-factory",
   };
 }

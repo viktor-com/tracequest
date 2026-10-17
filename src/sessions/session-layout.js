@@ -20,7 +20,9 @@
  * at <dashless>/agent-transcripts/<uuid>/<uuid>.jsonl, zero at project-dir
  * root; every ~/.claude/projects dir leading-dash; every ~/.codex/sessions
  * recording a rollout-*.jsonl under sessions/YYYY/MM/DD; every
- * ~/.grok/sessions dir a percent-encoded cwd.
+ * ~/.grok/sessions dir a percent-encoded cwd. ~/.vktr (Viktor's fork of the
+ * Grok CLI) verified 2026-10-17: same sessions/<enc-cwd>/<uuid>/ layout and
+ * file set, its chat/events/updates rows a subset of grok's fields.
  */
 import { statSync } from "node:fs";
 import { join } from "node:path";
@@ -41,7 +43,46 @@ export function factorySessionsRoot(home = homedir()) {
   return join(home, ".factory", "sessions");
 }
 export function grokSessionsRoot(home = homedir()) {
-  return join(home, ".grok", "sessions");
+  return grokFamilySessionsRoot("grok", home);
+}
+export function vktrSessionsRoot(home = homedir()) {
+  return grokFamilySessionsRoot("vktr", home);
+}
+
+/* ── grok family ─────────────────────────────────────────────────────── */
+
+/**
+ * Agents that record in the Grok CLI's on-disk format, each under its own
+ * home dir and launched by its own binary. vktr is Viktor's fork of the Grok
+ * CLI: identical session layout, so every grok code path serves it,
+ * parameterised by these fields rather than duplicated.
+ */
+export const GROK_FAMILY = Object.freeze([
+  Object.freeze({ id: "grok", homeDir: ".grok", binary: "grok" }),
+  Object.freeze({ id: "vktr", homeDir: ".vktr", binary: "vktr" }),
+]);
+
+/** True when `source` records in the Grok CLI session format (grok, vktr). */
+export function isGrokFamily(source) {
+  return source === "grok" || source === "vktr";
+}
+
+/** The grok-family member for `source`, or null. */
+export function grokFamilyMember(source) {
+  return GROK_FAMILY.find((m) => m.id === source) || null;
+}
+
+/** ~/.<agent>/sessions for a grok-family source. */
+export function grokFamilySessionsRoot(source, home = homedir()) {
+  return join(home, grokFamilyMember(source).homeDir, "sessions");
+}
+
+/** Grok-family source owning a recording path (".vktr/" or ".grok/" segment), or null. */
+export function grokFamilySourceForPath(p) {
+  const s = String(p ?? "").replace(/\\/g, "/");
+  if (s.includes("/.vktr/")) return "vktr";
+  if (s.includes("/.grok/")) return "grok";
+  return null;
 }
 
 /* ── claude (and the claude-family cursor-cloud import root) ──────────── */
@@ -155,14 +196,14 @@ export function grokWorkspaceSlug(cwd) {
   return encodeURIComponent(cwd);
 }
 
-/** ~/.grok/sessions/<enc-cwd>: the dir of per-session uuid DIRECTORIES. */
-export function grokWorkspaceDir(home, cwd) {
-  return join(grokSessionsRoot(home), grokWorkspaceSlug(cwd));
+/** ~/.<grok|vktr>/sessions/<enc-cwd>: the dir of per-session uuid DIRECTORIES. */
+export function grokWorkspaceDir(home, cwd, source = "grok") {
+  return join(grokFamilySessionsRoot(source, home), grokWorkspaceSlug(cwd));
 }
 
-/** ~/.grok/sessions/<enc-cwd>/<id> — the grok session path IS this directory. */
-export function grokSessionDir(home, cwd, sessionId) {
-  return join(grokWorkspaceDir(home, cwd), sessionId);
+/** ~/.<grok|vktr>/sessions/<enc-cwd>/<id> — the grok session path IS this directory. */
+export function grokSessionDir(home, cwd, sessionId, source = "grok") {
+  return join(grokWorkspaceDir(home, cwd, source), sessionId);
 }
 
 /** The appended file inside a grok session dir (its freshness/probe target). */

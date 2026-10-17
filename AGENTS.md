@@ -26,3 +26,5 @@ Step 4 only works if step 2 happened. If you skipped step 2, go back now — you
 <!-- facts:end -->
 
 Indexing and search performance tests combine **single-file filler micro-benchmarks** (hot-path skip/parse) with a **shared ~3000-session pipeline corpus** (`test/sessions/index-search-pipeline-perf.test.js`). Never run 32k separate files or bulk SQLite inserts per test. Hot-path indexer perf: `session-index-jsonl.test.js`, `scan-queries.test.js`, parse `*(perf)*` tests. Rust batch: `cargo test test_build_index_synthetic_claude_batch_perf`.
+
+Grok-format agents — the Grok CLI (`grok`, `~/.grok`) and Viktor's fork vktr (`vktr`, `~/.vktr`) — share one code path. `GROK_FAMILY` / `isGrokFamily` / `grokFamilySourceForPath` in `src/sessions/session-layout.js` (Rust: `Source::Vktr` → `scan_grok_family` / `index_grok_family`) carry the agent id, home dir and binary; extend those instead of copying grok code. vktr facts live in `vktr.facts`.

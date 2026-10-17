@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **vktr support.** Sessions recorded by vktr, Viktor's fork of the Grok CLI, under `~/.vktr/sessions` are listed, parsed, indexed and searched as their own source `vktr`, with its own color. vktr runs can be launched and continued, live vktr sessions are detected from `~/.vktr/active_sessions.json`, `import ssh` copies `.vktr/sessions`, and `limits` lists vktr as unavailable. vktr uses the grok code paths, which now take the agent id, home dir and binary name as parameters.
+
 ### Fixed
 
 - Submit Codex follow-ups with one Send and interrupt generation with one Stop, keeping the run attached.

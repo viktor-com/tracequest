@@ -13,6 +13,7 @@ import { withOpenCodeDb } from "./session-discovery-paths.js";
 import { OPENCODE_TERM_INDEX_PART_TYPES_SQL } from "./session-index-opencode.js";
 import { tokenize } from "./search-tokenizer.js";
 import { getSearchIndex } from "./search-index.js";
+import { isGrokFamily } from "./session-layout.js";
 
 /** Hoisted scan patterns (global; String.matchAll resets lastIndex per call). */
 const RE_FILE_PATH = /"file_path":\s*"([^"]+)"/g;
@@ -629,7 +630,7 @@ function isCursorCloudScanSkippableLine(line, start, end) {
 function scanSkipLineForSource(source) {
   if (source === "codex") return isCodexIndexSkippableLine;
   if (source === "factory") return isFactoryScanSkippableLine;
-  if (source === "grok") return isGrokChatScanSkippableLine;
+  if (isGrokFamily(source)) return isGrokChatScanSkippableLine;
   if (source === "cursor-cloud") return isCursorCloudScanSkippableLine;
   return isClaudeProgressFillerLine;
 }
@@ -880,7 +881,7 @@ export function scanSessionForQuery(session, query, max = 3) {
   const source = session.source || "claude";
   try {
     if (source === "opencode") return scanOpenCodeForQuery(session, query, max);
-    if (source === "grok") return scanGrokForQuery(session.path, query, max);
+    if (isGrokFamily(source)) return scanGrokForQuery(session.path, query, max);
 
     const skipLine = scanSkipLineForSource(source);
     const cached = getCachedScanLines(session);
@@ -902,7 +903,7 @@ function scanSessionForQueries(session, queries, max = 3) {
   const source = session.source || "claude";
   if (queries.length === 0) return new Map();
   try {
-    if (source === "grok") return scanGrokForQueries(session.path, queries, max);
+    if (isGrokFamily(source)) return scanGrokForQueries(session.path, queries, max);
     if (source === "opencode") {
       return new Map(queries.map((query) => [query, scanSessionForQuery(session, query, max)]));
     }
