@@ -40,7 +40,7 @@ token chart shows input and output tokens for each turn, with markers for chapte
 starts and tool errors. Each chapter lists the prompt, the commands the agent ran,
 their output and any retries.
 
-**How to use it:** open a session and choose **view session**. Click a bar or a
+**How to use it:** open a session and choose **Analytics**, then **Open full page**. Click a bar or a
 chapter to open it. `node bin/tracequest.js latest --open` opens a report for
 your most recent session.
 [Rendering and export options](docs/cli-reference.md#cli-usage).

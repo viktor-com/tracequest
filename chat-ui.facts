@@ -33,3 +33,25 @@
   id: tpw1
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/chat-tool-rows.playwright.test.js
   tags: [spec, chat-ui, ui, tests, implemented]
+
+# run-view-navigation
+- label: the run view header (/run?session= and /run?id=) has exactly one control that opens analytics — the "Analytics" toggle #analyticsToggle, with no separate "view session" link beside it — and the full /view page is reached from the open panel's "Open full page" link, which carries the run view as from=; on /run?session= that link (and the watch card's "Open full session view") points at /view?path=<recording>&from=/run?session=<hash>
+  id: rvn1
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'one analytics control' test/browser/run-view-navigation.playwright.test.js
+  tags: [spec, chat-ui, run-view-nav, ui, tests, implemented]
+- label: opening the analytics panel from the run view by click or by the idle A key (no form field focused) pushes one history entry with ?analytics=1: browser Back closes the panel and stays on the same run view, Forward reopens it, and the panel's close control, Escape and the toggle each close it and return focus to the toggle; a run view loaded with ?analytics=1 opens the panel without adding a history entry
+  id: rvn2
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'panel back paths' test/browser/run-view-navigation.playwright.test.js
+  tags: [spec, chat-ui, run-view-nav, ui, tests, implemented]
+- label: the served /view page opened with from=/run?… shows a "← Back to chat" link to that run view in place of "← Runs"; Escape on that page with no form field focused, no chapter keyboard-focused and no overlay open goes back to the run view, browser Back from it lands on the run view, and a from= that is not a same-origin /run? path is ignored (the page keeps "← Runs")
+  id: rvn3
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'full page back paths' test/browser/run-view-navigation.playwright.test.js
+  tags: [spec, chat-ui, run-view-nav, ui, tests, implemented]
+- label: at 760px and below the open analytics panel covers the chat column at full width (the chat is not squeezed beside it) and its close control reads "← Chat"; at 390px neither the run view nor the open panel scrolls horizontally
+  id: rvn4
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'narrow analytics' test/browser/run-view-navigation.playwright.test.js
+  tags: [spec, chat-ui, run-view-nav, ui, tests, implemented]
+- label: before its first poll response the run view shows a "Loading conversation" marker in the activity slot instead of a blank column, the marker is replaced once the conversation paints, and the keyboard-shortcuts cheatsheet lists A as show or hide analytics
+  id: rvn5
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'loading and cheatsheet' test/browser/run-view-navigation.playwright.test.js
+  tags: [spec, chat-ui, run-view-nav, ui, tests, implemented]

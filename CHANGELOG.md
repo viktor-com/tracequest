@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Give the run view one way into analytics and a way back out. The header's "analytics" and "view session" buttons, which opened the same panel, are now one **Analytics** button (also the `A` key). Browser Back and Escape close the panel; below 760px it covers the chat and leads back with "← Chat". The full page it opens shows "← Back to chat", and Escape there returns to the chat too. The header no longer wraps into six lines on a phone, and the conversation says "Loading conversation" instead of staying blank while it loads.
+
 ## [0.5.0] - 2026-10-18
 
 ### Added
