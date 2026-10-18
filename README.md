@@ -4,8 +4,8 @@
 
 TraceQuest is a local web app and CLI for reading coding-agent sessions. It shows
 each session's messages, tool calls, errors, timing and token usage. It reads
-sessions from Claude Code, Codex CLI, Cursor, Droid (Factory), OpenCode, Grok CLI and
-vktr (Viktor's fork of the Grok CLI).
+sessions from Claude Code, Codex CLI, Cursor, Droid (Factory), OpenCode, Grok CLI,
+vktr (Viktor's fork of the Grok CLI), fx (Vercel's coding agent) and DeepSeek Harness.
 It can also import Cursor Cloud Agent sessions and copy sessions from other
 machines over SSH.
 

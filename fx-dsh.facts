@@ -1,0 +1,67 @@
+# fx and DeepSeek Harness
+
+## format
+- label: fx (vercel-labs/fx 0.0.14) records each session as a directory ~/.fx/sessions/<id>/ holding session.json (id, workspace_root, created_at_ms, model, title, subagent_child) and events.jsonl, one {schema_version, seq, timestamp_ms, event} row per line whose event object is keyed by its kind (user, assistant, tool_call, tool_result, turn_completed, interrupted); a turn's rows are written together when the turn ends, and while a turn runs the directory holds owner.live and recovery.json (checkpoint.user.text is the in-flight prompt); a subagent child has subagent/owner.json naming its parent_id (verified against real fx sessions on 2026-10-18)
+  id: fxfmt
+  tags: [spec, fx, implemented]
+- label: DeepSeek Harness (@deepseek-ai/dsh 0.2.0-rc.2, binary dsh) records each session as ~/.dsh/sessions/<cwd slug>/<session dir>/session.v4.jsonl.zstd (session-<uuid> for CLI runs, a bare <uuid> for ACP sessions), JSONL appended as one zstd frame per write; the first row is {type session, id, createdAt, cwd} and later rows carry type, seq, time (epoch ms) and data — user/message (data.source.kind user for prompts; runtime-context and skill-catalog for injected context), assistant/message (data.message.content text, reasoning and tool-call parts; data.usage inputTokens, outputTokens, cacheReadTokens; data.message.source.model), tool/call, tool/result (data.message.toolCallId, content text, isError), turn/start and turn/end (verified against real dsh sessions on 2026-10-18)
+  id: dshfmt
+  tags: [spec, dsh, implemented]
+- label: readZstdFrames decodes every concatenated zstd frame of a file, where node's zstdDecompressSync stops after the first, and drops a truncated trailing frame (a write in progress) instead of failing
+  id: zstdfr
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'zstd frames' test/bin/fx-dsh-support.test.js
+  tags: [spec, dsh, implemented]
+
+## discovery
+- label: findSessions lists every ~/.fx/sessions/<id>/events.jsonl as one session with source fx, the events.jsonl file as its path and the session.json workspace_root as its project; a subagent child carries parentSession set to the parent_id from its subagent/owner.json
+  id: fxdis
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'fx sessions are discovered' test/bin/fx-dsh-support.test.js
+  tags: [spec, fx, implemented]
+- label: findSessions lists every ~/.dsh/sessions/<slug>/<session dir>/session.v4.jsonl.zstd (CLI session-<uuid> and ACP <uuid> dirs alike) as one session with source dsh, the .zstd file as its path and the session row's cwd as its project
+  id: dshdis
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'dsh sessions are discovered' test/bin/fx-dsh-support.test.js
+  tags: [spec, dsh, implemented]
+- label: the Rust sidecar maps a .fx/sessions root to Source::Fx and a .dsh/sessions root to Source::Dsh, scans them into the same rows as the JS discovery (path, project, source, parentSession), lists fx and dsh in KNOWN_SOURCES and indexes both formats, decoding dsh's multi-frame zstd with the pure-Rust ruzstd crate
+  id: fxdsrs
+  command: cd sidecar && cargo test fx_dsh
+  tags: [spec, fx, dsh, sidecar, implemented]
+
+## parse
+- label: parseSession on an fx events.jsonl returns source fx with the session id, cwd and model from session.json, every user prompt, assistant text, tool calls with their parsed arguments each followed by its result (a shell result shows its output and exit code; status failure or a nonzero exit code marks it an error), event timestamps from each turn's turn_summary start and end, and turn_completed token_progress input and output tokens on the turn's last assistant message
+  id: fxpar
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'fx session parses' test/bin/fx-dsh-support.test.js
+  tags: [spec, fx, implemented]
+- label: while an fx turn runs (owner.live present and no older than events.jsonl, so an imported copy's stale marker does not count), parseSession adds the in-flight prompt from recovery.json after the recorded turns, so a live fx session shows what it is working on
+  id: fxinf
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'fx in-flight prompt' test/bin/fx-dsh-support.test.js
+  tags: [spec, fx, implemented]
+- label: parseSession on a dsh .zstd recording returns source dsh with the session id, cwd and model, user prompts only from user/message rows whose source kind is user, assistant text, tool calls with parsed arguments each followed by its result (isError or a nonzero [exit code N] marker marks it an error), row timestamps, and each assistant message's usage as tokens whose input counts cache reads (as Claude's do) beside output and cache-read tokens
+  id: dshpar
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'dsh session parses' test/bin/fx-dsh-support.test.js
+  tags: [spec, dsh, implemented]
+- label: the fx and dsh parsers reproduce a real session of each harness (scrubbed fixtures under test/fixtures/fx-dsh) — prompts, assistant messages, tool calls and results, failed calls and tokens match the recording
+  id: fxdsre
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'real recording' test/bin/fx-dsh-support.test.js
+  tags: [spec, fx, dsh, implemented]
+
+## index
+- label: indexSession dispatches fx and dsh to their own indexers, KNOWN_SESSION_SOURCES includes both, and the index entry carries the first prompt, model, message counts, tool counts, errors and tokens that the parse reports; peekSession and the search scan read both formats, and /api/search finds a phrase that only an fx or a dsh session contains with the matching result source
+  id: fxdsix
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'fx and dsh index|fx and dsh search' test/bin/fx-dsh-support.test.js
+  tags: [spec, fx, dsh, search, implemented]
+
+## live
+- label: live detection probes fx and dsh processes by binary name like the other external agents; a probed process's cwd maps to that agent's newest recording for the cwd, which is live while it shows an open turn — fx while its turn runs (owner.live present and no older than events.jsonl), dsh while its last turn/start has no turn/end
+  id: fxdsli
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'fx and dsh live' test/bin/fx-dsh-support.test.js
+  tags: [spec, fx, dsh, live, implemented]
+
+## surfaces
+- label: import ssh copies .fx/sessions and .dsh/sessions from each remote home, and imported fx and dsh sessions are discovered under the host like local ones
+  id: fxdssh
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'fx and dsh import ssh' test/bin/fx-dsh-support.test.js
+  tags: [spec, fx, dsh, ssh-import, implemented]
+- label: fx and dsh have their own UI hue (--hue-fx and --hue-dsh in light and dark tokens, sourceHueVar, SOURCE_COLORS in app chrome, the dashboard client and compare metrics), session paths under ~/.fx and ~/.dsh are recognised as agent sessions, hub config accepts both sources, and CLI help, README, docs/cli-reference.md and CHANGELOG name fx and DeepSeek Harness
+  id: fxdssu
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'fx and dsh surfaces' test/bin/fx-dsh-support.test.js
+  tags: [spec, fx, dsh, implemented]

@@ -39,6 +39,7 @@ import {
 } from "../parse/parse-factory.js";
 import { collapseWhitespace, isDisplayableUserText, truncateFirstPrompt } from "../parse/parse-utils.js";
 import { isGrokFamily } from "./session-layout.js";
+import { indexDsh, indexFx } from "./session-index-fx-dsh.js";
 import { parseJsonlLine, forEachPartialJsonlLine } from "../parse/jsonl-read.js";
 import { accumulateTermFreqs, TOKENIZER_INPUT_CAP } from "./search-tokenizer.js";
 import { withOpenCodeDb } from "./session-discovery-paths.js";
@@ -73,7 +74,14 @@ export function peekSession(session) {
   if (source === "cursor") return peekCursor(filePath, fileSize);
   if (source === "cursor-cloud") return peekCursorCloud(filePath, fileSize);
   if (source === "factory") return peekFactory(filePath, fileSize);
+  if (source === "fx") return peekFromIndex(indexFx(filePath));
+  if (source === "dsh") return peekFromIndex(indexDsh(filePath));
   return peekClaude(filePath, fileSize);
+}
+
+/** fx and dsh peek through their indexers: one read of the recording yields every peek field. */
+function peekFromIndex(meta) {
+  return { firstPrompt: meta.firstPrompt, model: meta.model, termFreqs: meta.termFreqs || null, tools: meta.tools };
 }
 
 export function peekCursor(filePath, fileSize) {

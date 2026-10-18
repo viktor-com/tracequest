@@ -1,12 +1,13 @@
 import { existsSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { resolve, join } from "node:path";
+import { basename, resolve, join } from "node:path";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
 import { isOpenCodeSessionId, parseOpenCodeUri, resolveCursorCloudRoot, resolveHostsRoot } from "../sessions/session-discovery-paths.js";
+import { isDshRecordingFile } from "../sessions/session-layout.js";
 
 /** Agent config dirs under $HOME that may contain session logs (trailing slash). */
 export function agentSessionRootPrefixes(home = homedir()) {
-  return [".claude", ".codex", ".cursor", ".factory", ".grok", ".vktr"].map((dir) => `${home}/${dir}/`);
+  return [".claude", ".codex", ".cursor", ".factory", ".grok", ".vktr", ".fx", ".dsh"].map((dir) => `${home}/${dir}/`);
 }
 
 /**
@@ -67,6 +68,8 @@ export function sourceForSessionPath(p) {
   if (s.includes("/.factory/")) return "factory";
   if (s.includes("/.vktr/")) return "vktr";
   if (s.includes("/.grok/")) return "grok";
+  if (s.includes("/.fx/sessions/")) return "fx";
+  if (s.includes("/.dsh/sessions/")) return "dsh";
   try {
     if (s.startsWith(cursorCloudRootPrefix())) return "cursor-cloud";
   } catch {
@@ -97,12 +100,14 @@ export function isSessionPath(p) {
   const prefixes = [...agentSessionRootPrefixes(canonicalHome()), cursorCloudRootPrefix(), hostsRootPrefix()];
   if (!prefixes.some((prefix) => canonical.startsWith(prefix))) return false;
   // Beyond the directory allowlist, require the target to actually be a session:
-  // a .jsonl log (Claude/Codex/Factory) or a Grok session directory (which holds
-  // chat_history.jsonl). This rejects unrelated files under those dirs such as
-  // ~/.claude/.credentials.json or settings.json.
+  // a .jsonl log (Claude/Codex/Factory/fx), a Grok session directory (which holds
+  // chat_history.jsonl) or a DeepSeek Harness session.v<N>.jsonl.zstd. This
+  // rejects unrelated files under those dirs such as ~/.claude/.credentials.json
+  // or settings.json.
   try {
     const st = statSync(canonical);
     if (st.isDirectory()) return existsSync(join(canonical, "chat_history.jsonl"));
+    if (canonical.includes("/.dsh/sessions/") && isDshRecordingFile(basename(canonical))) return true;
     return canonical.endsWith(".jsonl");
   } catch (err) {
     if (!isIndexDiskExpectedErr(err)) {

@@ -4,7 +4,9 @@ import { homedir } from "node:os";
 import { isScanSkippableErr } from "../utils/fs-expected-err.js";
 import { claudeSubagentsDirFromSessionDir, listClaudeSubagentJsonlFiles } from "./claude-subagents.js";
 import { discoverCodexSessionMeta } from "../parse/parse-codex.js";
-import { projectLabel, shortenProjectPath } from "../server/server-session-path.js";
+import { readFxParentId, readFxSessionMeta } from "../parse/parse-fx.js";
+import { readDshSessionRow } from "../parse/parse-dsh.js";
+import { normalizeProjectFolder, projectLabel, shortenProjectPath } from "../server/server-session-path.js";
 import { openOpenCodeDbAtPath, openCodeDbMtimeMs, resolveOpenCodeDbPath, resolveCursorCloudRoot, listImportedHosts, openCodeUri } from "./session-discovery-paths.js";
 import {
   CURSOR_TRANSCRIPTS_DIR,
@@ -13,9 +15,13 @@ import {
   codexSessionsRoot,
   cursorMainRecording,
   cursorProjectsRoot,
+  dshSessionsRoot,
   factorySessionsRoot,
+  FX_EVENTS_FILE,
+  fxSessionsRoot,
   grokSessionsRoot,
   isCodexRolloutFile,
+  isDshRecordingFile,
   vktrSessionsRoot,
 } from "./session-layout.js";
 
@@ -35,6 +41,8 @@ export function getDiscoveryPaths() {
     factoryDir: factorySessionsRoot(home),
     grokDir: grokSessionsRoot(home),
     vktrDir: vktrSessionsRoot(home),
+    fxDir: fxSessionsRoot(home),
+    dshDir: dshSessionsRoot(home),
     openCodeDb: resolveOpenCodeDbPath(home),
   };
 }
@@ -48,6 +56,8 @@ function filesystemRootsForHome(home) {
     factorySessionsRoot(home),
     grokSessionsRoot(home),
     vktrSessionsRoot(home),
+    fxSessionsRoot(home),
+    dshSessionsRoot(home),
     resolveOpenCodeDbPath(home),
   ];
 }
@@ -72,6 +82,8 @@ export function discoveryRoots() {
     p.factoryDir,
     p.grokDir,
     p.vktrDir,
+    p.fxDir,
+    p.dshDir,
     p.openCodeDb,
     ...extraHostDiscoveryRoots(),
   ];
@@ -155,6 +167,8 @@ function discoveryPathsForHome(home, host = null) {
     factoryDir: factorySessionsRoot(home),
     grokDir: grokSessionsRoot(home),
     vktrDir: vktrSessionsRoot(home),
+    fxDir: fxSessionsRoot(home),
+    dshDir: dshSessionsRoot(home),
     openCodeDb: resolveOpenCodeDbPath(home),
     host,
   };
@@ -168,6 +182,8 @@ export function discoverSessions(projectFilter, out = []) {
   findFactorySessions(projectFilter, out, paths);
   findGrokSessions(projectFilter, out, paths);
   findVktrSessions(projectFilter, out, paths);
+  findFxSessions(projectFilter, out, paths);
+  findDshSessions(projectFilter, out, paths);
   findCursorCloudSessions(projectFilter, out, paths);
   findOpenCodeSessions(projectFilter, out, paths);
   // Imported SSH hosts: walk mirrored filesystem trees plus OpenCode DBs.
@@ -180,6 +196,8 @@ export function discoverSessions(projectFilter, out = []) {
     findFactorySessions(projectFilter, out, hostPaths);
     findGrokSessions(projectFilter, out, hostPaths);
     findVktrSessions(projectFilter, out, hostPaths);
+    findFxSessions(projectFilter, out, hostPaths);
+    findDshSessions(projectFilter, out, hostPaths);
     findOpenCodeSessions(projectFilter, out, hostPaths);
   }
   return out;
@@ -370,6 +388,59 @@ export function findGrokSessions(projectFilter, out = [], paths = getDiscoveryPa
 /** vktr (Viktor's Grok CLI fork) sessions: the grok layout under ~/.vktr/sessions. */
 export function findVktrSessions(projectFilter, out = [], paths = getDiscoveryPaths()) {
   return findGrokSessions(projectFilter, out, paths, "vktr");
+}
+
+/**
+ * fx sessions: every ~/.fx/sessions/<id>/events.jsonl, the project from its
+ * session.json workspace_root; a subagent child names its parent session.
+ */
+export function findFxSessions(projectFilter, out = [], paths = getDiscoveryPaths()) {
+  const root = paths.fxDir;
+  if (!root) return out;
+  for (const entry of readDirEntries(root)) {
+    const dir = join(root, entry.name);
+    if (!dirEntryIsDirectory(dir, entry)) continue;
+    const eventsPath = join(dir, FX_EVENTS_FILE);
+    const stat = statEntry(eventsPath);
+    if (!stat?.isFile()) continue;
+    const meta = readFxSessionMeta(eventsPath);
+    const cwd = meta.workspace_root || meta.origin_workspace_root || "";
+    const project = cwd ? normalizeProjectFolder(cwd) : "fx";
+    if (projectFilter && !project.includes(projectFilter) && !cwd.includes(projectFilter)) continue;
+    const row = { path: eventsPath, project, file: entry.name, size: stat.size, mtime: stat.mtime, source: "fx" };
+    const parent = meta.subagent_child ? readFxParentId(dir) : null;
+    if (parent) row.parentSession = parent;
+    out.push(row);
+  }
+  return out;
+}
+
+/**
+ * DeepSeek Harness sessions: ~/.dsh/sessions/<cwd slug>/<session dir>/ holds
+ * one session.v<N>.jsonl.zstd recording; the project is its session row's cwd.
+ * The dir is session-<uuid> for CLI runs and a bare <uuid> for ACP sessions.
+ */
+export function findDshSessions(projectFilter, out = [], paths = getDiscoveryPaths()) {
+  const root = paths.dshDir;
+  if (!root) return out;
+  for (const wsEntry of readDirEntries(root)) {
+    const wsDir = join(root, wsEntry.name);
+    if (!dirEntryIsDirectory(wsDir, wsEntry)) continue;
+    for (const entry of readDirEntries(wsDir)) {
+      const dir = join(wsDir, entry.name);
+      if (!dirEntryIsDirectory(dir, entry)) continue;
+      const name = readDirEntries(dir).map((e) => e.name).filter(isDshRecordingFile).sort().pop();
+      if (!name) continue;
+      const full = join(dir, name);
+      const stat = statEntry(full);
+      if (!stat?.isFile()) continue;
+      const cwd = readDshSessionRow(full).cwd || "";
+      const project = cwd ? normalizeProjectFolder(cwd) : "dsh";
+      if (projectFilter && !project.includes(projectFilter) && !cwd.includes(projectFilter)) continue;
+      out.push({ path: full, project, file: entry.name, size: stat.size, mtime: stat.mtime, source: "dsh" });
+    }
+  }
+  return out;
 }
 
 export function findOpenCodeSessions(projectFilter, out = [], paths = getDiscoveryPaths()) {

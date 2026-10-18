@@ -1,0 +1,6 @@
+<path>test_calc.py</path>
+<content>
+1	from calc import add
+2	assert add(2, 3) == 5
+3	print("ok")
+</content>

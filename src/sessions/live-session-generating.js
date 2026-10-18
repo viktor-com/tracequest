@@ -1,8 +1,10 @@
 import { closeSync, fstatSync, openSync, readFileSync, readdirSync, readSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { forEachJsonlLine, parseJsonlLine } from "../parse/jsonl-read.js";
 import { isIndexDiskExpectedErr, isProcRaceErr } from "../utils/fs-expected-err.js";
 import { openOpenCodeDbReadOnly } from "./session-discovery-paths.js";
+import { fxTurnRunning } from "../parse/parse-fx.js";
+import { forEachDshRow } from "../parse/parse-dsh.js";
 
 /** Last bytes of a JSONL used to classify generating vs idle. The opening token may have aged out. */
 const TAIL_BYTES = 131072;
@@ -516,6 +518,16 @@ export function openCodeSessionIsGenerating(uri, home) {
   }
 }
 
+/** True when a dsh recording's last turn/start has no turn/end after it. */
+export function dshSessionIsGenerating(path) {
+  let open = false;
+  forEachDshRow(path, (row) => {
+    if (row.type === "turn/start") open = true;
+    else if (row.type === "turn/end") open = false;
+  });
+  return open;
+}
+
 /** True when the mapped recording currently shows a generating or tool-executing turn. */
 export function recordingIsGenerating(source, path, extra = {}) {
   if (!path) return false;
@@ -527,6 +539,9 @@ export function recordingIsGenerating(source, path, extra = {}) {
     case "codex": return jsonlPathIsGenerating(path, codexJsonlIsGenerating);
     case "factory": return jsonlPathIsGenerating(path, factoryJsonlIsGenerating);
     case "opencode": return openCodeSessionIsGenerating(path, extra.home);
+    // fx writes a turn when it ends; owner.live marks one in progress.
+    case "fx": return fxTurnRunning(dirname(path));
+    case "dsh": return dshSessionIsGenerating(path);
     default: return false;
   }
 }

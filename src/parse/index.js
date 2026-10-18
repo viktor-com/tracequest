@@ -15,6 +15,8 @@ import { sep } from "node:path";
 import { parseClaude, parseCursor, parseCursorCloud } from "./parse-claude.js";
 import { parseCodex } from "./parse-codex.js";
 import { parseFactory } from "./parse-factory.js";
+import { parseFx } from "./parse-fx.js";
+import { parseDsh } from "./parse-dsh.js";
 import { parseGrok } from "./parse-grok.js";
 import { parseOpenCode } from "./parse-opencode.js";
 import { attachSessionHash } from "../sessions/session-hash.js";
@@ -36,6 +38,8 @@ export function parseSession(filePath, source, opts = {}) {
       case "grok":
       case "vktr": session = parseGrok(filePath, source); break;
       case "opencode": session = parseOpenCode(filePath); break;
+      case "fx": session = parseFx(filePath); break;
+      case "dsh": session = parseDsh(filePath); break;
       default: session = parseClaude(filePath); break;
     }
   } finally {
@@ -60,5 +64,7 @@ function detectSource(filePath) {
   if (filePath.includes(".factory/")) return "factory";
   if (filePath.includes(".vktr/")) return "vktr";
   if (filePath.includes(".grok/")) return "grok";
+  if (filePath.includes(".fx/sessions/")) return "fx";
+  if (filePath.includes(".dsh/sessions/")) return "dsh";
   return "claude";
 }

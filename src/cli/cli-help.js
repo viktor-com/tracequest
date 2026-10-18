@@ -258,7 +258,7 @@ ${k.bold("Examples:")}
   tracequest serve --port 8888 --filter tracequest
   tracequest presets
 
-${k.dim("Supported agents: Claude Code, Codex CLI, Droid/Factory, OpenCode, Grok CLI, vktr")}`;
+${k.dim("Supported agents: Claude Code, Codex CLI, Droid/Factory, OpenCode, Grok CLI, vktr, fx, DeepSeek Harness")}`;
 }
 
 export function showHelp() {

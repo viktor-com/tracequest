@@ -76,7 +76,7 @@ export const CORE_SHELL_JS = `
 
   function renderHeader() {
     const s = session.stats;
-    const sourceColors = { claude: '#a78bfa', codex: '#59d4a0', cursor: '#c4e86b', 'cursor-cloud': '#4dd0e1', factory: '#e0c45e', opencode: '#6ba4e8', grok: '#f07070', vktr: '#e07aa8' };
+    const sourceColors = { claude: '#a78bfa', codex: '#59d4a0', cursor: '#c4e86b', 'cursor-cloud': '#4dd0e1', factory: '#e0c45e', opencode: '#6ba4e8', grok: '#f07070', vktr: '#e07aa8', fx: '#94a3b8', dsh: '#7b8cf7' };
     const srcHue = sourceColors[session.source] ? 'var(--hue-' + session.source + ', ' + sourceColors[session.source] + ')' : 'var(--hue-other)';
     const srcBadge = session.source
       ? h('span', { className: 'header-agent', style: '--hue:' + srcHue }, session.source)
