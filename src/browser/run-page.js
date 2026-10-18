@@ -1495,8 +1495,7 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
 
      followTail remembers that the user is at the conversation end
      (idle leftover-snap frame counts). Sample it BEFORE live chrome
-     CSS (activity min-height + col padding) or prior-turn parking
-     changes scrollHeight — otherwise isAtBottom() goes false and
+     CSS (activity min-height + col padding) changes scrollHeight — otherwise isAtBottom() goes false and
      Planning next moves sits below the fold. ---- */
   var followTail = true;
   var pinningTail = false;
@@ -1799,120 +1798,6 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     var i;
     for (i = 0; i < parked.length; i++) unparkNode(parked[i]);
   }
-  function parkNode(el) {
-    if (!el) return;
-    el.style.maxHeight = "0px";
-    el.style.height = "0px";
-    el.style.minHeight = "0px";
-    el.style.overflow = "hidden";
-    el.style.marginTop = "0px";
-    el.style.marginBottom = "0px";
-    el.style.paddingTop = "0px";
-    el.style.paddingBottom = "0px";
-    el.style.borderWidth = "0px";
-    el.removeAttribute("data-trail");
-    el.setAttribute("data-contained", "parked");
-    var body = el.querySelector(".chat-tool-body");
-    if (body) {
-      body.style.height = "0px";
-      body.style.maxHeight = "0px";
-      body.style.padding = "0";
-      body.style.overflow = "hidden";
-      body.style.border = "none";
-      body.style.margin = "0";
-    }
-  }
-  // This turn starts at the first live-work event after leftover-snap.
-  // Later assistant events accumulate on the fold — ls | head stays
-  // when find / rg leftover arrive.
-  // A completed measure-append with no following assistant/output is
-  // a prior event once later tool_use arrives — not this turn. The
-  // last completed assistant (dump + named file) parks; this-turn
-  // cards grow in place.
-  function thisTurnEventIndex() {
-    var blocks = lastBlocks || [];
-    var lastUser = -1;
-    var lastAsst = -1;
-    var firstLive = -1;
-    var i;
-    for (i = 0; i < blocks.length; i++) {
-      var b = blocks[i];
-      if (b.kind === "user") lastUser = i;
-      if (b.kind === "text" || b.kind === "thought" || b.kind === "tool" || b.kind === "errnote") {
-        if (typeof b.eventIndex === "number") lastAsst = b.eventIndex;
-      }
-      if (b.kind === "tool" && b.running && typeof b.eventIndex === "number") {
-        if (firstLive < 0) firstLive = b.eventIndex;
-      }
-    }
-    // Skip leftover-snap dump + its completed named-output tools,
-    // then tool-less completed assistants. Remaining events are
-    // this turn and must stay as later assistants land.
-    var i0 = lastUser + 1;
-    while (i0 < blocks.length && blocks[i0].kind === "thought") i0++;
-    if (i0 < blocks.length && blocks[i0].kind === "text") {
-      var dumpEv = blocks[i0].eventIndex;
-      i0++;
-      var hadOutput = false;
-      while (i0 < blocks.length && blocks[i0].eventIndex === dumpEv) {
-        if (blocks[i0].kind === "tool" && blocks[i0].res) hadOutput = true;
-        i0++;
-      }
-      if (hadOutput) {
-        while (i0 < blocks.length) {
-          var ev = blocks[i0].eventIndex;
-          if (typeof ev !== "number") break;
-          var j = i0;
-          var hasTools = false;
-          while (j < blocks.length && blocks[j].eventIndex === ev) {
-            if (blocks[j].kind === "tool") hasTools = true;
-            j++;
-          }
-          if (hasTools) break;
-          if (blocks[i0].kind !== "text" && blocks[i0].kind !== "thought") break;
-          i0 = j;
-        }
-      }
-    }
-    for (i = i0; i < blocks.length; i++) {
-      if (typeof blocks[i].eventIndex === "number") return blocks[i].eventIndex;
-    }
-    if (firstLive >= 0) return firstLive;
-    return lastAsst;
-  }
-  // Live generating: keep this turn's cards under the prompt as they
-  // grow. Park every earlier event (dump, named file object, and
-  // the last completed assistant) at height 0 — not a 22px costume.
-  // Advertised bytes stay in the nodes so full-text / incremental
-  // stamps hold. This turn's tools and in-progress prose stay.
-  function parkPriorCompletedTurn() {
-    if (!chatThread) return;
-    var liveEv = thisTurnEventIndex();
-    var kids = chatThread.children;
-    var lastUser = -1;
-    var i;
-    for (i = 0; i < kids.length; i++) {
-      if (kids[i].classList.contains("chat-user")) lastUser = i;
-    }
-    var firstLive = -1;
-    for (i = lastUser + 1; i < kids.length; i++) {
-      var ev = parseInt(kids[i].getAttribute("data-event-index"), 10);
-      if (liveEv >= 0 && !isNaN(ev) && ev >= liveEv) {
-        firstLive = i;
-        break;
-      }
-    }
-    for (i = 0; i < kids.length; i++) {
-      var el = kids[i];
-      if (i <= lastUser) {
-        if (el.getAttribute("data-contained") === "parked") unparkNode(el);
-        continue;
-      }
-      var prior = firstLive >= 0 ? i < firstLive : false;
-      if (prior) parkNode(el);
-      else if (el.getAttribute("data-contained") === "parked") unparkNode(el);
-    }
-  }
   // Natural empty air is leftover #chatScroll under a short
   // prompt-anchored trail. Do not manufacture a fold-filling
   // #chatActivity min-height — that spacer turns pin-to-tail into
@@ -2108,13 +1993,11 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
   function containNamedOutput() {
     if (!chatScroll || !chatThread) return;
     if (lastState === "running") {
-      // Do not leftover-snap-uncap: an expanded previous fixture card
-      // or 511px assistant dump spends the fold. Park every prior
-      // assistant event off the fold so the first things under the
-      // prompt are this turn's tools, not leftover completed prose.
-      parkPriorCompletedTurn();
+      // Every earlier item of the turn stays in the thread at its natural
+      // height, so the conversation scrolls from the first prompt to the
+      // live tail. Collapsing them left only the prompt with nothing to scroll.
+      unparkAll();
       clearNewestProseLeftover(lastThreadEl(".chat-assistant"));
-      clearLeftoverScrollPad();
       sizeLiveAir();
       return;
     }
