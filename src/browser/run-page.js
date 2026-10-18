@@ -139,9 +139,12 @@ import {
   ANALYTICS_PANEL_HTML,
   ANALYTICS_PANEL_JS,
   ANALYTICS_TOGGLE_HTML,
+  analyticsPanelHtml,
 } from "./run-analytics-panel.js";
 
 const APPLY_THREAD_ITEMS_SRC = applyThreadItems.toString().replace(/^export /, "");
+/** The activity slot before the first poll paints: never a blank column. */
+const CHAT_LOADING_HTML = '<div class="chat-marker chat-loading"><span class="shimmer">Loading conversation</span></div>';
 /** Find box + Expand all above the thread; hidden until the transcript has tool calls to fold. */
 const CHAT_FIND_BAR_HTML = `<div class="chat-find-bar" id="chatFindBar" hidden>
     <div class="chat-find-inner">
@@ -2485,8 +2488,9 @@ ${APP_TOP_HTML}
       <a class="run-continued-from" id="continuedFrom" href="/view?id=${encodeURIComponent(resumedFrom)}" title="This run continues session ${esc(resumedFrom)} — open the original recording">&#8635;&#xFE0E; continued from ${esc(resumedFrom)}</a>` : ""}
       <span class="chat-top-spacer"></span>
       <span class="run-started" data-started="${esc(startedAt)}">started ${esc(startedAt)}</span>
+    </div>
+    <div class="chat-top-actions">
       ${ANALYTICS_TOGGLE_HTML}
-      <a class="run-view-link" id="viewSessionLink" title="Show this run's analytics" hidden>view session</a>
       <a class="run-back" href="/sessions">&larr; sessions</a>
     </div>
     <div class="session-stats chat-head-stats" id="chatStats" hidden></div>
@@ -2500,7 +2504,7 @@ ${CHAT_FIND_BAR_HTML}
   <div class="chat-scroll" id="chatScroll">
     <div class="chat-col">
       <div class="chat-thread" id="chatThread"></div>
-      <div class="chat-activity" id="chatActivity"></div>
+      <div class="chat-activity" id="chatActivity">${CHAT_LOADING_HTML}</div>
       <div class="run-banner" id="runBanner" hidden></div>
       <details class="chat-terminal" id="terminalDetails">
         <summary>raw terminal</summary>
@@ -2910,9 +2914,9 @@ ${CHAT_TRANSCRIPT_JS}
     if (data.sessionPath) {
       lastSessionPath = data.sessionPath;
       // Cross-link: the run's recording is a normal session — /view shows it.
-      var viewHref = "/view?path=" + encodeURIComponent(data.sessionPath);
+      var viewHref = "/view?path=" + encodeURIComponent(data.sessionPath) +
+        "&from=" + encodeURIComponent("/run?id=" + runId);
       viewSessionLink.href = viewHref;
-      viewSessionLink.hidden = false;
       var recLink = menuRecording.querySelector("a");
       if (!recLink) {
         recLink = document.createElement("a");
@@ -3562,7 +3566,8 @@ export function liveSessionPage({ session, readOnly = false } = {}) {
   const run = session.run || null;
   const continuable = Boolean(session.continuable);
   const agent = session.agent || null;
-  const viewHref = `/view?path=${encodeURIComponent(path)}`;
+  // The full page links back here (from=), so leaving the chat is reversible.
+  const viewHref = `/view?path=${encodeURIComponent(path)}&from=${encodeURIComponent(`/run?session=${hash}`)}`;
   const mdHref = `/markdown?path=${encodeURIComponent(path)}`;
   const statusWord = live ? "running" : "idle";
   const observerHeading = live ? "Watching a running session" : "Watching an idle session";
@@ -3602,9 +3607,9 @@ ${APP_TOP_HTML}
       <span class="session-project" title="${esc(path)}">${esc(prettyProject(project) || path.split("/").filter(Boolean).pop() || path)}</span>
       <span class="session-grade-badge run-grade" id="runGrade" hidden></span>
       <span class="run-origin" title="This session was started outside tracequest — its own terminal drives it">external</span>
-      <span class="chat-top-spacer"></span>
+    </div>
+    <div class="chat-top-actions">
       ${ANALYTICS_TOGGLE_HTML}
-      <a class="run-view-link" id="viewSessionLink" href="${esc(viewHref)}" title="Show this recording's analytics" data-analytics-label="${esc(hash)}">view session</a>
       <a class="run-back" href="/sessions">&larr; sessions</a>
     </div>
     <div class="session-stats chat-head-stats" id="chatStats" hidden></div>
@@ -3618,7 +3623,7 @@ ${CHAT_FIND_BAR_HTML}
   <div class="chat-scroll" id="chatScroll">
     <div class="chat-col">
       <div class="chat-thread" id="chatThread"></div>
-      <div class="chat-activity" id="chatActivity"></div>
+      <div class="chat-activity" id="chatActivity">${CHAT_LOADING_HTML}</div>
       <div class="run-banner" id="runBanner" hidden></div>
     </div>
   </div>
@@ -3681,7 +3686,7 @@ ${readOnly ? `
   <aside class="chat-output-pane" id="chatOutputPane" hidden></aside>
   </div>
     </main>
-    ${ANALYTICS_PANEL_HTML}
+    ${analyticsPanelHtml({ viewHref, label: hash })}
   </div>
 </div>
 ${LAUNCHER_MODAL_HTML}
@@ -3725,6 +3730,8 @@ ${CHAT_TRANSCRIPT_JS}
   /* watch-page activity marker: live shimmer, honest idle line */
   function activityHtml() {
     if (stopped) return "";
+    // Nothing fetched yet: say so, rather than "Not running" over an empty column.
+    if (!lastSession) return ${JSON.stringify(CHAT_LOADING_HTML)};
     if (lastState === "idle") {
       return markerHtml("Not running", "transcript preserved \\u2014 still watching for changes");
     }

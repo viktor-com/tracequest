@@ -28,8 +28,8 @@ tracequest ─┬─ Chat      /            rail of running + recent sessions �
 ```
 
 - Three sections, named the same everywhere: **Chat**, **Runs**, **Insights**. The top bar's section nav marks the current one with `aria-current="page"`. Compare and the session view belong to Runs.
-- Keyboard: `g c` Chat, `g r` Runs, `g i` Insights, `g d` Compare, `g v` View, `g n` New run; `s` or `/` search; ⌘K command menu; `j`/`k` step through lists and chapters; `?` lists every shortcut.
-- Exits go back to where the user came from: Compare and error pages link to Runs; the served session view shows `← Runs`. Exported and shared session files never show app navigation.
+- Keyboard: `g c` Chat, `g r` Runs, `g i` Insights, `g d` Compare, `g v` View, `g n` New run; `s` or `/` search; ⌘K command menu; `j`/`k` step through lists and chapters; `a` analytics in a chat; `?` lists every shortcut.
+- Exits go back to where the user came from: Compare and error pages link to Runs; the served session view shows `← Runs`, or `← Back to chat` when a chat opened it (`from=/run?…`). Exported and shared session files never show app navigation.
 
 ## The app shell
 
@@ -50,6 +50,8 @@ Every served page starts with the same top bar (`appTopHtml`): mark and wordmark
 **Insights.** Range control, scope field, headline tiles, then expandable rows that open onto the example sessions behind each figure.
 
 **Chat.** The rail on the left, one 760px reading column, the composer docked at the bottom. A live run ends on one slim composer (send or Stop); a finished one ends on the continue composer.
+
+The header has one way into analytics: the **Analytics** button (or `a`) docks the session view on the right. Opening it adds a history entry, so browser Back closes it; Escape and × close it too. Below 760px it covers the chat and its close control reads "← Chat". Its "Open full page" link opens `/view` with `from=` set, so that page leads back to the chat.
 
 The chat reads like Cursor's agent chat: your messages and the agent's replies are the column, and tool calls are folded. Consecutive calls of one kind become one row ("Read 4 files", "Ran 3 commands", "Edited app.ts +12 −3"). A click opens the group to one compact line per call, and a call to its full input and output (long output is cut at 12 lines behind "show more"). Thought blocks fold the same way. Folding never hides a failure: a failed call's row says "failed" and its group opens by default. "Expand all / Collapse all" above the thread is remembered in this browser. The find box (or `?q=`) opens and highlights the rows that hold a match, and `#tool-<id>` / `#event-<n>` link to one call.
 

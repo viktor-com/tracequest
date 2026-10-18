@@ -281,7 +281,12 @@ export const INTERACTIONS_NAV_JS = `
         return;
       }
       if (editing) return;
+      // Nothing left to dismiss on a page opened from a chat: Escape goes
+      // back to that chat, the same key that closes its analytics panel.
+      var backTo = focusedChapterIdx < 0 && !ev.defaultPrevented && window.parent === window &&
+        !(window.__tqOverlayStack && window.__tqOverlayStack.length) ? chatBackHref() : '';
       clearFocus();
+      if (backTo) location.href = backTo;
       return;
     }
 

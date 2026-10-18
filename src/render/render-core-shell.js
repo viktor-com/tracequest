@@ -5,6 +5,19 @@ const SUM_TOOL_COUNTS_JS = sumToolCounts.toString();
 export const CORE_SHELL_JS = `
   ${SUM_TOOL_COUNTS_JS}
 
+  /** The run view this served page was opened from (from=/run?…), or ''. */
+  function chatBackHref() {
+    var root = document.documentElement;
+    if (!root || !root.hasAttribute || !root.hasAttribute('data-tq-served')) return '';
+    try {
+      var raw = new URLSearchParams(location.search).get('from') || '';
+      if (!raw || raw.charAt(0) !== '/' || raw.charAt(1) === '/') return '';
+      var u = new URL(raw, location.origin);
+      if (u.origin !== location.origin || u.pathname !== '/run' || !u.search) return '';
+      return u.pathname + u.search + u.hash;
+    } catch (_) { return ''; }
+  }
+
   function readUrlState() {
     var params = new URLSearchParams(window.location.search);
     var hash = window.location.hash;
@@ -40,10 +53,13 @@ export const CORE_SHELL_JS = `
   }
 
   // The page's own URL keeps embed=1 so a reload inside the Runs flyout stays
-  // the compact embedded view; permalinks (buildFilterSearchParams) never carry it.
+  // the compact embedded view, and from= so it keeps its way back to the chat;
+  // permalinks (buildFilterSearchParams) never carry either.
   function pageSearchParams() {
     var base = buildFilterSearchParams();
-    if (new URLSearchParams(window.location.search).get('embed') === '1') base.set('embed', '1');
+    var own = new URLSearchParams(window.location.search);
+    if (own.get('embed') === '1') base.set('embed', '1');
+    if (own.get('from')) base.set('from', own.get('from'));
     return base;
   }
 
@@ -133,7 +149,11 @@ export const CORE_SHELL_JS = `
     // Markdown and Export are server routes, so only a served page offers them.
     const root = typeof document !== 'undefined' ? document.documentElement : null;
     const inApp = !!(root && root.hasAttribute && root.hasAttribute('data-tq-served'));
-    const backLink = inApp ? h('a', { className: 'header-back', href: '/sessions' }, '\u2190 Runs') : null;
+    // Opened from a chat (from=/run?…): the way back is that chat, not Runs.
+    const chatBack = chatBackHref();
+    const backLink = !inApp ? null : chatBack
+      ? h('a', { className: 'header-back', id: 'chatBackLink', href: chatBack, title: 'Back to the chat (Esc)' }, '\u2190 Back to chat')
+      : h('a', { className: 'header-back', href: '/sessions' }, '\u2190 Runs');
     // The run's first prompt is its name: what was asked, in the person's words.
     let promptText = '';
     try {

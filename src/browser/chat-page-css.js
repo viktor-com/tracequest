@@ -184,21 +184,36 @@ body { overflow: hidden; }
 
 /* ---- header ---- */
 .chat-top {
-  display: flex; flex-direction: column; gap: 4px; flex: none; min-width: 0;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "ident actions" "stats stats";
+  align-items: start; column-gap: 16px; row-gap: 4px; flex: none; min-width: 0;
   padding: 12px 24px; box-shadow: inset 0 -1px 0 var(--line-1);
 }
+.chat-top .chat-identity { grid-area: ident; min-height: 26px; }
+.chat-top .chat-head-stats { grid-area: stats; margin-top: 0; }
+.chat-top-actions { grid-area: actions; display: flex; align-items: center; gap: 12px; }
 .chat-top .session-top { gap: 8px 12px; }
 .run-started { font-size: var(--text-xs); color: var(--text-3); white-space: nowrap; }
 .run-back { color: var(--text-2); font-size: var(--text-sm); white-space: nowrap; }
 .run-back:hover { color: var(--text); }
-.run-view-link, .run-analytics-toggle {
-  display: inline-flex; align-items: center; height: 26px; padding: 0 11px; border-radius: var(--radius-pill);
+.run-analytics-toggle {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px 0 9px; border-radius: var(--radius-pill);
   font-size: var(--text-xs); color: var(--text-2); background: none; border: 0; box-shadow: inset 0 0 0 1px var(--line-2);
   white-space: nowrap; cursor: pointer; text-decoration: none; font-family: var(--font-sans);
   transition: background var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
 }
-.run-view-link:hover, .run-analytics-toggle:hover, .run-analytics-toggle[aria-expanded="true"] { background: var(--hover); color: var(--text); }
-.run-view-link[hidden] { display: none; }
+.run-analytics-toggle svg { flex: none; color: var(--text-3); }
+.run-analytics-toggle:hover { background: var(--hover); color: var(--text); }
+.run-analytics-toggle[aria-expanded="true"] { background: var(--surface-3); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-3); }
+.run-analytics-toggle[aria-expanded="true"] svg { color: var(--text); }
+.run-analytics-toggle:focus-visible, .run-back:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* Narrow: the identity keeps what tells runs apart (state, agent, id,
+   project); model, origin and start time live in analytics. */
+@media (max-width: 520px) {
+  .chat-top { padding: 10px 14px; }
+  .chat-top .session-top { gap: 6px 10px; }
+  .chat-top .session-model, .chat-top .run-origin, .chat-top .run-started { display: none; }
+}
+.chat-loading { margin-top: 18px; }
 .run-continued-from {
   display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: var(--radius-pill);
   font-size: 11px; color: var(--text-3); box-shadow: inset 0 0 0 1px var(--line-2); white-space: nowrap; text-decoration: none;
@@ -564,6 +579,8 @@ body[data-watch="session"][data-run-state="idle"]:not([data-live-tail="1"]) .obs
 body[data-watch="session"][data-run-state="idle"]:not([data-live-tail="1"]) .composer-status,
 body[data-watch="session"][data-run-state="idle"]:not([data-live-tail="1"]) .readonly-chip,
 body[data-watch="session"][data-run-state="idle"]:not([data-live-tail="1"]) .chat-activity { display: none; }
+/* ...except while the conversation is still loading: never a blank column. */
+body[data-watch="session"][data-run-state="idle"]:not([data-live-tail="1"]) .chat-activity:has(> .chat-loading) { display: block; }
 body[data-watch="session"][data-run-state="idle"] .chat-col { padding-bottom: 4px; }
 body[data-leftover-reading="1"] .chat-main { justify-content: flex-start; }
 body[data-leftover-reading="1"] #chatScroll { flex: 1; min-height: 0; margin-top: 0; }

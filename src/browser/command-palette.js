@@ -252,8 +252,9 @@ export const COMMAND_PALETTE_HTML = `${WORKSPACE_SEARCH_HTML}
         <tr><th><kbd>G</kbd> then <kbd>C</kbd> <kbd>R</kbd> <kbd>I</kbd> <kbd>D</kbd> <kbd>V</kbd> <kbd>N</kbd></th><td>Go to Chat, Runs, Insights, Compare, View, New run</td></tr>
         <tr><th><kbd>J</kbd> / <kbd>K</kbd></th><td>Next / previous in the current list</td></tr>
         <tr><th><kbd>O</kbd> or <kbd>Enter</kbd></th><td>Open focused item or toggle chapter</td></tr>
+        <tr><th><kbd>A</kbd></th><td>Show or hide analytics in a chat</td></tr>
         <tr><th><kbd>?</kbd> or <kbd>⌘/</kbd></th><td>Keyboard shortcuts</td></tr>
-        <tr><th><kbd>Esc</kbd></th><td>Close overlay or unfocus</td></tr>
+        <tr><th><kbd>Esc</kbd></th><td>Close overlay or analytics, unfocus, or go back to the chat</td></tr>
       </tbody>
     </table>
     <p class="tq-a11y-help">Deselect Character keys to turn off shortcuts that only use single characters like S, / and G then C. Shortcuts that use Control or Command are not affected.</p>
