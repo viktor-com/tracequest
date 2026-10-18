@@ -43,6 +43,10 @@
   id: fxdsre
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'real recording' test/bin/fx-dsh-support.test.js
   tags: [spec, fx, dsh, implemented]
+- label: fx and dsh prompts drop the leading <kandev-system> blocks Kandev puts ahead of a task's first prompt, in the parse, the JS index and the sidecar index alike, so a Kandev-run session lists and opens on the person's prompt
+  id: fxdskd
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'kandev preamble' test/bin/fx-dsh-support.test.js && cd sidecar && cargo test fx_dsh_kandev
+  tags: [spec, fx, dsh, implemented]
 
 ## index
 - label: indexSession dispatches fx and dsh to their own indexers, KNOWN_SESSION_SOURCES includes both, and the index entry carries the first prompt, model, message counts, tool counts, errors and tokens that the parse reports; peekSession and the search scan read both formats, and /api/search finds a phrase that only an fx or a dsh session contains with the matching result source
@@ -54,6 +58,10 @@
 - label: live detection probes fx and dsh processes by binary name like the other external agents; a probed process's cwd maps to that agent's newest recording for the cwd, which is live while it shows an open turn — fx while its turn runs (owner.live present and no older than events.jsonl), dsh while its last turn/start has no turn/end
   id: fxdsli
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'fx and dsh live' test/bin/fx-dsh-support.test.js
+  tags: [spec, fx, dsh, live, implemented]
+- label: the live session endpoint serves a dsh recording (sessionFreshnessPath is the .jsonl.zstd file itself, not a grok chat file inside it), and the data watchers count session.v<N>.jsonl.zstd writes and fx owner.live changes as session data changes
+  id: dshlve
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'dsh live endpoint' test/bin/fx-dsh-support.test.js
   tags: [spec, fx, dsh, live, implemented]
 
 ## surfaces

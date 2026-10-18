@@ -72,6 +72,9 @@ export function isRelevantDataFilename(filename) {
   return (
     filename.includes("chat_history") ||
     filename.endsWith(".jsonl") ||
+    // DeepSeek Harness appends to session.v<N>.jsonl.zstd; fx marks a running turn with owner.live.
+    filename.endsWith(".jsonl.zstd") ||
+    basename(filename) === "owner.live" ||
     filename.includes("opencode.db") ||
     basename(filename) === "active_sessions.json"
   );

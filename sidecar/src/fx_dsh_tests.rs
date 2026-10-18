@@ -156,3 +156,24 @@ fn fx_dsh_index_matches_the_js_indexer() {
     assert!(dsh.duration_ms > 15000 && dsh.duration_ms < 20000, "{}", dsh.duration_ms);
     assert!(!dsh.term_freqs.as_ref().unwrap().is_empty());
 }
+
+#[test]
+fn fx_dsh_kandev_preamble_is_not_the_first_prompt() {
+    let dir = std::env::temp_dir().join("tracequest_test_fx_dsh_kandev");
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    let preamble = "<kandev-system>KANDEV MCP TOOLS\\nKandev Task ID: t-1</kandev-system>\\n\\n";
+    fs::write(dir.join("session.json"), r#"{"id":"kandev","workspace_root":"/home/dev/calc"}"#).unwrap();
+    fs::write(
+        dir.join("events.jsonl"),
+        format!("{{\"seq\":1,\"timestamp_ms\":1,\"event\":{{\"user\":{{\"text\":\"{preamble}fix the flaky test\"}}}}}}\n"),
+    )
+    .unwrap();
+    assert_eq!(index_fx(&dir.join("events.jsonl")).first_prompt.as_deref(), Some("fix the flaky test"));
+    let dsh_row = format!(
+        "{{\"type\":\"user/message\",\"seq\":1,\"time\":2,\"data\":{{\"content\":[{{\"type\":\"text\",\"text\":\"{preamble}rename the module\"}}],\"source\":{{\"kind\":\"user\"}}}}}}\n"
+    );
+    fs::write(dir.join("session.v4.jsonl"), dsh_row).unwrap();
+    assert_eq!(index_dsh(&dir.join("session.v4.jsonl")).first_prompt.as_deref(), Some("rename the module"));
+    let _ = fs::remove_dir_all(&dir);
+}

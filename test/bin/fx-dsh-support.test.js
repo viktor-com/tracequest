@@ -23,6 +23,11 @@ import { createHandle } from "../../src/server/server-http.js";
 import { isImportedHostSession } from "../../src/sessions/session-discovery-paths.js";
 import { handleApiSearch } from "../../src/routes/route-handlers-api.js";
 import { resetIndexWritersForTests } from "../../src/sessions/index-writers.js";
+import { clearRunSessionMemo, handleApiSessionsLive } from "../../src/routes/route-handlers-launch.js";
+import { sessionFreshnessPath } from "../../src/sessions/run-session-link.js";
+import { isRelevantDataFilename } from "../../src/server/server-live-reload.js";
+import { sessionHash } from "../../src/sessions/session-hash.js";
+import { mockHttpResponse } from "../helpers/capture-json-handler.js";
 
 const ROOT = new URL("../../", import.meta.url).pathname;
 const FIXTURES = join(ROOT, "test/fixtures/fx-dsh");
@@ -246,6 +251,27 @@ test("real recording: fx and dsh fixtures parse to what the harness recorded", (
   assert.equal(dsh.stats.totalInputTokens, 7361 + 60288);
 });
 
+test("kandev preamble: fx and dsh prompts drop Kandev's <kandev-system> blocks", () => {
+  const preamble = "<kandev-system>KANDEV MCP TOOLS\nKandev Task ID: t-1</kandev-system>\n\n";
+  const fxDirK = join(home, "synthetic-fx", "kandev");
+  mkdirSync(fxDirK, { recursive: true });
+  writeFileSync(join(fxDirK, "session.json"), JSON.stringify({ id: "kandev", workspace_root: CWD }));
+  writeJsonl(join(fxDirK, "events.jsonl"), [
+    { seq: 1, timestamp_ms: 1000, event: { user: { text: `${preamble}fix the flaky test` } } },
+    { seq: 2, timestamp_ms: 1000, event: { turn_completed: { turn_summary: { started_at_ms: 900, completed_at_ms: 1000, turn_duration_ms: 100 } } } },
+  ]);
+  const fxPath = join(fxDirK, "events.jsonl");
+  assert.deepEqual(parseSession(fxPath, "fx").events.map((e) => e.text), ["fix the flaky test"]);
+  assert.equal(indexSession({ path: fxPath, source: "fx" }).firstPrompt, "fix the flaky test");
+
+  const dshPath = writeDshRecording(join(home, "synthetic-dsh", "kandev"), [
+    { type: "session", version: 4, id: "kandev", createdAt: 1, cwd: CWD },
+    { type: "user/message", seq: 1, time: 2, data: { content: [{ type: "text", text: `${preamble}rename the module` }], source: { kind: "user" }, role: "user" } },
+  ]);
+  assert.deepEqual(parseSession(dshPath, "dsh").events.map((e) => e.text), ["rename the module"]);
+  assert.equal(indexSession({ path: dshPath, source: "dsh" }).firstPrompt, "rename the module");
+});
+
 /* ── index, peek, search ──────────────────────────────────────────────── */
 
 test("fx and dsh index entries carry what the parse reports", () => {
@@ -355,6 +381,27 @@ test("fx and dsh live: a probed process maps to its cwd's recording while a turn
     rmSync(fxRun, { recursive: true, force: true });
     rmSync(join(home, ".dsh", "sessions", "-home-dev-live-dsh-"), { recursive: true, force: true });
   }
+});
+
+test("dsh live endpoint serves the recording and the watchers see dsh and fx writes", async () => {
+  assert.equal(sessionFreshnessPath(dshMainPath()), dshMainPath());
+  assert.equal(isRelevantDataFilename("session.v4.jsonl.zstd"), true);
+  assert.equal(isRelevantDataFilename(join("J1awiyS7sSqf", "owner.live")), true);
+  clearRunSessionMemo();
+  const row = discoverSessions(null, []).find((x) => x.path === dshMainPath());
+  const res = mockHttpResponse();
+  await handleApiSessionsLive(null, res, new URL(`http://localhost/api/sessions/live?id=${sessionHash(dshMainPath())}`), {
+    findSessions: () => [row],
+    detectLiveSessions: () => [],
+    parseSession,
+    buildSessionChapters: () => [],
+    muxAvailable: () => false,
+  });
+  assert.equal(res.status, 200, res.body);
+  const data = JSON.parse(res.body);
+  assert.equal(data.source, "dsh");
+  assert.equal(data.state, "idle");
+  assert.equal(data.session.events.filter((e) => e.type === "user").length, 2);
 });
 
 /* ── surfaces ─────────────────────────────────────────────────────────── */

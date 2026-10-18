@@ -1103,11 +1103,13 @@ export function resolveRunSessionPath(params, deps = {}) {
  * session directory (appends never touch the directory mtime), and the
  * opencode database file for opencode:// virtual sessions (the recording
  * IS a set of db rows; the db file's mtime moves when they grow — without
- * this mapping the live endpoint would 404 every opencode session).
+ * this mapping the live endpoint would 404 every opencode session). A DeepSeek
+ * Harness session.v<N>.jsonl.zstd is its own file too.
  */
 export function sessionFreshnessPath(sessionPath) {
   if (sessionPath.startsWith("opencode://")) return resolveOpenCodeDbPath(homedir());
-  return sessionPath.endsWith(".jsonl") ? sessionPath : join(sessionPath, GROK_CHAT_FILE);
+  if (sessionPath.endsWith(".jsonl") || sessionPath.endsWith(".jsonl.zstd")) return sessionPath;
+  return join(sessionPath, GROK_CHAT_FILE);
 }
 
 /** attrs that settle a persisted claim as identity (never re-guessed, bars the path elsewhere). */

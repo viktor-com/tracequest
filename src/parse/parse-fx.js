@@ -11,7 +11,7 @@
  */
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { capContent, parseToolArgs } from "./parse-utils.js";
+import { capContent, parseToolArgs, stripKandevContext } from "./parse-utils.js";
 import { forEachJsonlLineFromFile, parseJsonlLine } from "./jsonl-read.js";
 import { enrichToolEvent } from "./parse-enrich.js";
 import { buildSession } from "./parse-session-build.js";
@@ -159,7 +159,8 @@ export function parseFx(filePath, opts = {}) {
     forEachFxEvent(filePath, (kind, ev, row) => {
       if (kind === "user") {
         assistant = null;
-        const text = typeof ev.text === "string" ? ev.text.trim() : "";
+        // Kandev puts its <kandev-system> preamble ahead of the first prompt.
+        const text = typeof ev.text === "string" ? stripKandevContext(ev.text.trim()).trim() : "";
         if (text) turn.push({ type: "user", timestamp: null, text: capContent(text, 500), uuid: `fx-user-${n++}`, _ms: row.timestamp_ms });
       } else if (kind === "assistant") {
         const m = ev.provider_replay?.source?.model;

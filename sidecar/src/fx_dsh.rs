@@ -289,9 +289,20 @@ struct Acc {
     cache_read_tokens: i64,
 }
 
+/// The text after any leading <kandev-system> blocks Kandev puts ahead of a
+/// prompt (JS stripKandevContext).
+fn strip_kandev_context(text: &str) -> &str {
+    let mut value = text;
+    while value.starts_with("<kandev-system>") {
+        let Some(end) = value.find("</kandev-system>") else { break };
+        value = value[end + "</kandev-system>".len()..].trim_start();
+    }
+    value
+}
+
 impl Acc {
     fn add_prompt(&mut self, text: &str) {
-        let clean = text.replace('\n', " ");
+        let clean = strip_kandev_context(text.trim()).replace('\n', " ");
         let clean = clean.trim();
         if clean.is_empty() {
             return;
