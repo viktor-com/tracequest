@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Give the run view one way into analytics and a way back out. The header's "analytics" and "view session" buttons, which opened the same panel, are now one **Analytics** button (also the `A` key). Browser Back and Escape close the panel; below 760px it covers the chat and leads back with "← Chat". The full page it opens shows "← Back to chat", and Escape there returns to the chat too. The header no longer wraps into six lines on a phone, and the conversation says "Loading conversation" instead of staying blank while it loads.
+- fx and DeepSeek Harness sessions run from Kandev open on the task's prompt instead of Kandev's `<kandev-system>` tool preamble, in the list, the session view and search.
+- A DeepSeek Harness session's live chat page no longer reads "session gone": the live endpoint stats the `.jsonl.zstd` recording itself, and the data watchers count DeepSeek Harness writes and fx turn starts and ends as changes.
 
 ## [0.5.0] - 2026-10-18
 

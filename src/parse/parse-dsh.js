@@ -7,7 +7,7 @@
  * tool/call, tool/result, turn/start, turn/end and bookkeeping rows.
  */
 import { readFileSync } from "node:fs";
-import { capContent, parseToolArgs } from "./parse-utils.js";
+import { capContent, parseToolArgs, stripKandevContext } from "./parse-utils.js";
 import { forEachJsonlLine, parseJsonlLine } from "./jsonl-read.js";
 import { enrichToolEvent } from "./parse-enrich.js";
 import { buildSession } from "./parse-session-build.js";
@@ -107,7 +107,8 @@ export function parseDsh(filePath) {
         break;
       case "user/message": {
         if (!isDshPromptRow(row)) break;
-        const text = dshContentText(data.content).trim();
+        // Kandev puts its <kandev-system> preamble ahead of the first prompt.
+        const text = stripKandevContext(dshContentText(data.content).trim()).trim();
         if (text) events.push({ type: "user", timestamp: iso(row.time), text: capContent(text, 500), uuid: data.id || `dsh-user-${n++}` });
         break;
       }

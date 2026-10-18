@@ -9,7 +9,7 @@
  * stamps every row, so its duration is the active span over those rows.
  */
 import { normalizeToolName } from "../parse/parse-enrich.js";
-import { foldNewlines, truncateFirstPrompt } from "../parse/parse-utils.js";
+import { foldNewlines, stripKandevContext, truncateFirstPrompt } from "../parse/parse-utils.js";
 import { forEachFxEvent, fxToolCall, fxToolResultText, readFxSessionMeta } from "../parse/parse-fx.js";
 import { dshContentText, dshToolCall, dshToolResult, forEachDshRow, isDshPromptRow } from "../parse/parse-dsh.js";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
@@ -19,7 +19,7 @@ import { addActiveRecord, ASSISTANT, noteToolCall, OTHER, TOOL_RESULT, TOOL_WAIT
 const GIT_COMMIT_RE = /\bgit\b.*\bcommit\b/i;
 
 function addPrompt(state, text) {
-  const clean = foldNewlines(text).trim();
+  const clean = foldNewlines(stripKandevContext(String(text).trim())).trim();
   if (!clean) return;
   if (!state.firstPrompt) state.firstPrompt = truncateFirstPrompt(clean);
   state.chapters++;
