@@ -1495,8 +1495,9 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
 
      followTail remembers that the user is at the conversation end
      (idle leftover-snap frame counts). Sample it BEFORE live chrome
-     CSS (activity min-height + col padding) changes scrollHeight — otherwise isAtBottom() goes false and
-     Planning next moves sits below the fold. ---- */
+     CSS (activity min-height + col padding) changes scrollHeight —
+     otherwise isAtBottom() goes false and Planning next moves sits below
+     the fold. ---- */
   var followTail = true;
   var pinningTail = false;
   function isAtBottom() {
