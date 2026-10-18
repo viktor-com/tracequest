@@ -339,18 +339,6 @@ export function outputPreview(text, max) {
   return { text: s.slice(0, end), hidden: s.slice(end + 1).split("\n").length };
 }
 
-/**
- * The folded form of a long chat message: its first `maxLines` lines, cut to
- * `maxChars`, and whether anything was left out. A message within both
- * limits is returned whole with folded false.
- */
-export function messagePreview(text, maxLines, maxChars) {
-  var s = String(text).replace(/\s+$/, "");
-  var pv = outputPreview(s, maxLines);
-  var shown = pv.text.length > maxChars ? pv.text.slice(0, maxChars).replace(/\s+\S*$/, "") : pv.text;
-  return { text: shown, folded: shown.length < s.length };
-}
-
 /** The group's rendering of the page's open state: which of its rows and thoughts are open. */
 export function groupOpenState(group, st, query) {
   var hits = {};
