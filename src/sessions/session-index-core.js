@@ -7,6 +7,7 @@ import {
   indexGrokJsonl,
 } from "./session-index-jsonl.js";
 import { indexOpenCode } from "./session-index-opencode.js";
+import { indexDsh, indexFx } from "./session-index-fx-dsh.js";
 import { discoveryRoots, discoverSessions } from "./session-discovery.js";
 import { resolveHostsRoot, stampImportedHost } from "./session-discovery-paths.js";
 import { runSidecar, runSidecarAsync, sidecarAvailable } from "./index-writers.js";
@@ -22,6 +23,8 @@ const INDEX_SESSION_BY_SOURCE = new Map([
   ["grok", (session) => indexGrokJsonl(session.path, "grok")],
   ["vktr", (session) => indexGrokJsonl(session.path, "vktr")],
   ["opencode", (session) => indexOpenCode(session)],
+  ["fx", (session) => indexFx(session.path)],
+  ["dsh", (session) => indexDsh(session.path)],
   ["claude", (session) => indexClaudeJsonl(session.path)],
 ]);
 

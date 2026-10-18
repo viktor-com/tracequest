@@ -208,3 +208,36 @@ export function grokSessionDir(home, cwd, sessionId, source = "grok") {
 
 /** The appended file inside a grok session dir (its freshness/probe target). */
 export const GROK_CHAT_FILE = "chat_history.jsonl";
+
+/* ── fx ───────────────────────────────────────────────────────────────── */
+
+/**
+ * fx (vercel-labs/fx, verified 0.0.14 on 2026-10-18) keeps one directory per
+ * session, ~/.fx/sessions/<id>/, with session.json (workspace_root, model,
+ * title) and events.jsonl. The session path is events.jsonl.
+ */
+export function fxSessionsRoot(home = homedir()) {
+  return join(home, ".fx", "sessions");
+}
+
+/** The recording inside an fx session dir. */
+export const FX_EVENTS_FILE = "events.jsonl";
+
+/** Present in an fx session dir while a turn runs (removed when it ends). */
+export const FX_LIVE_MARKER = "owner.live";
+
+/* ── DeepSeek Harness ─────────────────────────────────────────────────── */
+
+/**
+ * DeepSeek Harness (dsh, @deepseek-ai/dsh, verified 0.2.0-rc.2 on 2026-10-18)
+ * keeps ~/.dsh/sessions/<cwd slug>/<session-<uuid> or ACP <uuid>>/session.v4.jsonl.zstd,
+ * JSONL appended one zstd frame per write. The session path is that file.
+ */
+export function dshSessionsRoot(home = homedir()) {
+  return join(home, ".dsh", "sessions");
+}
+
+/** session.v<N>.jsonl.zstd (or an uncompressed session.v<N>.jsonl) inside a dsh session dir. */
+export function isDshRecordingFile(name) {
+  return /^session\.v\d+\.jsonl(?:\.zstd)?$/.test(name);
+}

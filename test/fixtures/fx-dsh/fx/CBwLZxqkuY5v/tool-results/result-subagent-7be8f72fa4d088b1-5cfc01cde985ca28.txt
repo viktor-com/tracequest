@@ -1,0 +1,1 @@
+{"ok":true,"result":"1. Path: `calc.py` (i.e. `/home/dev/calc/calc.py`)\n2. Line count from `wc -l`: `6` — output was `       6 calc.py` (exit code 0)","error_code":null}

@@ -947,6 +947,15 @@ impl ActiveSpan {
         }
     }
 
+    /// ToolWait when the call `id` is a long-running tool, else ToolResult.
+    pub(crate) fn result_kind_for_id(&self, id: &str) -> RecordKind {
+        if self.waits.get(id).copied().unwrap_or(false) {
+            RecordKind::ToolWait
+        } else {
+            RecordKind::ToolResult
+        }
+    }
+
     /// ToolWait when any call id `id_re` finds in a result line is a long-running tool.
     fn result_kind(&self, line: &str, id_re: &Regex) -> RecordKind {
         for caps in id_re.captures_iter(line) {
@@ -3037,12 +3046,14 @@ impl std::fmt::Display for UnknownSourceError {
 impl std::error::Error for UnknownSourceError {}
 
 /// Every `source` value this build can index. Kept in sync with `indexer_for`.
-pub const KNOWN_SOURCES: [&str; 8] = [
+pub const KNOWN_SOURCES: [&str; 10] = [
     "claude",
     "codex",
     "cursor",
     "cursor-cloud",
+    "dsh",
     "factory",
+    "fx",
     "grok",
     "opencode",
     "vktr",
@@ -3061,6 +3072,8 @@ fn indexer_for(source: &str) -> Option<fn(&Session) -> IndexEntry> {
         "factory" => Some(|s| index_factory(Path::new(&s.path))),
         "grok" => Some(|s| index_grok(&s.path)),
         "vktr" => Some(|s| index_grok_family(&s.path, "vktr")),
+        "fx" => Some(|s| crate::fx_dsh::index_fx(Path::new(&s.path))),
+        "dsh" => Some(|s| crate::fx_dsh::index_dsh(Path::new(&s.path))),
         "opencode" => Some(index_opencode),
         _ => None,
     }

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **fx and DeepSeek Harness support.** Sessions recorded by fx (Vercel's coding agent, `~/.fx/sessions`) and DeepSeek Harness (`dsh`, `~/.dsh/sessions`) are listed, parsed, indexed and searched as sources `fx` and `dsh`, with their own colors: prompts, assistant messages, tool calls with their results, failed calls, tokens and worked time. DeepSeek Harness writes zstd-compressed recordings, read frame by frame (Node 22.15 or newer). fx subagent sessions link to their parent, and a running fx turn shows its prompt. Live sessions of both are detected from their processes, `import ssh` copies `.fx/sessions` and `.dsh/sessions`, and the Rust sidecar scans and indexes both.
+
 - **vktr support.** Sessions recorded by vktr, Viktor's fork of the Grok CLI, under `~/.vktr/sessions` are listed, parsed, indexed and searched as their own source `vktr`, with its own color. vktr runs can be launched and continued, live vktr sessions are detected from `~/.vktr/active_sessions.json`, `import ssh` copies `.vktr/sessions`, and `limits` lists vktr as unavailable. vktr uses the grok code paths, which now take the agent id, home dir and binary name as parameters.
 
 ### Changed

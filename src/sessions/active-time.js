@@ -26,7 +26,7 @@ export const MAX_STALL_MS = 6 * 60 * 60 * 1000;
 export const MAX_MODEL_WAIT_MS = 30 * 60 * 1000;
 
 /** Sources whose transcripts carry event times: their indexed duration is worked time. */
-export const ACTIVE_TIME_SOURCES = new Set(["claude", "codex", "factory", "grok", "vktr", "opencode"]);
+export const ACTIVE_TIME_SOURCES = new Set(["claude", "codex", "factory", "grok", "vktr", "opencode", "fx", "dsh"]);
 
 /** Record kinds; OTHER is a timestamped line that is no message (metadata, notices). */
 export const OTHER = 0;

@@ -35,6 +35,12 @@ pub(crate) fn infer_source(root: &str) -> Option<Source> {
     // an override path that happens to contain both from being shadowed.
     if lower.contains("tracequest") && lower.contains("cursor-cloud") {
         Some(Source::CursorCloud)
+    } else if lower.contains(".fx/sessions") || lower.contains(".fx\\sessions") {
+        // fx and dsh match their whole "<home dir>/sessions" segment so a host id
+        // or project path cannot claim another agent's root.
+        Some(Source::Fx)
+    } else if lower.contains(".dsh/sessions") || lower.contains(".dsh\\sessions") {
+        Some(Source::Dsh)
     } else if lower.contains(".claude") && lower.contains("projects") {
         Some(Source::Claude)
     } else if lower.contains(".codex") && lower.contains("sessions") {
@@ -112,6 +118,8 @@ pub fn scan(roots: &[String], filter: Option<&str>) -> Vec<Session> {
                 Source::Factory => scan_factory(root, filter),
                 Source::Grok => scan_grok(root, filter),
                 Source::Vktr => scan_grok_family(root, filter, "vktr"),
+                Source::Fx => crate::fx_dsh::scan_fx(root, filter),
+                Source::Dsh => crate::fx_dsh::scan_dsh(root, filter),
                 Source::OpenCode => scan_opencode(root, filter),
             };
             Some(sessions)

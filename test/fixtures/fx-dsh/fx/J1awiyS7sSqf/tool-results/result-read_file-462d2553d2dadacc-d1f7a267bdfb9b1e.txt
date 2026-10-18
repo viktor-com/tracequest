@@ -1,0 +1,5 @@
+<path>calc.py</path>
+<content>
+1	def add(a, b):
+2	    return a + b
+</content>

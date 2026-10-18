@@ -298,7 +298,7 @@ tracequest import cursor-cloud --full
 tracequest import cursor-cloud --api-key key_xxx
 ```
 
-**import ssh**: copy local agent session trees from remote machines over SSH (`rsync` on PATH, plus one `ssh -o ControlMaster` mux per host so the six trees plus OpenCode's db share a single connection; `BatchMode=yes` so a missing key never hangs on a password prompt) into `~/.local/share/tracequest/hosts/<host>/`. Trees: `.claude/projects`, `.cursor/projects`, `.codex/sessions`, `.factory/sessions`, `.grok/sessions`, `.vktr/sessions`, `.local/share/opencode/opencode.db`. Remote cursor-cloud imports are not copied — pull those with `import cursor-cloud` on this machine. `--as gpu` (or an import-hosts line `user@box as gpu`) sets the host id independently of the SSH destination. Imported rows keep their original source (`host:gpu` selects one machine) and cannot be Continued as a local run. Re-runs are incremental; `--full` recopies; vanished remote sessions stay in the local archive. With no hosts on the command line, read `~/.tracequest/import-hosts`.
+**import ssh**: copy local agent session trees from remote machines over SSH (`rsync` on PATH, plus one `ssh -o ControlMaster` mux per host so the eight trees plus OpenCode's db share a single connection; `BatchMode=yes` so a missing key never hangs on a password prompt) into `~/.local/share/tracequest/hosts/<host>/`. Trees: `.claude/projects`, `.cursor/projects`, `.codex/sessions`, `.factory/sessions`, `.grok/sessions`, `.vktr/sessions`, `.fx/sessions`, `.dsh/sessions`, `.local/share/opencode/opencode.db`. Remote cursor-cloud imports are not copied — pull those with `import cursor-cloud` on this machine. `--as gpu` (or an import-hosts line `user@box as gpu`) sets the host id independently of the SSH destination. Imported rows keep their original source (`host:gpu` selects one machine) and cannot be Continued as a local run. Re-runs are incremental; `--full` recopies; vanished remote sessions stay in the local archive. With no hosts on the command line, read `~/.tracequest/import-hosts`.
 
 ```bash
 tracequest import ssh gpu
@@ -395,10 +395,12 @@ tracequest scans the following standard locations and auto-detects the agent Sou
 - **Codex CLI** — `~/.codex/sessions/`
 - **Cursor** — `~/.cursor/projects/`
 - **Cursor Cloud Agents** — `~/.local/share/tracequest/cursor-cloud/` (populated by `tracequest import cursor-cloud`; override with `TRACEQUEST_CURSOR_CLOUD_DIR`)
-- **SSH-imported hosts** — `~/.local/share/tracequest/hosts/<host>/` (populated by `tracequest import ssh`; override with `TRACEQUEST_HOSTS_DIR`). Same agent layouts as Claude/Cursor/Codex/Factory/Grok/vktr above, tagged with `host` for `host:gpu` filters. Not a new source name.
+- **SSH-imported hosts** — `~/.local/share/tracequest/hosts/<host>/` (populated by `tracequest import ssh`; override with `TRACEQUEST_HOSTS_DIR`). Same agent layouts as Claude/Cursor/Codex/Factory/Grok/vktr/fx/DeepSeek Harness above, tagged with `host` for `host:gpu` filters. Not a new source name.
 - **Droid/Factory** — `~/.factory/sessions/`
 - **OpenCode** — `~/.local/share/opencode/opencode.db`
 - **Grok CLI** — `~/.grok/sessions/`
 - **vktr** (Viktor's fork of the Grok CLI) — `~/.vktr/sessions/`, the same layout as Grok, listed and parsed as its own source `vktr`; live sessions come from `~/.vktr/active_sessions.json`
+- **fx** (Vercel's coding agent) — `~/.fx/sessions/<id>/events.jsonl` with `session.json`, source `fx`. fx writes a turn when it ends; while a turn runs the session shows its prompt from `recovery.json`. Subagent sessions link to their parent.
+- **DeepSeek Harness** (`dsh`) — `~/.dsh/sessions/<cwd slug>/<session>/session.v4.jsonl.zstd`, source `dsh`. The recording is zstd-compressed, one frame per write; reading it needs Node 22.15 or newer.
 
-Use `tracequest list` or `tracequest serve` (or the library `findSessions()`) to aggregate across every supported Source. Source is shown with color-coded badges in the UI and HTML (claude=purple, codex=teal, cursor=lime, cursor-cloud=cyan, factory=yellow, opencode=blue, grok=red, vktr=pink).
+Use `tracequest list` or `tracequest serve` (or the library `findSessions()`) to aggregate across every supported Source. Source is shown with color-coded badges in the UI and HTML (claude=purple, codex=teal, cursor=lime, cursor-cloud=cyan, factory=yellow, opencode=blue, grok=red, vktr=pink, fx=slate, dsh=indigo).

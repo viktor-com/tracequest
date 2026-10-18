@@ -50,7 +50,7 @@ function getToolClr(name) {
 var SOURCE_COLORS = {
   claude: 'var(--hue-claude)', codex: 'var(--hue-codex)', factory: 'var(--hue-factory)',
   cursor: 'var(--hue-cursor)', 'cursor-cloud': 'var(--hue-cursor-cloud)', opencode: 'var(--hue-opencode)', grok: 'var(--hue-grok)',
-  vktr: 'var(--hue-vktr)'
+  vktr: 'var(--hue-vktr)', fx: 'var(--hue-fx)', dsh: 'var(--hue-dsh)'
 };
 var KEY_COLORS = {
   project: 'var(--text-2)', source: 'var(--text-2)', host: 'var(--text-2)', tool: 'var(--text-2)',
@@ -1223,7 +1223,7 @@ function emptyStateHtml() {
   }
   return '<div class="empty ui-empty">' + mark(inbox)
     + '<div class="ui-empty-title">No runs recorded yet</div>'
-    + '<div class="ui-empty-body">tracequest reads sessions from Claude Code, Codex CLI, Cursor, Droid, OpenCode, Grok CLI and vktr on this machine. Run any of them, or start one here.</div>'
+    + '<div class="ui-empty-body">tracequest reads sessions from Claude Code, Codex CLI, Cursor, Droid, OpenCode, Grok CLI, vktr, fx and DeepSeek Harness on this machine. Run any of them, or start one here.</div>'
     + '<div class="ui-empty-actions"><button type="button" class="ui-btn ui-btn--primary" data-empty-action="new-run">New run</button></div>'
     + '</div>';
 }

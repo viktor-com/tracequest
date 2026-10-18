@@ -14,6 +14,7 @@ import { OPENCODE_TERM_INDEX_PART_TYPES_SQL } from "./session-index-opencode.js"
 import { tokenize } from "./search-tokenizer.js";
 import { getSearchIndex } from "./search-index.js";
 import { isGrokFamily } from "./session-layout.js";
+import { isDshScanLine, readDshText } from "../parse/parse-dsh.js";
 
 /** Hoisted scan patterns (global; String.matchAll resets lastIndex per call). */
 const RE_FILE_PATH = /"file_path":\s*"([^"]+)"/g;
@@ -877,11 +878,27 @@ function scanJsonlFileForQueries(
   };
 }
 
+/**
+ * A dsh recording's conversation lines, decoded from zstd once and kept in the
+ * scan-line cache: the file itself cannot be scanned line by line.
+ */
+function dshScanLines(session) {
+  const cached = getCachedScanLines(session);
+  if (cached !== null) return cached;
+  const lines = [];
+  forEachJsonlLine(readDshText(session.path), (line) => {
+    if (isDshScanLine(line)) lines.push(line);
+  });
+  setCachedScanLines(session, lines);
+  return lines;
+}
+
 export function scanSessionForQuery(session, query, max = 3) {
   const source = session.source || "claude";
   try {
     if (source === "opencode") return scanOpenCodeForQuery(session, query, max);
     if (isGrokFamily(source)) return scanGrokForQuery(session.path, query, max);
+    if (source === "dsh") return scanInMemoryJsonlLines(dshScanLines(session), query, max, RE_FILE_PATH);
 
     const skipLine = scanSkipLineForSource(source);
     const cached = getCachedScanLines(session);
@@ -904,6 +921,7 @@ function scanSessionForQueries(session, queries, max = 3) {
   if (queries.length === 0) return new Map();
   try {
     if (isGrokFamily(source)) return scanGrokForQueries(session.path, queries, max);
+    if (source === "dsh") return scanInMemoryJsonlLinesForQueries(dshScanLines(session), queries, max, RE_FILE_PATH);
     if (source === "opencode") {
       return new Map(queries.map((query) => [query, scanSessionForQuery(session, query, max)]));
     }

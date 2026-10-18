@@ -96,6 +96,8 @@ export const TOKENS_DARK = `
   --hue-opencode: #9fbbe0;
   --hue-grok: #c0a8dd;
   --hue-vktr: #e3a6bd;
+  --hue-fx: #b4c0cc;
+  --hue-dsh: #a3adf2;
   --hue-read: #9fbbe0;
   --hue-edit: #c0a8dd;
   --hue-grep: #9fc9a2;
@@ -150,6 +152,8 @@ export const TOKENS_LIGHT = `
   --hue-opencode: #3d6aa8;
   --hue-grok: #7a55a8;
   --hue-vktr: #a8456b;
+  --hue-fx: #4d5e70;
+  --hue-dsh: #4552b8;
   --hue-read: #3d6aa8;
   --hue-edit: #7a55a8;
   --hue-grep: #2f7d55;
@@ -173,6 +177,6 @@ html[data-theme="light"] {${TOKENS_LIGHT}}
 
 /** Source → hue token, for inline style="--hue: var(--hue-…)" chips. */
 export function sourceHueVar(source) {
-  const known = ["claude", "codex", "cursor", "cursor-cloud", "factory", "opencode", "grok", "vktr"];
+  const known = ["claude", "codex", "cursor", "cursor-cloud", "factory", "opencode", "grok", "vktr", "fx", "dsh"];
   return known.includes(source) ? `var(--hue-${source})` : "var(--hue-other)";
 }

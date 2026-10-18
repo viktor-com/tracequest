@@ -128,6 +128,10 @@ pub enum Source {
     Grok,
     /// vktr, Viktor's fork of the Grok CLI: the grok session layout under ~/.vktr.
     Vktr,
+    /// fx (vercel-labs/fx): ~/.fx/sessions/<id>/events.jsonl.
+    Fx,
+    /// DeepSeek Harness: ~/.dsh/sessions/<slug>/<session>/session.v<N>.jsonl.zstd.
+    Dsh,
     OpenCode,
 }
 

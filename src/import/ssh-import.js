@@ -7,7 +7,7 @@
  * sshxp). Tests set TRACEQUEST_IMPORT_SSH_FIXTURE to a local directory of
  * per-host trees and never open a real SSH connection (fact sshfx).
  *
- * Copied files keep their original source (claude/cursor/codex/factory/grok/vktr)
+ * Copied files keep their original source (claude/cursor/codex/factory/grok/vktr/fx/dsh)
  * so they are not a new KNOWN_SESSION_SOURCE (fact sshsv). Discovery stamps
  * `host` from the path prefix under the hosts root (fact sshst).
  */
@@ -24,7 +24,7 @@ import { hubConfig } from "../hub/config.js";
 
 const execFileAsync = promisify(execFile);
 
-/** The six filesystem session trees (plus opencode.db) copied from remote $HOME (fact sshly). */
+/** The eight filesystem session trees (plus opencode.db) copied from remote $HOME (facts sshly, fxdssh). */
 export const SSH_IMPORT_SOURCES = Object.freeze([
   { id: "claude", rel: Object.freeze([".claude", "projects"]) },
   { id: "cursor", rel: Object.freeze([".cursor", "projects"]) },
@@ -32,6 +32,8 @@ export const SSH_IMPORT_SOURCES = Object.freeze([
   { id: "factory", rel: Object.freeze([".factory", "sessions"]) },
   { id: "grok", rel: Object.freeze([".grok", "sessions"]) },
   { id: "vktr", rel: Object.freeze([".vktr", "sessions"]) },
+  { id: "fx", rel: Object.freeze([".fx", "sessions"]) },
+  { id: "dsh", rel: Object.freeze([".dsh", "sessions"]) },
   { id: "opencode", rel: Object.freeze([".local", "share", "opencode", "opencode.db"]), file: true },
 ]);
 

@@ -180,7 +180,8 @@ export async function applySessionChanges(base, changes, { roots, watchedRoots, 
       if (!ancestorsOf(base).has(path)) rescan.add(root);
       continue;
     }
-    if (path.endsWith(".jsonl") && !base.nonSession.has(path)) rescan.add(root);
+    // dsh recordings are session.v<N>.jsonl.zstd.
+    if ((path.endsWith(".jsonl") || path.endsWith(".jsonl.zstd")) && !base.nonSession.has(path)) rescan.add(root);
   }
 
   // The common case: only listed files changed. Re-stat just those, and keep

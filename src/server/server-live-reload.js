@@ -14,7 +14,9 @@ import {
   claudeProjectsRoot,
   codexSessionsRoot,
   cursorProjectsRoot,
+  dshSessionsRoot,
   factorySessionsRoot,
+  fxSessionsRoot,
 } from "../sessions/session-layout.js";
 
 /** Debounce window (ms) before broadcasting session-data SSE after fs churn. */
@@ -306,6 +308,8 @@ export function defaultDataRoots(home = homedir()) {
   return [
     join(home, ".grok"),
     join(home, ".vktr"),
+    fxSessionsRoot(home),
+    dshSessionsRoot(home),
     claudeProjectsRoot(home),
     codexSessionsRoot(home),
     cursorProjectsRoot(home),

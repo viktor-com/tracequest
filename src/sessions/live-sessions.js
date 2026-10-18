@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -7,6 +7,8 @@ import { sessionMtimeMs } from "./session-list.js";
 import { isIndexDiskExpectedErr, isProcRaceErr } from "../utils/fs-expected-err.js";
 import { procCwds, procCwdsAsync, openPathsAmong, openPathsAmongAsync, spawnText } from "./proc-probe.js";
 import { codexSessionMetaCwd } from "../parse/parse-codex.js";
+import { readFxSessionMeta } from "../parse/parse-fx.js";
+import { readDshSessionRow } from "../parse/parse-dsh.js";
 import { normalizeProjectFolder, shortenProjectPath } from "../server/server-session-path.js";
 import {
   claudeProjectDir,
@@ -274,6 +276,8 @@ const EXTERNAL_AGENT_PROCESS_SPECS = [
   { source: "cursor", binary: "cursor-agent" },
   { source: "factory", binary: "droid" },
   { source: "opencode", binary: "opencode" },
+  { source: "fx", binary: "fx" },
+  { source: "dsh", binary: "dsh" },
 ];
 
 /** First-line reads per probed cwd when matching codex session_meta cwds. */
@@ -418,6 +422,42 @@ function openCodeSessionForCwd(cwd, sessions) {
   return best?.path ?? null;
 }
 
+/** A path with symlinks resolved (macOS /tmp → /private/tmp), or itself when unresolvable. */
+function realPathOr(p) {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+}
+
+/** The cwd an fx or dsh recording names: fx session.json workspace_root, dsh's session row. */
+function recordedCwd(source, path) {
+  if (source === "fx") return readFxSessionMeta(path).workspace_root || null;
+  return readDshSessionRow(path).cwd || null;
+}
+
+/**
+ * Newest discovered fx or dsh session whose recorded cwd is the probed cwd
+ * (compared with symlinks resolved: dsh records ACP cwds unresolved). The
+ * project label prefilters; a bounded number of reads confirm the cwd.
+ */
+function recordedCwdSessionForCwd(source, cwd, sessions) {
+  const want = realPathOr(cwd);
+  const labels = new Set([normalizeProjectFolder(cwd), normalizeProjectFolder(want)]);
+  const candidates = sessions
+    .filter((s) => s?.source === source && !s.parentSession && !isImportedHostSession(s.path))
+    .sort((a, b) => sessionMtimeMs(b) - sessionMtimeMs(a));
+  let reads = 0;
+  for (const s of candidates) {
+    if (s.project && !labels.has(s.project)) continue;
+    if (reads++ >= CODEX_CWD_READS_MAX) break;
+    const recorded = recordedCwd(source, s.path);
+    if (recorded && (recorded === cwd || realPathOr(recorded) === want)) return s.path;
+  }
+  return null;
+}
+
 /** (source, cwd) → that agent's newest recording for the cwd (null when none). */
 function agentSessionForCwd(source, cwd, home, sessions) {
   switch (source) {
@@ -425,6 +465,8 @@ function agentSessionForCwd(source, cwd, home, sessions) {
     case "cursor": return cursorSessionForCwd(cwd, home);
     case "factory": return factorySessionForCwd(cwd, home);
     case "opencode": return openCodeSessionForCwd(cwd, sessions);
+    case "fx":
+    case "dsh": return recordedCwdSessionForCwd(source, cwd, sessions);
     default: return null;
   }
 }
@@ -647,6 +689,8 @@ function sourceForCarriedPath(path) {
   if (path.includes("/.factory/")) return "factory";
   if (path.includes("/.cursor/")) return "cursor";
   if (path.includes("/.claude/")) return "claude";
+  if (path.includes("/.fx/sessions/")) return "fx";
+  if (path.includes("/.dsh/sessions/")) return "dsh";
   return null;
 }
 

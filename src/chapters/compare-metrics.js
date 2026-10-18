@@ -22,6 +22,8 @@ const SOURCE_COLORS = {
   opencode: "var(--hue-opencode)",
   grok: "var(--hue-grok)",
   vktr: "var(--hue-vktr)",
+  fx: "var(--hue-fx)",
+  dsh: "var(--hue-dsh)",
 };
 
 const TOOL_COLORS_CMP = {
