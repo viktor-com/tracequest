@@ -55,6 +55,8 @@ The header has one way into analytics: the **Analytics** button (or `a`) docks t
 
 The chat reads like Cursor's agent chat: your messages and the agent's replies are the column, and tool calls are folded. Consecutive calls of one kind become one row ("Read 4 files", "Ran 3 commands", "Edited app.ts +12 −3"). A click opens the group to one compact line per call, and a call to its full input and output (long output is cut at 12 lines behind "show more"). Thought blocks fold the same way. Folding never hides a failure: a failed call's row says "failed" and its group opens by default. "Expand all / Collapse all" above the thread is remembered in this browser. The find box (or `?q=`) opens and highlights the rows that hold a match, and `#tool-<id>` / `#event-<n>` link to one call.
 
+The chat opens at the end of the conversation and follows new items while you are at the bottom; scrolling up keeps your place. Every message and tool row stays in the thread, in order. A long message, such as an agent's task brief, shows its first 8 lines behind "show more".
+
 ## States
 
 Every list and screen handles four states. Use the design-system state components.

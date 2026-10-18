@@ -55,3 +55,21 @@
   id: rvn5
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'loading and cheatsheet' test/browser/run-view-navigation.playwright.test.js
   tags: [spec, chat-ui, run-view-nav, ui, tests, implemented]
+
+# chat-transcript-open
+- label: opening a finished recording on /run?session= lands at the end of the conversation like Cursor's and Kandev's chat: the last message is in view on open and after the window is resized, even when the last user prompt is longer than the screen, a recording with no user prompt does not open at the top, and every earlier message, tool row and the first prompt stay in the thread in order at their natural height (none at zero height, none moved off screen), reachable by scrolling up
+  id: rvend
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'opens at the end' test/bin/run-view-transcript.e2e.test.js
+  tags: [spec, chat-ui, ui, tests, implemented]
+- label: a long user message in the chat transcript shows its first 8 lines (at most 800 characters) with a show more button that opens the whole message in place, leaving the reader at its start, and a show less button that folds it back; the reader's choice survives a live re-render, and a find (?q=) hit inside the folded part opens the message
+  id: rvlong
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'long prompt' test/bin/run-view-transcript.e2e.test.js && node --test test/browser/chat-message-preview.test.js
+  tags: [spec, chat-ui, ui, tests, implemented]
+- label: while a watched recording grows, /run?session= appends the new messages and tool rows below the earlier ones without a reload and keeps the newest one in view for a reader at the bottom; earlier items of the same turn stay visible (never collapsed to zero height while generating), and a reader who scrolled up keeps their place
+  id: rvlive
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'live recording streams' test/bin/run-view-transcript.e2e.test.js
+  tags: [spec, chat-ui, ui, tests, implemented]
+- label: a Grok or vktr recording started by Kandev keeps its user prompt: leading <kandev-system> blocks inside <user_query> are stripped the same way as for Claude and Codex, so the prompt after them reaches the chat transcript, and a message holding only Kandev context still shows nothing
+  id: rvgkp
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Kandev context' test/bin/run-view-transcript.e2e.test.js
+  tags: [spec, chat-ui, parse, tests, implemented]

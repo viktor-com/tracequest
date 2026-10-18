@@ -132,6 +132,7 @@ import {
   parseDeepLink,
   deepLinkKeys,
   outputPreview,
+  messagePreview,
   groupOpenState,
 } from "./chat-tool-groups.js";
 import {
@@ -157,7 +158,7 @@ const CHAT_FIND_BAR_HTML = `<div class="chat-find-bar" id="chatFindBar" hidden>
 const TOOL_GROUPS_SRC = [
   toolKind, inputField, patchSummary, toolTarget, toolVerb, diffCounts, toolRow, groupToolBlocks,
   baseName, groupSummary, groupDetail, textMatches, rowMatches, isOpen, parseDeepLink, deepLinkKeys,
-  outputPreview, groupOpenState,
+  outputPreview, messagePreview, groupOpenState,
 ].map(fnSrc).join("\n");
 
 /** Snapshot poll cadence in ms for the raw terminal block. */
@@ -1442,11 +1443,26 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
   function markerHtml(m1, m2) {
     return '<div class="chat-marker"><span class="m1">' + escHtml(m1) + '</span> <span class="m2">' + escHtml(m2) + "</span></div>";
   }
+  /* Agent sessions often open with a task brief longer than the screen: it
+     folds to its first lines behind show more, like Cursor's and Kandev's chat.
+     A find hit in the folded part opens it. */
+  var MESSAGE_PREVIEW_LINES = 8;
+  var MESSAGE_PREVIEW_CHARS = 800;
+  function userMessageHtml(text, key) {
+    var moreKey = "msg:" + key;
+    var pv = messagePreview(text, MESSAGE_PREVIEW_LINES, MESSAGE_PREVIEW_CHARS);
+    if (!pv.folded) return escHtml(text);
+    var open = Object.prototype.hasOwnProperty.call(toolState.more, moreKey)
+      ? !!toolState.more[moreKey]
+      : textMatches(text, toolState.query);
+    return escHtml(open ? text : pv.text + "\\u2026") +
+      '<button class="tg-more chat-user-more" type="button" data-more="' + escHtml(moreKey) + '" aria-expanded="' + open + '">' + (open ? "show less" : "show more") + "</button>";
+  }
   function blockItem(b, idx) {
     var key = b.kind + ":" + idx;
     var ev = b.eventIndex;
     var item;
-    if (b.kind === "user") item = threadItem(key, "user", "chat-user chat-message", escHtml(b.text), ev);
+    if (b.kind === "user") item = threadItem(key, "user", "chat-user chat-message", userMessageHtml(b.text, key), ev);
     else if (b.kind === "text") {
       item = threadItem(key, "assistant", "chat-assistant chat-message", md(b.text), ev);
       item.sourceText = b.text;
@@ -1489,15 +1505,10 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
   ${APPLY_THREAD_ITEMS_SRC}
   ${TOOL_GROUPS_SRC}
 
-  /* ---- sticky scroll: live sticks to the generating trail; a
-     completed idle turn frames the last user bubble so the prompt
-     and the whole assistant sit in the viewport as one reading block.
-
-     followTail remembers that the user is at the conversation end
-     (idle leftover-snap frame counts). Sample it BEFORE live chrome
-     CSS (activity min-height + col padding) or prior-turn parking
-     changes scrollHeight — otherwise isAtBottom() goes false and
-     Planning next moves sits below the fold. ---- */
+  /* ---- sticky scroll: the conversation opens at its end and follows
+     new items while the reader is at the bottom, like Cursor's and
+     Kandev's chat. Every item stays in the thread at its natural height;
+     a reader who scrolled up keeps their place. ---- */
   var followTail = true;
   var pinningTail = false;
   function isAtBottom() {
@@ -1522,613 +1533,6 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
       if (pinningTail) return;
       followTail = isAtBottom();
     }, { passive: true });
-  }
-  function frameCompletedTurn() {
-    if (!chatScroll || !chatThread) return;
-    var users = chatThread.querySelectorAll(".chat-user");
-    var target = users.length ? users[users.length - 1] : null;
-    if (!target) {
-      chatScroll.scrollTop = 0;
-      return;
-    }
-    var tr = target.getBoundingClientRect();
-    var sr = chatScroll.getBoundingClientRect();
-    chatScroll.scrollTop = Math.max(0, chatScroll.scrollTop + (tr.top - sr.top) - 10);
-  }
-  function historyRoot() { return document.getElementById("chatHistory"); }
-  function historyCol() { return document.getElementById("chatHistoryCol"); }
-  function lastThreadEl(sel) {
-    var nodes = [];
-    var hist = historyCol();
-    if (hist) {
-      var a = hist.querySelectorAll(sel);
-      var i;
-      for (i = 0; i < a.length; i++) nodes.push(a[i]);
-    }
-    if (chatThread) {
-      var b = chatThread.querySelectorAll(sel);
-      var j;
-      for (j = 0; j < b.length; j++) nodes.push(b[j]);
-    }
-    return nodes.length ? nodes[nodes.length - 1] : null;
-  }
-  function nodeFollows(earlier, later) {
-    if (!earlier || !later) return false;
-    return !!(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
-  }
-  // After growth, leftover-snap of the first dump's named card spends
-  // leftover on that card so the newest completed turn shears onto
-  // the continue pill. Stale = a follow-up user after the first
-  // named output starts a new turn (use lastBlocks so moving that
-  // file after newest prose does not flip the flag).
-  // Same-turn tool-then-prose (G1 opening + shell output + closing)
-  // is the completed named column, not after-growth — leftover-snap
-  // that named file occupying leftover, do not park it under the
-  // last caption (lastAsst > firstOut is G1's real turn shape).
-  function leftoverSnapIsStale() {
-    var blocks = lastBlocks || [];
-    var firstOut = -1;
-    var lastAsst = -1;
-    var lastUser = -1;
-    var i;
-    for (i = 0; i < blocks.length; i++) {
-      if (blocks[i].kind === "user") lastUser = i;
-      if (blocks[i].kind === "tool" && blocks[i].res) {
-        if (firstOut < 0) firstOut = i;
-      }
-      if (blocks[i].kind === "text") lastAsst = i;
-    }
-    if (firstOut >= 0 && lastUser > firstOut && lastAsst > lastUser) return true;
-    if (firstOut >= 0 && lastUser > firstOut) {
-      return nodeFollows(lastThreadEl(".chat-card.chat-output"), lastThreadEl(".chat-user"));
-    }
-    return false;
-  }
-  // Frame the last user only for first-turn leftover-snap, or when a
-  // follow-up user after the first named-output starts a new turn.
-  // File-less same-user growth must not re-frame the first dump
-  // (r5 leftover-snapped that dump in place at scrollTop=0).
-  function shouldFrameCompletedTurn() {
-    if (!leftoverSnapIsStale()) return true;
-    return nodeFollows(lastThreadEl(".chat-card.chat-output"), lastThreadEl(".chat-user"));
-  }
-  // Newest completed turn whole above the slim continue pill.
-  // Does not change leftover-snap line math.
-  function keepNewestTurnAbovePill() {
-    if (!chatScroll) return;
-    var el = lastThreadEl(".chat-assistant");
-    var composer = document.querySelector(".chat-composer");
-    if (!el || !composer) return;
-    var er = el.getBoundingClientRect();
-    var cr = composer.getBoundingClientRect();
-    if (er.bottom > cr.top - 4) {
-      chatScroll.scrollTop += (er.bottom - cr.top) + 8;
-    }
-    followTail = true;
-  }
-  // After growth a newest turn that owns a file is the reading block.
-  // A new user after the first named-output starts that turn; otherwise
-  // the last .chat-assistant is the reading start — not the first-dump user.
-  // Pinning only the last box left BAR_NEW_TURN_MARKER as a 39px caption under an uncapped prior file object.
-  // Framing the last user after parking the dump left a two-line island over unused leftover (r2).
-  // r3 stapled the previous dump's fixture under the marker.
-  // r5 leftover-snapped the first dump's fixture in place so leftover
-  // still framed user + L001–L023 + ev=1 at scrollTop=0.
-  // r6 height-0'd the first dump and claimed leftover with margin-top
-  // spacer on the 39px caption (black void + caption glued to the pill).
-  function newestTurnAnchor() {
-    var user = lastThreadEl(".chat-user");
-    var firstOut = chatThread ? chatThread.querySelector(".chat-card.chat-output") : null;
-    if (user && firstOut && nodeFollows(firstOut, user)) return user;
-    return lastThreadEl(".chat-assistant");
-  }
-  function restoreLeftoverViewport() {
-    if (chatScroll) {
-      chatScroll.style.height = "";
-      chatScroll.style.minHeight = "";
-      chatScroll.style.flex = "";
-      chatScroll.style.marginTop = "";
-    }
-    if (chatThread) chatThread.style.paddingBottom = "";
-    document.body.removeAttribute("data-leftover-pocket");
-    document.body.removeAttribute("data-leftover-owned");
-    document.body.removeAttribute("data-leftover-reading");
-  }
-  function restoreThreadFromHistory() {
-    var col = historyCol();
-    var root = historyRoot();
-    if (!col || !chatThread) return;
-    while (col.firstChild) chatThread.insertBefore(col.firstChild, chatThread.firstChild);
-    if (root) {
-      root.hidden = true;
-      root.removeAttribute("data-split");
-    }
-  }
-  function clearLeftoverScrollPad() {
-    restoreThreadFromHistory();
-    restoreLeftoverViewport();
-  }
-  // File-less leftover occupies leftover as the newest turn's reading
-  // block: leftover (#chatScroll) fills leftover (flex:1). r9 sized
-  // leftover to a 55px pocket and pinned it with flex-end so leftover
-  // ceded to unused chat-main. r7 leftoverScrollPadForNewest set
-  // #chatThread padding-bottom hoisting a 39px caption to leftover top
-  // over unused leftover. r6 leftover is not a black void above a
-  // caption glued to the pill. r8 leftover history painted the dump
-  // on leftover.
-  function occupyLeftoverAsNewestReading(el) {
-    if (!chatScroll || !el) return;
-    document.body.removeAttribute("data-leftover-pocket");
-    document.body.setAttribute("data-leftover-owned", "newest");
-    document.body.setAttribute("data-leftover-reading", "1");
-    chatScroll.style.height = "";
-    chatScroll.style.minHeight = "";
-    chatScroll.style.flex = "";
-    chatScroll.style.marginTop = "";
-    if (chatThread) chatThread.style.paddingBottom = "";
-  }
-  // File-less newest: leftover-owned pixels are that turn occupying
-  // leftover (prose at leftover top + honest absence + close). Earlier
-  // turns stay in flow above it, scrolled off the top. Do not stretch the
-  // caption (r4), do not pin it with margin-top (r6), do not
-  // pad-bottom hoist (r7), do not shrink leftover to a 55px pocket
-  // that cedes leftover to unused chat-main (r9).
-  function frameNewestTurnAtLeftoverTop() {
-    if (!chatScroll) return;
-    var newest = lastThreadEl(".chat-assistant");
-    if (!newest) return;
-    clearNewestProseLeftover(newest);
-    occupyLeftoverAsNewestReading(newest);
-    var tr = newest.getBoundingClientRect();
-    var sr = chatScroll.getBoundingClientRect();
-    chatScroll.scrollTop = Math.max(0, chatScroll.scrollTop + (tr.top - sr.top) - 4);
-    keepNewestTurnAbovePill();
-    followTail = true;
-  }
-  function leftoverSnapNewestTurn() {
-    if (!chatScroll) return;
-    if (!newestTurnOwnFile()) {
-      frameNewestTurnAtLeftoverTop();
-      return;
-    }
-    clearLeftoverScrollPad();
-    var target = newestTurnAnchor();
-    if (!target) return;
-    var tr = target.getBoundingClientRect();
-    var sr = chatScroll.getBoundingClientRect();
-    chatScroll.scrollTop = Math.max(0, chatScroll.scrollTop + (tr.top - sr.top) - 10);
-    // Size the file where the frame put it, not where it sat before.
-    if (lastState !== "running") leftoverSnapNewestTurnReading();
-    keepNewestTurnAbovePill();
-  }
-  // That turn's own file: same data-event-index as the last assistant.
-  // The last .chat-card.chat-output is the prior dump's fixture after
-  // a file-less measure append — do not staple it under BAR_NEW_TURN_MARKER.
-  function newestTurnOwnFile() {
-    if (!chatThread) return null;
-    var newest = lastThreadEl(".chat-assistant");
-    if (!newest) return null;
-    var ev = parseInt(newest.getAttribute("data-event-index"), 10);
-    if (isNaN(ev)) return null;
-    var cards = chatThread.querySelectorAll(".chat-card.chat-output");
-    var own = null;
-    var i;
-    for (i = 0; i < cards.length; i++) {
-      var ce = parseInt(cards[i].getAttribute("data-event-index"), 10);
-      if (ce === ev) own = cards[i];
-    }
-    return own;
-  }
-  function clearNewestProseLeftover(el) {
-    if (!el) return;
-    el.style.minHeight = "";
-    el.style.paddingBottom = "";
-    el.style.marginBottom = "";
-    el.style.marginTop = "";
-    if (el.getAttribute("data-contained") === "leftover") el.removeAttribute("data-contained");
-  }
-  // r4 stretched a 39px caption with min-height — leftover was 701px
-  // of air, not leftover-snap. Honest absence: do not fake a file and
-  // do not stretch the caption.
-  // Newest turn with its own file: leftover-snap that turn
-  // (prose + file card + close).
-  function leftoverSnapNewestTurnReading() {
-    var newest = lastThreadEl(".chat-assistant");
-    var own = newestTurnOwnFile();
-    if (!own) return;
-    clearNewestProseLeftover(newest);
-    unparkNode(own);
-    snapNamedOutputCard(own, true);
-  }
-  // After a file-less append leftover closes above a reserved slot for
-  // the newest prose (composer.top − newest height), not newest.top
-  // after an uncapped 475px file — that leftover room equals the file
-  // itself and leftover-snap never snaps (r1).
-  function leftoverCloseTop(card, composer) {
-    var close = composer.getBoundingClientRect().top;
-    if (!leftoverSnapIsStale() || newestTurnOwnFile()) return close;
-    var newest = lastThreadEl(".chat-assistant");
-    if (newest && card && nodeFollows(card, newest)) {
-      var nh = Math.ceil(newest.getBoundingClientRect().height) || 39;
-      return close - nh - 8;
-    }
-    return close;
-  }
-  function clearOutputCap(card) {
-    if (!card) return;
-    card.style.maxHeight = "";
-    card.style.height = "";
-    card.removeAttribute("data-contained");
-    var body = card.querySelector(".chat-tool-body");
-    if (body) {
-      body.style.maxHeight = "";
-      body.style.height = "";
-      body.style.padding = "";
-      body.style.overflow = "";
-      body.style.border = "";
-      body.style.margin = "";
-    }
-  }
-  function unparkNode(el) {
-    if (!el) return;
-    el.style.maxHeight = "";
-    el.style.height = "";
-    el.style.minHeight = "";
-    el.style.overflow = "";
-    el.style.marginTop = "";
-    el.style.marginBottom = "";
-    el.style.paddingTop = "";
-    el.style.paddingBottom = "";
-    el.style.borderWidth = "";
-    el.removeAttribute("data-contained");
-    el.removeAttribute("data-trail");
-    var body = el.querySelector(".chat-tool-body");
-    if (body) {
-      body.style.maxHeight = "";
-      body.style.height = "";
-      body.style.padding = "";
-      body.style.overflow = "";
-      body.style.border = "";
-      body.style.margin = "";
-    }
-  }
-  function unparkAll() {
-    clearLeftoverScrollPad();
-    if (!chatThread) return;
-    var parked = chatThread.querySelectorAll("[data-contained=parked], [data-contained=leftover]");
-    var i;
-    for (i = 0; i < parked.length; i++) unparkNode(parked[i]);
-  }
-  function parkNode(el) {
-    if (!el) return;
-    el.style.maxHeight = "0px";
-    el.style.height = "0px";
-    el.style.minHeight = "0px";
-    el.style.overflow = "hidden";
-    el.style.marginTop = "0px";
-    el.style.marginBottom = "0px";
-    el.style.paddingTop = "0px";
-    el.style.paddingBottom = "0px";
-    el.style.borderWidth = "0px";
-    el.removeAttribute("data-trail");
-    el.setAttribute("data-contained", "parked");
-    var body = el.querySelector(".chat-tool-body");
-    if (body) {
-      body.style.height = "0px";
-      body.style.maxHeight = "0px";
-      body.style.padding = "0";
-      body.style.overflow = "hidden";
-      body.style.border = "none";
-      body.style.margin = "0";
-    }
-  }
-  // This turn starts at the first live-work event after leftover-snap.
-  // Later assistant events accumulate on the fold — ls | head stays
-  // when find / rg leftover arrive.
-  // A completed measure-append with no following assistant/output is
-  // a prior event once later tool_use arrives — not this turn. The
-  // last completed assistant (dump + named file) parks; this-turn
-  // cards grow in place.
-  function thisTurnEventIndex() {
-    var blocks = lastBlocks || [];
-    var lastUser = -1;
-    var lastAsst = -1;
-    var firstLive = -1;
-    var i;
-    for (i = 0; i < blocks.length; i++) {
-      var b = blocks[i];
-      if (b.kind === "user") lastUser = i;
-      if (b.kind === "text" || b.kind === "thought" || b.kind === "tool" || b.kind === "errnote") {
-        if (typeof b.eventIndex === "number") lastAsst = b.eventIndex;
-      }
-      if (b.kind === "tool" && b.running && typeof b.eventIndex === "number") {
-        if (firstLive < 0) firstLive = b.eventIndex;
-      }
-    }
-    // Skip leftover-snap dump + its completed named-output tools,
-    // then tool-less completed assistants. Remaining events are
-    // this turn and must stay as later assistants land.
-    var i0 = lastUser + 1;
-    while (i0 < blocks.length && blocks[i0].kind === "thought") i0++;
-    if (i0 < blocks.length && blocks[i0].kind === "text") {
-      var dumpEv = blocks[i0].eventIndex;
-      i0++;
-      var hadOutput = false;
-      while (i0 < blocks.length && blocks[i0].eventIndex === dumpEv) {
-        if (blocks[i0].kind === "tool" && blocks[i0].res) hadOutput = true;
-        i0++;
-      }
-      if (hadOutput) {
-        while (i0 < blocks.length) {
-          var ev = blocks[i0].eventIndex;
-          if (typeof ev !== "number") break;
-          var j = i0;
-          var hasTools = false;
-          while (j < blocks.length && blocks[j].eventIndex === ev) {
-            if (blocks[j].kind === "tool") hasTools = true;
-            j++;
-          }
-          if (hasTools) break;
-          if (blocks[i0].kind !== "text" && blocks[i0].kind !== "thought") break;
-          i0 = j;
-        }
-      }
-    }
-    for (i = i0; i < blocks.length; i++) {
-      if (typeof blocks[i].eventIndex === "number") return blocks[i].eventIndex;
-    }
-    if (firstLive >= 0) return firstLive;
-    return lastAsst;
-  }
-  // Live generating: keep this turn's cards under the prompt as they
-  // grow. Park every earlier event (dump, named file object, and
-  // the last completed assistant) at height 0 — not a 22px costume.
-  // Advertised bytes stay in the nodes so full-text / incremental
-  // stamps hold. This turn's tools and in-progress prose stay.
-  function parkPriorCompletedTurn() {
-    if (!chatThread) return;
-    var liveEv = thisTurnEventIndex();
-    var kids = chatThread.children;
-    var lastUser = -1;
-    var i;
-    for (i = 0; i < kids.length; i++) {
-      if (kids[i].classList.contains("chat-user")) lastUser = i;
-    }
-    var firstLive = -1;
-    for (i = lastUser + 1; i < kids.length; i++) {
-      var ev = parseInt(kids[i].getAttribute("data-event-index"), 10);
-      if (liveEv >= 0 && !isNaN(ev) && ev >= liveEv) {
-        firstLive = i;
-        break;
-      }
-    }
-    for (i = 0; i < kids.length; i++) {
-      var el = kids[i];
-      if (i <= lastUser) {
-        if (el.getAttribute("data-contained") === "parked") unparkNode(el);
-        continue;
-      }
-      var prior = firstLive >= 0 ? i < firstLive : false;
-      if (prior) parkNode(el);
-      else if (el.getAttribute("data-contained") === "parked") unparkNode(el);
-    }
-  }
-  // Natural empty air is leftover #chatScroll under a short
-  // prompt-anchored trail. Do not manufacture a fold-filling
-  // #chatActivity min-height — that spacer turns pin-to-tail into
-  // leftover-snap stubs over void.
-  function sizeLiveAir() {
-    if (!chatActivity) return;
-    chatActivity.style.minHeight = "";
-  }
-  // Prompt-anchored live trail: if the last user bubble plus this
-  // turn's tools plus Planning fit, pin the prompt to the top of
-  // #chatScroll (Cursor conversation-01–04). A trail that overflows
-  // still pinLiveTails so Planning does not sit below the fold.
-  function frameLiveTrail() {
-    if (!chatScroll || !chatThread) {
-      pinLiveTail();
-      return;
-    }
-    var users = chatThread.querySelectorAll(".chat-user");
-    var target = users.length ? users[users.length - 1] : null;
-    if (!target) {
-      pinLiveTail();
-      return;
-    }
-    var tr = target.getBoundingClientRect();
-    var trailBottom = chatActivity
-      ? chatActivity.getBoundingClientRect().top + 28
-      : chatThread.getBoundingClientRect().bottom;
-    if (trailBottom - tr.top <= chatScroll.clientHeight - 8) {
-      frameCompletedTurn();
-      followTail = true;
-      return;
-    }
-    pinLiveTail();
-  }
-  // Measure each pre line box via Range so the file-object viewport
-  // can close on a complete line (not a theoretical line-height).
-  function measurePreLines(pre) {
-    var node = pre.firstChild;
-    while (node && node.nodeType !== 3) node = node.nextSibling;
-    if (!node) return [];
-    var raw = node.nodeValue || "";
-    var range = document.createRange();
-    var out = [];
-    var start = 0;
-    var i;
-    for (i = 0; i <= raw.length; i++) {
-      if (i !== raw.length && raw.charCodeAt(i) !== 10) continue;
-      try {
-        if (i > start) {
-          range.setStart(node, start);
-          range.setEnd(node, i);
-        } else {
-          range.setStart(node, start);
-          range.setEnd(node, start);
-        }
-        var r = range.getBoundingClientRect();
-        if (r.height > 0) {
-          out.push({ top: r.top, bottom: r.bottom, start: start, end: i });
-        } else if (out.length) {
-          var prev = out[out.length - 1];
-          var lh = Math.max(12, prev.bottom - prev.top);
-          out.push({ top: prev.bottom, bottom: prev.bottom + lh, start: start, end: i });
-        }
-      } catch (err) { /* range bounds */ }
-      start = i + 1;
-    }
-    return out;
-  }
-  // Snap the body viewport so it closes at the next line's top: the
-  // last painted Range is whole, the following glyph is not in the
-  // box, and the card's padding-bottom is empty interior pad
-  // (last Range.bottom ≤ card.bottom).
-  function snapBodyToWholeLines(body, card, maxH) {
-    var lines = measurePreLines(body);
-    var br = body.getBoundingClientRect();
-    if (!lines.length) {
-      var fallback = Math.max(0, Math.floor(maxH));
-      body.style.height = fallback + "px";
-      body.style.maxHeight = fallback + "px";
-      return;
-    }
-    function closeAt(idx) {
-      if (idx + 1 < lines.length && lines[idx + 1].top > lines[idx].bottom) {
-        return lines[idx + 1].top;
-      }
-      return lines[idx].bottom;
-    }
-    var last = -1;
-    var i;
-    for (i = 0; i < lines.length; i++) {
-      if (closeAt(i) - br.top <= maxH + 0.5) last = i;
-      else break;
-    }
-    if (last < 0) last = 0;
-    var snapped = Math.min(Math.floor(maxH), Math.floor(closeAt(last) - br.top - 0.5));
-    while (last > 0 && lines[last].bottom > br.top + snapped + 0.5) {
-      last--;
-      snapped = Math.min(Math.floor(maxH), Math.floor(closeAt(last) - br.top - 0.5));
-    }
-    if (snapped < 1) snapped = Math.max(1, Math.floor(lines[0].bottom - br.top));
-    body.style.height = snapped + "px";
-    body.style.maxHeight = snapped + "px";
-    body.style.overflow = "auto";
-    var after = card.getBoundingClientRect();
-    var lastLine = lines[last];
-    if (lastLine && lastLine.bottom > after.bottom + 0.5 && last > 0) {
-      last--;
-      snapped = Math.min(Math.floor(maxH), Math.floor(closeAt(last) - br.top - 0.5));
-      body.style.height = snapped + "px";
-      body.style.maxHeight = snapped + "px";
-    }
-  }
-  function snapNamedOutputCard(card, fillLeftover) {
-    if (!card) return;
-    var body = card.querySelector(".chat-tool-body");
-    if (!body) return;
-    var composer = document.querySelector(".chat-composer");
-    if (!composer) return;
-    // Answer-first leftover snap: never yield/clip .chat-assistant.
-    // The file object takes only room between the unclipped prose and
-    // the composer, cutting preferred file-object lines first.
-    clearOutputCap(card);
-    var head = card.querySelector(".chat-output-head");
-    var headH = head ? Math.ceil(head.getBoundingClientRect().height) : 0;
-    var lines = measurePreLines(body);
-    var cs = window.getComputedStyle(body);
-    var padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
-    var borderY = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
-    var avgLh = parseFloat(cs.lineHeight);
-    if (!avgLh || !isFinite(avgLh)) {
-      var fs = parseFloat(cs.fontSize) || 11.5;
-      avgLh = fs * 1.4;
-    }
-    if (lines.length >= 2) {
-      avgLh = (lines[lines.length - 1].bottom - lines[0].top) / lines.length;
-    } else if (lines.length === 1) {
-      avgLh = Math.max(12, lines[0].bottom - lines[0].top);
-    }
-    var FILE_OBJECT_MAX = 12;
-    var preferredLines = Math.max(1, Math.min(lines.length || FILE_OBJECT_MAX, FILE_OBJECT_MAX));
-    var preferredBody = Math.ceil(preferredLines * avgLh + padY + borderY);
-    var cardPadB = 12;
-    var closeTop = leftoverCloseTop(card, composer);
-    var cr = card.getBoundingClientRect();
-    var leftover = Math.floor(closeTop - cr.top - 8);
-    var leftoverBody = leftover - headH - cardPadB;
-    // fillLeftover (G1 first-turn named column, after-growth own file)
-    // leftover-snaps leftover room so the named card occupies leftover.
-    // Otherwise the 12-line preferred ceiling still applies.
-    var bodyRoom = fillLeftover ? leftoverBody : Math.min(preferredBody, leftoverBody);
-    var naturalBody = body.scrollHeight;
-    if (bodyRoom < 1 || naturalBody <= bodyRoom + 1) {
-      card.setAttribute("data-contained", "1");
-      return;
-    }
-    snapBodyToWholeLines(body, card, bodyRoom);
-    card.setAttribute("data-contained", "1");
-    cr = card.getBoundingClientRect();
-    if (cr.bottom > closeTop - 4) {
-      var tighter = Math.max(1, bodyRoom - Math.ceil(cr.bottom - (closeTop - 4)));
-      snapBodyToWholeLines(body, card, tighter);
-    }
-  }
-  // First-turn leftover occupancy: leftover is the flex:1 leftover
-  // viewport (leftover.bottom is composer.top of leftover.clientHeight
-  // leftover viewport, leftover = composer.top − leftover.top =
-  // leftover.clientHeight). leftover-owned pixels occupying leftover
-  // are BAR's named shell-output column — opening prose + named card (Lines 1–6) + closing prose — not user + prior dumps.
-  // leftoverAir is leftover − leftoverOwned (BAR leftover has leftover air under closing). leftover occupancy of leftover-owned content is not leftover occupancy of leftover. unparkAll restores
-  // live-parked nodes; earlier blocks (user, lsof/ps, thoughts) stay
-  // in flow above the opening, scrolled off the top. The named card
-  // fillLeftover-snaps in place — not a 12-line island under the user
-  // prompt, not data-contained=parked, not split into #chatHistory.
-  function leftoverOccupyingNamedCard() {
-    if (!chatThread) return null;
-    var cards = chatThread.querySelectorAll(".chat-card.chat-output");
-    return cards.length ? cards[cards.length - 1] : null;
-  }
-  // Earlier blocks stay in flow at their natural height so scrolling up
-  // reaches them; the column is framed by scrolling it to the top.
-  function leftoverSnapNamedColumn() {
-    var named = leftoverOccupyingNamedCard();
-    if (!named || !chatThread || !chatScroll || lastState === "running") return;
-    var opening = named.previousElementSibling;
-    var top = opening && opening.classList.contains("chat-assistant") ? opening : named;
-    clearOutputCap(named);
-    var tr = top.getBoundingClientRect();
-    var sr = chatScroll.getBoundingClientRect();
-    chatScroll.scrollTop = Math.max(0, chatScroll.scrollTop + (tr.top - sr.top) - 20);
-    document.body.setAttribute("data-leftover-owned", "named-column");
-    snapNamedOutputCard(named, true);
-  }
-  function containNamedOutput() {
-    if (!chatScroll || !chatThread) return;
-    if (lastState === "running") {
-      // Do not leftover-snap-uncap: an expanded previous fixture card
-      // or 511px assistant dump spends the fold. Park every prior
-      // assistant event off the fold so the first things under the
-      // prompt are this turn's tools, not leftover completed prose.
-      parkPriorCompletedTurn();
-      clearNewestProseLeftover(lastThreadEl(".chat-assistant"));
-      clearLeftoverScrollPad();
-      sizeLiveAir();
-      return;
-    }
-    if (leftoverSnapIsStale()) {
-      // Earlier turns stay in flow; leftoverSnapNewestTurn frames the
-      // newest turn by scrolling and sizes its own file there.
-      unparkAll();
-      if (!newestTurnOwnFile()) occupyLeftoverAsNewestReading(lastThreadEl(".chat-assistant"));
-      clearNewestProseLeftover(lastThreadEl(".chat-assistant"));
-      sizeLiveAir();
-      return;
-    }
-    unparkAll();
-    sizeLiveAir();
   }
 
   /* ---- tool-row interaction: open/close, Expand all, find, deep links ---- */
@@ -2249,7 +1653,8 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     if (toolState.query) applyFindMarks(el);
     var again = el.querySelectorAll("[" + attr + "]");
     for (var j = 0; j < again.length; j++) {
-      if (again[j].getAttribute(attr) === focusKey) { again[j].focus(); break; }
+      // Keep the reader's place: an opened prompt's button sits below its text.
+      if (again[j].getAttribute(attr) === focusKey) { again[j].focus({ preventScroll: true }); break; }
     }
     syncFindCount();
   }
@@ -2324,68 +1729,28 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
   })();
 
   var lastItems = [];
-  var framedTurnKey = "";
-  // Live-trail framing is identity generating, or in-flight unmatched
-  // tool_use. QUIET_MS on a completed idle turn is not a live trail.
-  function watchFramesLiveTrail() {
-    if (lastState !== "running") return false;
-    if (typeof watchIdentityWord === "function" && watchIdentityWord() !== "running") {
-      return typeof hasUnresolvedToolUse === "function" && hasUnresolvedToolUse(lastSession);
-    }
-    return true;
-  }
   function rerender() {
     lastBlocks = lastSession ? buildBlocks(lastSession, lastState) : [];
     var items = renderItems(lastBlocks);
     lastItems = items;
     // The thread's HTML from the items just built, not a second render pass.
     var threadHtml = itemsHtml(items);
-    var stick = followTail || isAtBottom();
+    // Sample before the patch: the new items push the end of the thread down.
+    followTail = followTail || isAtBottom();
     var threadChanged = threadHtml !== lastThreadHtml;
     if (threadChanged) {
-      restoreThreadFromHistory();
-      restoreLeftoverViewport();
       applyThreadItems(chatThread, items);
       lastThreadHtml = threadHtml;
     }
     syncOutputPane(items);
+    // A deep link or a find step may take the reader elsewhere (followTail off).
     afterThreadPatch(threadChanged);
     var aHtml = activityHtml();
     if (aHtml !== lastActivityHtml) {
       chatActivity.innerHTML = aHtml;
       lastActivityHtml = aHtml;
     }
-    var turnKey = "";
-    var lastAsstKey = "";
-    for (var u = 0; u < items.length; u++) {
-      if (!items[u]) continue;
-      if (items[u].role === "user") turnKey = items[u].key;
-      if (items[u].role === "assistant") lastAsstKey = items[u].key;
-    }
-    var frameKey = turnKey + "\0" + lastAsstKey;
-    if (watchFramesLiveTrail()) {
-      framedTurnKey = "";
-      containNamedOutput();
-      if (stick) frameLiveTrail();
-      requestAnimationFrame(function () {
-        containNamedOutput();
-        if (stick && followTail) frameLiveTrail();
-      });
-    } else if (frameKey && frameKey !== framedTurnKey) {
-      framedTurnKey = frameKey;
-      if (shouldFrameCompletedTurn()) frameCompletedTurn();
-      containNamedOutput();
-      if (leftoverSnapIsStale()) leftoverSnapNewestTurn();
-      else leftoverSnapNamedColumn();
-      requestAnimationFrame(function () {
-        if (shouldFrameCompletedTurn()) frameCompletedTurn();
-        containNamedOutput();
-        if (leftoverSnapIsStale()) leftoverSnapNewestTurn();
-        else leftoverSnapNamedColumn();
-      });
-    } else {
-      containNamedOutput();
-    }
+    if (followTail) pinLiveTail();
     // Identity word (detectLiveSessions / apiLive on /run?session=), not
     // the growth lastState overlay (quiet window / unmatched tool_use).
     document.body.setAttribute("data-run-state", typeof watchIdentityWord === "function" ? watchIdentityWord() : lastState);
@@ -2404,7 +1769,8 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     var t = ev.target && ev.target.closest ? ev.target.closest("[data-tg], [data-more]") : null;
     if (t) {
       var moreKey = t.getAttribute("data-more");
-      if (moreKey) toolState.more[moreKey] = !toolState.more[moreKey];
+      // A folded message says whether it is open: a find hit can open it without a click.
+      if (moreKey) toolState.more[moreKey] = t.hasAttribute("aria-expanded") ? t.getAttribute("aria-expanded") !== "true" : !toolState.more[moreKey];
       else toolState.overrides[t.getAttribute("data-tg")] = t.getAttribute("aria-expanded") !== "true";
       patchToolItem(t);
       return;
@@ -2418,13 +1784,7 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     syncOutputPane(lastItems);
   });
   window.addEventListener("resize", function () {
-    containNamedOutput();
-    if (watchFramesLiveTrail() && followTail) frameLiveTrail();
-    else if (!watchFramesLiveTrail() && leftoverSnapIsStale() && followTail) leftoverSnapNewestTurn();
-    else if (!watchFramesLiveTrail() && followTail) {
-      if (leftoverOccupyingNamedCard()) leftoverSnapNamedColumn();
-      else { frameCompletedTurn(); keepNewestTurnAbovePill(); }
-    }
+    if (followTail) scrollBottom();
   });
 `;
 
@@ -3540,7 +2900,7 @@ ${ANALYTICS_PANEL_JS}
  * in-thread tools when detectLiveSessions reports idle — growth chrome
  * only, never a second RUNNING identity. A completed idle G1 poll
  * whose etag is inside QUIET_MS follows identity for growth lastState
- * too (leftover-snap, no Planning-next-moves shimmer). Exclusive
+ * too (no Planning-next-moves shimmer). Exclusive
  * #liveTailForm (Stop) and data-live-tail follow detectLiveSessions /
  * poll state, so idle G1 inside QUIET_MS keeps the Send a follow-up
  * composer (no Stop). #runStatus, data-run-state, title, and
@@ -3771,10 +3131,8 @@ ${CHAT_TRANSCRIPT_JS}
    *  unmatched tool_use may still spin in-thread tools. */
   function setWatchState(state) {
     // Sample follow-tail BEFORE live chrome CSS grows the column
-    // (chat-activity min-height + chat-col padding-bottom) or
-    // leftover-snap parking. Leftover-snap's idle frame is the
-    // conversation end; after those rules, isAtBottom() is false
-    // and the generating trail never pins.
+    // (chat-activity min-height + chat-col padding-bottom); after those
+    // rules, isAtBottom() is false and the generating trail never pins.
     if (state === "running") followTail = followTail || isAtBottom();
     lastState = state;
     paintWatchChrome();

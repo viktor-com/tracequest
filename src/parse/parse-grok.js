@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { isDisplayableUserText, capContent, parseToolArgs } from "./parse-utils.js";
+import { isDisplayableUserText, capContent, parseToolArgs, stripKandevContext } from "./parse-utils.js";
 import { forEachJsonlLineFromFile, parseJsonlLine, parseJsonlLineAt } from "./jsonl-read.js";
 import { isGrokChatIndexedLine, isGrokEventsIndexedLine } from "./grok-chat-index.js";
 import { errorPattern, normalizeToolName, enrichToolEvent } from "./parse-enrich.js";
@@ -8,10 +8,11 @@ import { buildSession } from "./parse-session-build.js";
 import { grokFamilySourceForPath } from "../sessions/session-layout.js";
 
 export function extractUserQuery(text) {
-  const trimmed = text.trim();
+  const trimmed = stripKandevContext(text.trim());
   const uq = trimmed.match(/<user_query>\s*([\s\S]*?)\s*<\/user_query>/);
   if (uq) {
-    const inner = uq[1].trim();
+    // Kandev puts its context blocks ahead of the prompt, inside <user_query> too.
+    const inner = stripKandevContext(uq[1].trim());
     // Slash commands: extract the actual user input from <command-args> or <command-message>
     const args = inner.match(/<command-args>([\s\S]*?)<\/command-args>/);
     if (args) return args[1].trim() || null;

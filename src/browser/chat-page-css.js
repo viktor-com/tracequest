@@ -242,6 +242,7 @@ body { overflow: hidden; }
   font-size: var(--text-md); line-height: 1.55; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .chat-thread > .chat-user:first-child { margin-top: 2px; }
+.chat-user-more { display: block; margin-top: 6px; }
 .chat-assistant {
   position: relative; margin: 6px 2px 12px; font-size: var(--text-md); line-height: 1.65; color: var(--text); overflow-wrap: break-word;
 }
