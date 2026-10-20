@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-10-20
+
 ### Fixed
 
 - Keep every item visible in the run view while a session is generating, so it scrolls from the first prompt to the live tail. Earlier messages and tool calls of the current turn were collapsed to zero height, which left only the prompt on screen with nothing to scroll.

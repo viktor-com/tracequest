@@ -247,3 +247,9 @@
   label: Cursor indexing, peek metadata, and snippet scanning use the same Claude-family tokenizer input and query-scan behavior while preserving source=cursor in search results, and the multi-source search/serve integration covers all seven agent sources
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'source indexers tokenize source content into per-session termFreqs|cursor source routes to peekCursor|cursor snippets scan Claude-family JSONL content|search and serve API return hits from all seven agent sources' test/bin/tracequest-multi-source-integration.test.js
   tags: [spec, cursor, search, implemented, cursor-cloud]
+
+# release
+- label: tracequest full-transcript release metadata uses version 0.5.2 consistently in the package, lockfile and dated changelog entry
+  id: rel052
+  command: node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const p=JSON.parse(fs.readFileSync("package.json")), l=JSON.parse(fs.readFileSync("package-lock.json")); assert.equal(p.version,"0.5.2"); assert.equal(l.version,p.version); assert.equal(l.packages[""].version,p.version); assert.ok(fs.readFileSync("CHANGELOG.md","utf8").includes("## [0.5.2] - 2026-10-20"));'
+  tags: [release-0-5-2, implemented]
