@@ -55,3 +55,9 @@
   id: rvn5
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'loading and cheatsheet' test/browser/run-view-navigation.playwright.test.js
   tags: [spec, chat-ui, run-view-nav, ui, tests, implemented]
+
+# run-view-scroll
+- label: the run view (/run?session=) never collapses or hides transcript items: for a finished recording and for one still generating (including a turn whose newest tool call has no result yet), every user message, agent message and tool row after the first prompt is rendered in order at its natural height (none parked at zero height, none moved off screen into #chatHistory), and scrolling with the mouse wheel goes from the first prompt to the last message
+  id: rvsc
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/run-view-scroll.e2e.test.js
+  tags: [spec, chat-ui, ui, tests, implemented]
