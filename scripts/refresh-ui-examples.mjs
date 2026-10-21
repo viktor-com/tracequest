@@ -4,9 +4,24 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright";
+import assert from "node:assert/strict";
+import { MARK_SVG, WORDMARK_SVG } from "../src/ui/brand.js";
 import { browserPageHTML } from "../src/browser/browser-page-build.js";
 import { comparePage } from "../src/browser/compare-page.js";
 import { renderHTML } from "../src/render.js";
+
+async function assertBrand(page) {
+  for (const [selector, svg] of [[".app-mark", MARK_SVG], [".app-logotype", WORDMARK_SVG]]) {
+    const logo = page.locator(selector).first();
+    await logo.waitFor({ state: "visible" });
+    assert.deepEqual(await logo.evaluate((el) => Array.from(el.querySelectorAll("path"), (p) => p.getAttribute("d"))),
+      Array.from(svg.matchAll(/<path[^>]* d="([^"]*)"/g), (m) => m[1]), `${selector} must use canonical brand paths`);
+    const bounds = await logo.boundingBox();
+    assert.ok(bounds && bounds.x >= 0 && bounds.y >= 0 && bounds.width > 0 && bounds.height > 0 &&
+      bounds.x + bounds.width <= page.viewportSize().width && bounds.y + bounds.height <= page.viewportSize().height,
+      `${selector} must be visible in the capture`);
+  }
+}
 
 const ROOT = new URL("..", import.meta.url);
 const OUT_DIR = new URL("docs/ui-examples/", ROOT);
@@ -224,10 +239,12 @@ function writeTempHtml(dir, name, html) {
   return pathToFileURL(path).href;
 }
 
-async function screenshotLocator(page, selector, path) {
+async function screenshotPage(page, selector, path) {
   const locator = page.locator(selector).first();
   await locator.waitFor({ state: "visible" });
-  await locator.screenshot({ path });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await assertBrand(page);
+  await page.screenshot({ path, fullPage: true });
   console.log(`wrote ${path}`);
 }
 
@@ -244,20 +261,20 @@ async function main() {
     await page.locator(".compare-cb").nth(0).check();
     await page.locator(".compare-cb").nth(1).check();
     await page.waitForTimeout(100);
-    await screenshotLocator(page, ".container", join(OUT_DIR.pathname, "browser-index.png"));
+    await screenshotPage(page, ".container", join(OUT_DIR.pathname, "browser-index.png"));
 
     await page.setViewportSize(VIEWPORT);
     const [a, b] = compareSessions();
     const compareUrl = writeTempHtml(tmp, "compare.html", comparePage(a, b));
     await page.goto(compareUrl);
     await page.waitForTimeout(100);
-    await screenshotLocator(page, ".container", join(OUT_DIR.pathname, "compare-analysis.png"));
+    await screenshotPage(page, ".container", join(OUT_DIR.pathname, "compare-analysis.png"));
 
     const renderUrl = writeTempHtml(tmp, "rendered-session.html", renderHTML(a));
     await page.goto(renderUrl);
     await page.locator(".chapter").first().click();
     await page.waitForTimeout(150);
-    await screenshotLocator(page, "#app", join(OUT_DIR.pathname, "rendered-session-detail.png"));
+    await screenshotPage(page, "#app", join(OUT_DIR.pathname, "rendered-session-detail.png"));
   } finally {
     await browser.close();
     rmSync(tmp, { recursive: true, force: true });

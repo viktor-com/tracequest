@@ -10,7 +10,7 @@
 
 <p align="center">Follow your coding agents. Find what happened.</p>
 
-![The TraceQuest session list, error breakdown and a per-turn token chart for one session](docs/assets/hero.png)
+![A TraceQuest conversation beside its session analytics](docs/assets/hero.png)
 
 TraceQuest is a local web app and CLI for reading coding-agent sessions. It shows
 each session's messages, tool calls, errors, timing and token usage. It reads
@@ -21,16 +21,15 @@ machines over SSH.
 
 [Try it](#try-it) · [Features](#features) · [Documentation](docs/README.md)
 
-The screenshots show 16 real Claude Code and Codex CLI sessions, recorded on six
-small sample projects made for these screenshots. One Codex session is also
-replayed as a running session to show live updates, so the lists count 17.
+The screenshots use the bundled Claude Code samples and synthetic Codex recordings.
+The hub shows copies under demo machine names.
 Costs are estimated from token counts and model prices. They are not billing data.
 
 ## Features
 
 ### Search and filter sessions
 
-![The session list filtered to Codex sessions with errors, with the filter terms explained](docs/assets/browse.png)
+![The session list filtered to Codex sessions with errors](docs/assets/browse.png)
 
 The session list searches message text. You can filter by project, source,
 machine, model, tool, error count and age. The summary row above the list shows
@@ -57,7 +56,7 @@ your most recent session.
 
 ### Find out why tool calls fail
 
-![Insights for 17 sessions: failed tool calls grouped by cause, and error rates per agent](docs/assets/insights.png)
+![Failed tool calls grouped by cause, with error rates per agent](docs/assets/insights.png)
 
 Insights groups failed tool calls by cause. It also shows error rates, retries,
 loops, active time and estimated cost. Expand a row to see the failed output and
@@ -82,7 +81,7 @@ choose **Compare**. [Browser and session commands](docs/cli-reference.md#cli-usa
 
 ### Read, start and continue conversations
 
-![A Codex session open in the conversation view while it is still running](docs/assets/runs.png)
+![A Codex session open in the conversation view](docs/assets/runs.png)
 
 The conversation view shows a session's messages and tool output, and updates
 while the agent is still working. **+ New run** starts an installed agent in a
@@ -95,7 +94,7 @@ tmux.
 
 ### Export reports and write handoffs
 
-![An exported HTML session report with print, Markdown, export and share buttons](docs/assets/reports.png)
+![A standalone HTML session report with Print and Share buttons](docs/assets/reports.png)
 
 **Export** saves a session as a single HTML file with its timeline and chapters.
 **Markdown** saves the session text. The `handoff` command searches your sessions

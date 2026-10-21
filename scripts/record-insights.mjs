@@ -19,7 +19,22 @@ import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
+import assert from "node:assert/strict";
+import { MARK_SVG, WORDMARK_SVG } from "../src/ui/brand.js";
 import { writeJsonl } from "../test/helpers/fixtures.js";
+
+async function assertBrand(page) {
+  for (const [selector, svg] of [[".app-mark", MARK_SVG], [".app-logotype", WORDMARK_SVG]]) {
+    const logo = page.locator(selector).first();
+    await logo.waitFor({ state: "visible" });
+    assert.deepEqual(await logo.evaluate((el) => Array.from(el.querySelectorAll("path"), (p) => p.getAttribute("d"))),
+      Array.from(svg.matchAll(/<path[^>]* d="([^"]*)"/g), (m) => m[1]), `${selector} must use canonical brand paths`);
+    const bounds = await logo.boundingBox();
+    assert.ok(bounds && bounds.x >= 0 && bounds.y >= 0 && bounds.width > 0 && bounds.height > 0 &&
+      bounds.x + bounds.width <= page.viewportSize().width && bounds.y + bounds.height <= page.viewportSize().height,
+      `${selector} must be visible in the capture`);
+  }
+}
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BIN = join(ROOT, "bin/tracequest.js");
@@ -166,7 +181,13 @@ async function startFixtureServer() {
   });
   const url = `http://127.0.0.1:${port}/insights`;
   await waitForHttp(url, child);
-  return { url, stop: () => { child.kill("SIGTERM"); rmSync(home, { recursive: true, force: true }); } };
+  return { url, stop: async () => {
+    if (child.exitCode == null) await new Promise((resolve) => {
+      child.once("exit", resolve);
+      child.kill("SIGTERM");
+    });
+    rmSync(home, { recursive: true, force: true, maxRetries: 3 });
+  } };
 }
 
 const target = values.url ? { url: values.url, stop: () => {} } : await startFixtureServer();
@@ -180,6 +201,7 @@ try {
   const page = await context.newPage();
   await page.goto(target.url, { waitUntil: "load" });
   await page.waitForSelector('[data-insight="headline"]');
+  await assertBrand(page);
   mkdirSync(OUT_DIR, { recursive: true });
   await page.screenshot({ path: POSTER_OUT, fullPage: true });
   await sleep(1100);
@@ -211,6 +233,7 @@ try {
     if (await example.count()) {
       await example.click();
       await page.waitForLoadState("load");
+      await assertBrand(page);
       await sleep(1400);
     }
   }
@@ -222,5 +245,5 @@ try {
 } finally {
   await browser.close();
   rmSync(videoDir, { recursive: true, force: true });
-  target.stop();
+  await target.stop();
 }

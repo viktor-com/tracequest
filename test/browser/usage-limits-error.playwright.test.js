@@ -177,6 +177,21 @@ describe("usage-limits error playwright", SKIP_NO_PLAYWRIGHT, () => {
       assert.ok(chips.includes("codex error"), `local error chip in ${JSON.stringify(chips)}`);
       assert.ok(chips.includes("codex@gpu error"), `imported error chip in ${JSON.stringify(chips)}`);
       assert.equal(await page.locator("#appLimits .app-limit-chip.is-error").count(), 2);
+
+      // A collector can become available after a page first renders with no limits.
+      await page.evaluate(() => window.paintUsageLimits({ local: { harnesses: [] }, hosts: [] }));
+      assert.equal(await page.locator("#appLimitsBtn").isVisible(), false);
+      await page.evaluate(() => window.paintUsageLimits({
+        local: { harnesses: [{ id: "codex", status: "ok", plan: "plus",
+          windows: [{ id: "five_hour", utilization: 0.25, resetsAt: null }],
+          limitingWindow: "five_hour" }] }, hosts: [],
+      }));
+      assert.equal(await page.locator("#appLimitsBtn").isVisible(), true);
+      await page.keyboard.press("Escape");
+      await page.locator("#appLimitsBtn").click();
+      assert.equal(await panel.isVisible(), true);
+      assert.equal(await panel.locator('.usage-widget[data-harness="codex"]').count(), 1);
+      assert.match(await panel.textContent(), /25%/);
     } finally {
       await browser.close();
       await stopServe(child);

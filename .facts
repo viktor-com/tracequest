@@ -261,3 +261,5 @@
 - TraceQuest provides reusable path-based SVG and PNG versions of its wordmark and primary TQ mark, plus a multi-resolution ICO, from one shipped asset directory @branding-integration @implemented
 - The README and app headers use the selected TraceQuest identity, adapting to light and dark themes, and all served pages and standalone reports include the TQ favicon @branding-integration @implemented
 - Brand asset URLs return intact image bytes in regular and read-only hub mode, and packaged installations include every runtime brand asset @branding-integration @implemented
+- Every README product screenshot and UI example is rendered from the current TraceQuest interface with the canonical TQ mark and wordmark; screenshot refresh checks the displayed brand before capture @spec @branding-media @implemented
+- Documentation recordings use the current identity, and historical regression images show the relevant evidence without obsolete app branding @spec @branding-media @implemented

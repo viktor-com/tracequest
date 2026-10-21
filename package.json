@@ -48,7 +48,7 @@
     "demo": "HOME=\"$PWD/examples/home\" TRACEQUEST_TMUX_SOCKET=tracequest-demo node bin/tracequest.js serve",
     "test": "TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/*.test.js test/routes/*.test.js test/browser/*.test.js",
     "smoke:standup-handoff": "node scripts/smoke-standup-handoff.mjs",
-    "docs:ui-examples": "node scripts/refresh-ui-examples.mjs",
+    "docs:ui-examples": "node scripts/refresh-readme-screenshots.mjs && node scripts/refresh-ui-examples.mjs && node scripts/record-insights.mjs && node scripts/record-usage-limits.mjs",
     "probe:standup-agents": "node bin/tracequest.js standup --probe-agents",
     "build:sidecar": "cd sidecar && cargo build --release",
     "build:sidecar:bundle": "node scripts/bundle-sidecar.mjs",

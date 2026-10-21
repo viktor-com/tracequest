@@ -311,6 +311,7 @@ export const USAGE_LIMITS_CLIENT_SRC =
   usageWidgetHtml.toString().replace(/^export /, "") + "\n" +
   usageStripMarkup.toString().replace(/^export /, "") + "\n" +
   usageMarkupSig.toString().replace(/^export /, "") + "\n" +
+  usageChipCount.toString() + "\n" +
   paintUsageLimits.toString().replace(/^export /, "") + "\n" +
   startUsageLimitsPolling.toString().replace(/^export /, "");
 
