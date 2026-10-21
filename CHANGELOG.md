@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- New tracequest logo: TRACE and QUEST stacked in custom heavy capitals, with the Q's tail running under QUEST as an orange trace. The header shows it on one line. It replaces the zigzag in a rounded square in the app header and README, and pages now have a favicon (`/favicon.svg`) that follows the system light or dark theme.
+- New tracequest logo: a Q whose tail leaves the run and runs flat as an accent-orange trace. The header shows the mark beside the lowercase wordmark, and pages now have a favicon (`/favicon.svg`) with the mark on a dark tile that follows the system light or dark theme.
 
 ## [0.5.2] - 2026-10-20
 

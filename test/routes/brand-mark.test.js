@@ -29,13 +29,14 @@ function get(handle, path) {
   });
 }
 
-test("brand mark: header wordmark renders the TRACEQUEST logotype with an accent trace", () => {
+test("brand mark: header wordmark renders the trace mark beside the wordmark", () => {
   const top = appTopHtml({ nav: "chat" });
   assert.ok(top.includes(MARK_SVG), "app top bar embeds the mark");
   assert.match(MARK_SVG, /stroke="currentColor"/);
   assert.match(MARK_SVG, /class="app-mark-trace"/);
-  assert.match(APP_TOP_CSS, /\.app-mark-trace\s*\{\s*fill:\s*var\(--accent\)/);
-  assert.doesNotMatch(top, /M5 11\.5h2\.5l1\.5-5/, "old zigzag mark is gone");
+  assert.match(MARK_SVG, /<span class="app-word">tracequest<\/span>/);
+  assert.match(APP_TOP_CSS, /\.app-mark-trace\s*\{\s*stroke:\s*var\(--accent\)/);
+  assert.doesNotMatch(top, /M0 1\.8H10M5 1\.8V16/, "the old stacked letterforms are gone");
 });
 
 test("brand mark: /favicon.svg serves a theme-aware SVG favicon", async () => {
@@ -44,7 +45,7 @@ test("brand mark: /favicon.svg serves a theme-aware SVG favicon", async () => {
   assert.match(res.headers["content-type"], /^image\/svg\+xml/);
   assert.equal(res.body, FAVICON_SVG);
   assert.match(res.body, /prefers-color-scheme:dark/);
-  assert.match(res.body, /fill="#f54e00"/);
+  assert.match(res.body, /stroke="#f54e00"/);
 });
 
 test("brand mark: every served page head links the favicon", () => {
@@ -66,7 +67,7 @@ test("brand mark: every served page head links the favicon", () => {
   assert.match(FAVICON_LINK, /rel="icon".*href="\/favicon\.svg"/);
 });
 
-test("brand mark: README shows docs/assets/logo.svg, the stacked logo from brand-mark.js", () => {
+test("brand mark: README shows docs/assets/logo.svg, the lockup from brand-mark.js", () => {
   const readme = readFileSync(new URL("../../README.md", import.meta.url), "utf8");
   assert.match(readme.split("\n")[0], /<img src="docs\/assets\/logo\.svg"/);
   const logo = readFileSync(new URL("../../docs/assets/logo.svg", import.meta.url), "utf8");

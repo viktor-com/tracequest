@@ -492,7 +492,7 @@ export const APP_TOP_CSS = `
 }
 .app-wordmark:hover { opacity: 0.8; }
 .app-mark { color: var(--text); flex: none; }
-.app-mark-trace { fill: var(--accent); }
+.app-mark-trace { stroke: var(--accent); }
 .app-crumb-sep, .app-crumb {
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }

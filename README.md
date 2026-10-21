@@ -1,4 +1,4 @@
-<img src="docs/assets/logo.svg" width="220" height="149" alt="tracequest">
+<img src="docs/assets/logo.svg" width="220" height="74" alt="tracequest">
 
 # tracequest
 
