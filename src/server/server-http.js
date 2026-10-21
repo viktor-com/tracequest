@@ -6,6 +6,7 @@ import { setInitialFilter } from "./server-state.js";
 import { redactBody, redactKindFor } from "./redact-body.js";
 import { redactOffThread } from "./redact-pool.js";
 import { markHubReadonly } from "./server-html-helpers.js";
+import { FAVICON_SVG } from "../ui/brand-mark.js";
 
 /**
  * Hub mode (fact hubmd): the server is a shared, read-only view of collected
@@ -330,8 +331,10 @@ export function createHandle(routeMap) {
         send(res, 302, "", "text/html; charset=utf-8", { Location: `/insights${url.search}` });
       } else if (_hubMode && hubPickerRedirect(url)) {
         send(res, 302, "", "text/html; charset=utf-8", { Location: "/sessions" });
+      } else if (url.pathname === "/favicon.svg") {
+        send(res, 200, FAVICON_SVG, "image/svg+xml; charset=utf-8");
       } else if (url.pathname === "/favicon.ico") {
-        // No icon is shipped; answer "no content" so browsers stop logging a 404 per page.
+        // Pages link /favicon.svg; answer "no content" so browsers stop logging a 404 here.
         send(res, 204, "");
       } else if (handler) {
         await handler(req, res, url);

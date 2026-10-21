@@ -7,7 +7,7 @@ import { STANDALONE_BASE_CSS } from "../render/render-css.js";
 import { esc } from "../server/server-html-helpers.js";
 import { fmtCost, fmtTokens, formatDuration } from "../filter/filter-formats.js";
 import { INSIGHTS_RANGES } from "../insights/load.js";
-import { appTopStaticHtml, APP_TOP_CSS } from "./app-chrome.js";
+import { appTopStaticHtml, APP_TOP_CSS, FAVICON_LINK } from "./app-chrome.js";
 
 const INSIGHTS_PAGE_CSS = `
 .container { max-width: 1200px; margin: 0 auto; padding: var(--space-6) var(--space-8) 120px; }
@@ -336,6 +336,7 @@ export function insightsPage(data) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest — insights</title>
+${FAVICON_LINK}
 <style>
 ${STANDALONE_BASE_CSS}
 ${APP_TOP_CSS}

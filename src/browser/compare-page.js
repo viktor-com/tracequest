@@ -1,5 +1,5 @@
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
-import { THEME_BOOT_SCRIPT, appTopHtml, APP_TOP_CSS, APP_SHELL_JS } from "./app-chrome.js";
+import { THEME_BOOT_SCRIPT, FAVICON_LINK, appTopHtml, APP_TOP_CSS, APP_SHELL_JS } from "./app-chrome.js";
 import { esc } from "../server/server-html-helpers.js";
 import { COMPARE_PAGE_CSS } from "./compare-page-css.js";
 import {
@@ -28,7 +28,7 @@ function compareDocument(bodyHtml, { swappable = false } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest — compare</title>
-${THEME_BOOT_SCRIPT}
+${THEME_BOOT_SCRIPT}${FAVICON_LINK}
 <style>
 ${STANDALONE_BASE_CSS}
 ${APP_TOP_CSS}

@@ -1,6 +1,6 @@
 import { browserClientScript } from "./browser-client.js";
 import { LAUNCHER_MODAL_CSS, LAUNCHER_MODAL_HTML } from "./launch-page.js";
-import { appTopHtml, APP_TOP_CSS, IDENTITY_ROW_CSS, THEME_BOOT_SCRIPT } from "./app-chrome.js";
+import { appTopHtml, APP_TOP_CSS, IDENTITY_ROW_CSS, THEME_BOOT_SCRIPT, FAVICON_LINK } from "./app-chrome.js";
 import { COMMAND_PALETTE_CSS, COMMAND_PALETTE_HTML } from "./command-palette.js";
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
 import { RUNS_PAGE_CSS } from "./runs-page-css.js";
@@ -16,7 +16,7 @@ const HTML_HEAD = `<!DOCTYPE html>
      chrome without them and then moves it (fact hlstrip). -->
 <link rel="expect" href="#tq-list-rendered" blocking="render">
 <title>Runs · tracequest</title>
-${THEME_BOOT_SCRIPT}
+${THEME_BOOT_SCRIPT}${FAVICON_LINK}
 <style>
 ${STANDALONE_BASE_CSS}
 ${APP_TOP_CSS}

@@ -1,3 +1,5 @@
+<img src="docs/assets/logo.svg" width="220" height="149" alt="tracequest">
+
 # tracequest
 
 ![The TraceQuest session list, error breakdown and a per-turn token chart for one session](docs/assets/hero.png)

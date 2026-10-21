@@ -103,6 +103,7 @@ import {
   appTopHtml,
   APP_SHELL_JS,
   THEME_BOOT_SCRIPT,
+  FAVICON_LINK,
   APP_TOP_CSS,
   IDENTITY_ROW_CSS,
   SOURCE_COLORS,
@@ -2346,7 +2347,7 @@ export function runPage({ run } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest — run ${esc(id)}</title>
-${THEME_BOOT_SCRIPT}
+${THEME_BOOT_SCRIPT}${FAVICON_LINK}
 <style>
 ${STANDALONE_BASE_CSS}
 ${RUN_PAGE_CSS}
@@ -3467,7 +3468,7 @@ export function liveSessionPage({ session, readOnly = false } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest — ${esc(statusWord)} session ${esc(hash)}</title>
-${THEME_BOOT_SCRIPT}
+${THEME_BOOT_SCRIPT}${FAVICON_LINK}
 <style>
 ${STANDALONE_BASE_CSS}
 ${RUN_PAGE_CSS}
@@ -3914,7 +3915,7 @@ export function chatHomePage({ defaultCwd } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest</title>
-${THEME_BOOT_SCRIPT}
+${THEME_BOOT_SCRIPT}${FAVICON_LINK}
 <style>
 ${STANDALONE_BASE_CSS}
 ${RUN_PAGE_CSS}

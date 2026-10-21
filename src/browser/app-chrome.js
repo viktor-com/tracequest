@@ -27,6 +27,7 @@
  * ("+ New run", "Kill run").
  */
 import { fmtTokens, fmtCost, estimateCost, formatDuration } from "../filter/filter-formats.js";
+import { MARK_SVG } from "../ui/brand-mark.js";
 import {
   formatPercent,
   limitingWindow,
@@ -36,6 +37,8 @@ import {
   usageChipTitle,
   usageWindowLabel,
 } from "../usage/format.js";
+
+export { FAVICON_LINK } from "../ui/brand-mark.js";
 
 /** The one source→pill-color map (dashboard rows, rail rows, chat header). */
 export const SOURCE_COLORS = {
@@ -313,9 +316,6 @@ export const USAGE_LIMITS_CLIENT_SRC =
   paintUsageLimits.toString().replace(/^export /, "") + "\n" +
   startUsageLimitsPolling.toString().replace(/^export /, "");
 
-/** The tracequest mark: two offset strokes, a trace and its echo. */
-const MARK_SVG = '<svg class="app-mark" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><rect x="1.25" y="1.25" width="15.5" height="15.5" rx="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 11.5h2.5l1.5-5 1.5 5H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
 const ICON_THEME = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="5.75" stroke="currentColor" stroke-width="1.5"/><path d="M8 2.25a5.75 5.75 0 0 1 0 11.5z" fill="currentColor"/></svg>';
 const ICON_PLUS = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>';
 
@@ -396,7 +396,7 @@ export const APP_SHELL_JS = `(function () {
  */
 export function appTopHtml({ crumbHtml, extraHtml = "", nav = "" } = {}) {
   return `<header class="app-top">
-    <a class="app-wordmark" href="/" aria-label="tracequest — Chat">${MARK_SVG}<span>tracequest</span></a>
+    <a class="app-wordmark" href="/" aria-label="tracequest — Chat">${MARK_SVG}</a>
     <span class="app-crumb-sep">/</span>
     ${crumbHtml}
     ${appNavHtml(nav)}
@@ -418,7 +418,7 @@ export function appTopHtml({ crumbHtml, extraHtml = "", nav = "" } = {}) {
  */
 export function appTopStaticHtml(nav) {
   return `<header class="app-top">
-    <a class="app-wordmark" href="/" aria-label="tracequest — Chat">${MARK_SVG}<span>tracequest</span></a>
+    <a class="app-wordmark" href="/" aria-label="tracequest — Chat">${MARK_SVG}</a>
     ${appNavHtml(nav)}
     <a class="new-run-btn app-top-push" href="/?launch=1" title="Start an agent run">${ICON_PLUS}<span>New run</span></a>
   </header>`;
@@ -492,6 +492,7 @@ export const APP_TOP_CSS = `
 }
 .app-wordmark:hover { opacity: 0.8; }
 .app-mark { color: var(--text); flex: none; }
+.app-mark-trace { fill: var(--accent); }
 .app-crumb-sep, .app-crumb {
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
@@ -588,7 +589,6 @@ html.theme-switching, html.theme-switching * { transition: background-color var(
 @media (max-width: 640px) {
   .app-top { padding: 0 var(--space-3); gap: var(--space-1); }
   .app-top .app-wordmark { margin-right: var(--space-1); }
-  .app-top .app-wordmark span { display: none; }
   .app-top .app-nav-item { padding: 0 7px; font-size: var(--text-sm); }
   .app-top .app-live { display: none; }
   .app-top .app-limits-btn { padding: 0 6px; max-width: 22vw; overflow: hidden; }

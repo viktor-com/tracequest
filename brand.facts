@@ -1,0 +1,14 @@
+# mark
+
+- label: the app header shows the TRACEQUEST logotype (custom heavy condensed capitals in the text colour) whose Q tail runs under QUEST as an accent-orange trace, replacing the zigzag-in-a-rounded-square mark
+  command: node --test --test-name-pattern 'header wordmark' test/routes/brand-mark.test.js
+  tags: [spec, brand, ui, implemented]
+- label: GET /favicon.svg serves image/svg+xml: the stacked TRACE/QUEST logo cropped into a dark rounded tile with the orange trace, the tile lifting slightly under prefers-color-scheme dark
+  command: node --test --test-name-pattern 'favicon.svg serves' test/routes/brand-mark.test.js
+  tags: [spec, brand, ui, implemented]
+- label: every served app page head (chat, runs, session view, compare, insights) links /favicon.svg as its icon
+  command: node --test --test-name-pattern 'links the favicon' test/routes/brand-mark.test.js
+  tags: [spec, brand, ui, implemented]
+- label: README opens with docs/assets/logo.svg, the stacked TRACE/QUEST logo with the orange trace under QUEST, generated from the same letter paths as the header logotype
+  command: node --test --test-name-pattern 'README shows' test/routes/brand-mark.test.js
+  tags: [spec, brand, docs, implemented]

@@ -14,7 +14,7 @@ import { sessionHash } from "../sessions/session-hash.js";
 import { compareLiveRefreshScript, viewLiveRefreshScript } from "../render/render-live-update.js";
 import { sessionListChecksum, sessionMtimeMs } from "../sessions/session-list.js";
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
-import { THEME_BOOT_SCRIPT, appTopHtml, appTopStaticHtml, APP_TOP_CSS, APP_SHELL_JS } from "../browser/app-chrome.js";
+import { THEME_BOOT_SCRIPT, FAVICON_LINK, appTopHtml, appTopStaticHtml, APP_TOP_CSS, APP_SHELL_JS } from "../browser/app-chrome.js";
 import { fetchSession } from "../server/server-helpers.js";
 import { openCompareOffThread, openSessionOffThread, usesSessionWorkers } from "../server/session-pool.js";
 import { finishSessionBody, sessionBody } from "../server/session-load.js";
@@ -313,7 +313,7 @@ function routeErrorDocument({ docTitle, stateAttr, kicker, title, status, handle
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${docTitle}</title>
-${THEME_BOOT_SCRIPT}
+${THEME_BOOT_SCRIPT}${FAVICON_LINK}
 <style>
 ${STANDALONE_BASE_CSS}
 ${APP_TOP_CSS}
@@ -972,7 +972,7 @@ export async function handleApiViewSession(_req, res, url, _deps = null) {
  */
 function viewAppShell() {
   return {
-    head: `${THEME_BOOT_SCRIPT}\n<style id="tq-app-shell">${APP_TOP_CSS}\nbody { padding-top: 0; }</style>`,
+    head: `${THEME_BOOT_SCRIPT}${FAVICON_LINK}\n<style id="tq-app-shell">${APP_TOP_CSS}\nbody { padding-top: 0; }</style>`,
     top: appTopHtml({ crumbHtml: '<span class="app-crumb">Run</span>', nav: "runs" }),
     // New run here opens the launcher on the Runs page.
     script: `<script>${APP_SHELL_JS}\n(function(){var b=document.getElementById("newRunBtn");if(b)b.addEventListener("click",function(){location.href="/?launch=1";});})();</script>`,
