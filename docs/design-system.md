@@ -4,15 +4,15 @@ Source: `src/ui/tokens.js` (tokens), `src/ui/components.js` (components, icons),
 
 ## Identity
 
-The primary mark is the simplified **TQ ligature**, with an open Q curl and a shared top stroke. The expressive wordmark is its horizontal companion. Use the existing artwork rather than recreating the letters with a font.
+The primary mark is a **Q whose tail is the trace**: an open bowl in the ink colour, and an accent-orange tail that starts inside the run, leaves through the gap and runs flat along the timeline. The lowercase wordmark is its horizontal companion, set in the system UI font and shipped as outlines.
 
 All assets live in [`src/ui/assets/`](../src/ui/assets/). SVGs contain editable vector paths. PNGs use the same outlines with transparent backgrounds. Files ending in `-light` use white artwork for dark backgrounds; the other mark and wordmark files use charcoal artwork for light backgrounds.
 
 - `tracequest-mark.svg` / `.png`: primary square mark, with a white `-light` variant.
 - `tracequest-wordmark.svg` / `.png`: horizontal wordmark, with a white `-light` variant.
-- `favicon.svg`, `favicon.png`, `favicon.ico`: white mark on a charcoal tile. The ICO contains 16, 24, 32, 48, 64, 128, and 256 pixel images.
+- `favicon.svg`, `favicon.png`, `favicon.ico`: the mark on a charcoal tile. The ICO contains 16, 24, 32, 48, 64, 128, and 256 pixel images.
 
-[`src/ui/brand.js`](../src/ui/brand.js) supplies the shared header artwork and favicon links. Headers inherit the current theme's text colour. Exported and shared reports embed their artwork and favicon so they work without the server. Keep the existing padding around the mark and scale it proportionally.
+[`src/ui/brand.js`](../src/ui/brand.js) supplies the shared header artwork and favicon links. Headers inherit the current theme's text colour and paint the trace with `--accent`. Exported and shared reports embed their artwork and favicon so they work without the server. Keep the existing padding around the mark and scale it proportionally.
 
 ## Interface palette
 
@@ -35,7 +35,7 @@ CursorGothic and Berkeley Mono are not bundled. The stacks name them first, so m
 ## Principles
 
 1. **Paper and ink.** Two warm neutrals carry everything. Greys are ink mixed into paper, so they never shift temperature.
-2. **One accent, used rarely.** The identity stays monochrome. Orange marks something that needs attention (high plan usage, compare side B). Selection, focus and primary actions use ink, not colour.
+2. **One accent, used rarely.** Orange marks the brand and something that needs attention (high plan usage, compare side B). Selection, focus and primary actions use ink, not colour.
 3. **Colour means state.** Green is success or live, red is failure, amber is waiting or idle. Agents and tools get muted categorical hues (`--hue-*`), shown as small squares, never as fills behind text.
 4. **Quiet structure.** Hairlines and surface steps, no drop shadows on content. Shadows only lift overlays.
 5. **Numbers are tabular.** Every figure uses `font-variant-numeric: tabular-nums`; columns of numbers align right.

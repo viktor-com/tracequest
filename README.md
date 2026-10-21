@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/ui/assets/favicon.svg" alt="TraceQuest TQ logo" width="104" height="104">
+  <img src="src/ui/assets/favicon.svg" alt="TraceQuest logo" width="104" height="104">
 </p>
 <h1 align="center">
   <picture>

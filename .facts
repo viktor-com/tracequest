@@ -255,9 +255,9 @@
   tags: [release-0-5-2, implemented]
 
 # branding
-- The TraceQuest horizontal wordmark uses expressive flared serif lettering with readable shared-stroke ligatures @logo-design @implemented
-- The primary square TraceQuest logo is the simplified TQ ligature with an open Q curl, joined top stroke, and flared serifs matching the wordmark @logo-square @implemented
-- The TraceQuest browser icon is supplied as a multi-resolution ICO with 16, 32, and 48 pixel images, preserving a recognisable TQ silhouette at browser-tab sizes @logo-favicon @implemented
-- TraceQuest provides reusable path-based SVG and PNG versions of its wordmark and primary TQ mark, plus a multi-resolution ICO, from one shipped asset directory @branding-integration @implemented
-- The README and app headers use the selected TraceQuest identity, adapting to light and dark themes, and all served pages and standalone reports include the TQ favicon @branding-integration @implemented
+- The TraceQuest wordmark sets the lowercase name in the system UI font as vector outlines with −0.02em tracking @logo-design @implemented
+- The primary square mark is an open bowl in the ink colour whose accent-orange tail leaves the run and runs flat — the trace @logo-square @implemented
+- The TraceQuest browser icon is the mark on a charcoal tile, supplied as a multi-resolution ICO with 16, 32, and 48 pixel images that stays recognisable at browser-tab sizes @logo-favicon @implemented
+- TraceQuest provides reusable path-based SVG and PNG versions of its wordmark and primary mark, plus a multi-resolution ICO, from one shipped asset directory @branding-integration @implemented
+- The README and app headers use the TraceQuest identity, adapting to light and dark themes, and all served pages and standalone reports include the favicon @branding-integration @implemented
 - Brand asset URLs return intact image bytes in regular and read-only hub mode, and packaged installations include every runtime brand asset @branding-integration @implemented
