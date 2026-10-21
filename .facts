@@ -256,3 +256,5 @@
 
 # branding
 - The proposed TraceQuest wordmark retains expressive Gaueko-inspired shapes and readable ligatures, with consistent flares, smooth counters, and optically balanced spacing refined against the supplied lettering reference @logo-design @implemented
+- The square TraceQuest logo combines readable T and Q into a continuous ligature matching the selected wordmark’s flared serifs, spiral Q, and white-on-charcoal palette @logo-square @implemented
+- The TraceQuest browser icon is supplied as a multi-resolution ICO with 16, 32, and 48 pixel images, preserving a recognisable TQ silhouette at browser-tab sizes @logo-favicon @implemented
