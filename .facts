@@ -253,3 +253,6 @@
   id: rel052
   command: node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const p=JSON.parse(fs.readFileSync("package.json")), l=JSON.parse(fs.readFileSync("package-lock.json")); assert.equal(p.version,"0.5.2"); assert.equal(l.version,p.version); assert.equal(l.packages[""].version,p.version); assert.ok(fs.readFileSync("CHANGELOG.md","utf8").includes("## [0.5.2] - 2026-10-20"));'
   tags: [release-0-5-2, implemented]
+
+# branding
+- The proposed TraceQuest logo pairs a Q-shaped session trace with a legible tracequest wordmark, using warm ivory and amber for dark surfaces @logo-design @implemented
