@@ -2,8 +2,8 @@
  * tracequest design tokens, derived from cursor.com/brand (measured from the
  * live site's computed styles, October 2026).
  *
- * Paper and ink, warm. One accent (Cursor orange) used sparingly for brand
- * and attention; status colours are Cursor's ANSI green and red. Text and
+ * Paper and ink, warm. One accent (Cursor orange) used sparingly for
+ * attention; status colours are Cursor's ANSI green and red. Text and
  * borders are the ink colour mixed down, so every grey stays in temperature.
  *
  * Dark is the default. Light applies when the system prefers it, unless the

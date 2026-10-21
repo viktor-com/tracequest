@@ -7,6 +7,7 @@ import { CSS } from "./render/render-css.js";
 import { RENDER_JS } from "./render/render-assemble.js";
 import { sessionHash } from "./sessions/session-hash.js";
 import { viewerSessionData } from "./render/render-viewer-data.js";
+import { STANDALONE_FAVICON_LINK } from "./ui/brand.js";
 
 const _renderCache = new Map();
 const MAX_RENDER_CACHE = 5;
@@ -19,6 +20,7 @@ const RENDER_SHELL_HEAD = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tracequest — `;
 const RENDER_SHELL_MID = `</title>
+${STANDALONE_FAVICON_LINK}
 <style>
 ${CSS}
 </style>

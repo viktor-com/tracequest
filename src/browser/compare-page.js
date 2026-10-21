@@ -1,3 +1,4 @@
+import { FAVICON_LINKS } from "../ui/brand.js";
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
 import { THEME_BOOT_SCRIPT, appTopHtml, APP_TOP_CSS, APP_SHELL_JS } from "./app-chrome.js";
 import { esc } from "../server/server-html-helpers.js";
@@ -27,6 +28,7 @@ function compareDocument(bodyHtml, { swappable = false } = {}) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${FAVICON_LINKS}
 <title>tracequest — compare</title>
 ${THEME_BOOT_SCRIPT}
 <style>

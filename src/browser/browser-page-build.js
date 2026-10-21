@@ -1,3 +1,4 @@
+import { FAVICON_LINKS } from "../ui/brand.js";
 import { browserClientScript } from "./browser-client.js";
 import { LAUNCHER_MODAL_CSS, LAUNCHER_MODAL_HTML } from "./launch-page.js";
 import { appTopHtml, APP_TOP_CSS, IDENTITY_ROW_CSS, THEME_BOOT_SCRIPT } from "./app-chrome.js";
@@ -11,6 +12,7 @@ const HTML_HEAD = `<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${FAVICON_LINKS}
 <!-- The first paint waits for the list script below, which renders the
      embedded rows, count and overview as it runs: no frame shows the list
      chrome without them and then moves it (fact hlstrip). -->

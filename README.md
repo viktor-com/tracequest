@@ -1,4 +1,14 @@
-# tracequest
+<p align="center">
+  <img src="src/ui/assets/favicon.svg" alt="TraceQuest TQ logo" width="104" height="104">
+</p>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="src/ui/assets/tracequest-wordmark-light.svg">
+    <img src="src/ui/assets/tracequest-wordmark.svg" alt="TraceQuest" width="480">
+  </picture>
+</h1>
+
+<p align="center">Follow your coding agents. Find what happened.</p>
 
 ![The TraceQuest session list, error breakdown and a per-turn token chart for one session](docs/assets/hero.png)
 

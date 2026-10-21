@@ -1,3 +1,4 @@
+import { FAVICON_LINKS } from "../ui/brand.js";
 /**
  * /insights — where agents waste time and fail, across every collected machine
  * (facts inspg, inspd, inspr). Server-rendered and script-free: every figure is
@@ -335,6 +336,7 @@ export function insightsPage(data) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${FAVICON_LINKS}
 <title>tracequest — insights</title>
 <style>
 ${STANDALONE_BASE_CSS}

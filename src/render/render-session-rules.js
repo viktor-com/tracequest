@@ -9,6 +9,8 @@ export const SESSION_VIEWER_RULES = `
 
 /* ---- header ---- */
 .header { display: flex; flex-direction: column; gap: var(--space-3); padding-bottom: var(--space-6); }
+.report-brand { display: flex; align-items: center; gap: 8px; color: var(--text); margin-bottom: var(--space-3); }
+.report-brand svg { flex: none; }
 .header-back {
   align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-bottom: var(--space-1);
   font-size: var(--text-sm); color: var(--text-3); transition: color var(--dur-2) var(--ease-out);

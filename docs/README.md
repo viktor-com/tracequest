@@ -1,5 +1,7 @@
 # TraceQuest documentation
 
+<img src="../src/ui/assets/favicon.svg" alt="TraceQuest TQ logo" width="64" height="64">
+
 [Product overview and screenshots](../README.md)
 
 ## Start here

@@ -255,6 +255,9 @@
   tags: [release-0-5-2, implemented]
 
 # branding
-- The proposed TraceQuest wordmark retains expressive Gaueko-inspired shapes and readable ligatures, with consistent flares, smooth counters, and optically balanced spacing refined against the supplied lettering reference @logo-design @implemented
-- The square TraceQuest logo combines readable T and Q into a continuous ligature matching the selected wordmark’s flared serifs, spiral Q, and white-on-charcoal palette @logo-square @implemented
+- The TraceQuest horizontal wordmark uses expressive flared serif lettering with readable shared-stroke ligatures @logo-design @implemented
+- The primary square TraceQuest logo is the simplified TQ ligature with an open Q curl, joined top stroke, and flared serifs matching the wordmark @logo-square @implemented
 - The TraceQuest browser icon is supplied as a multi-resolution ICO with 16, 32, and 48 pixel images, preserving a recognisable TQ silhouette at browser-tab sizes @logo-favicon @implemented
+- TraceQuest provides reusable path-based SVG and PNG versions of its wordmark and primary TQ mark, plus a multi-resolution ICO, from one shipped asset directory @branding-integration @implemented
+- The README and app headers use the selected TraceQuest identity, adapting to light and dark themes, and all served pages and standalone reports include the TQ favicon @branding-integration @implemented
+- Brand asset URLs return intact image bytes in regular and read-only hub mode, and packaged installations include every runtime brand asset @branding-integration @implemented

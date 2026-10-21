@@ -1,10 +1,12 @@
 import { secretRulesJson } from "../share/secret-rules.js";
 import { buildScannerRedactorSrc } from "../share/share-bundle.js";
 import { OVERLAY_FOCUS_SRC } from "../browser/overlay-focus.js";
+import { STANDALONE_FAVICON_LINK } from "../ui/brand.js";
 
 const SCANNER_REDACTOR_SRC = buildScannerRedactorSrc();
 
 export const SHARE_JS = `
+  const SHARE_FAVICON_HTML = ${JSON.stringify(STANDALONE_FAVICON_LINK)};
   ${OVERLAY_FOCUS_SRC}
 
   const SECRET_RULES = ${secretRulesJson()};
@@ -285,7 +287,7 @@ export const SHARE_JS = `
     // Escape comment openers too; the pattern is spelled -{2} because this
     // script is itself inline and must never contain a literal comment opener.
     var data = JSON.stringify(redactedSession).replace(/<\\//g, '<\\\\/').replace(/<!-{2}/g, '\\\\u003c!--');
-    return '<!DOCTYPE html>\\n<html lang="en">\\n<head>\\n<meta charset="utf-8">\\n<meta name="viewport" content="width=device-width, initial-scale=1">\\n<title>tracequest — ' + sid + '</title>\\n<style>\\n' + css + '\\n</style>\\n</head>\\n<body>\\n<div id="app"></div>\\n<script>\\nconst SESSION = ' + data + ';\\n' + renderJs + '\\n</scr' + 'ipt>\\n</body>\\n</html>';
+    return '<!DOCTYPE html>\\n<html lang="en">\\n<head>\\n<meta charset="utf-8">\\n<meta name="viewport" content="width=device-width, initial-scale=1">\\n<title>tracequest — ' + sid + '</title>' + SHARE_FAVICON_HTML + '\\n<style>\\n' + css + '\\n</style>\\n</head>\\n<body>\\n<div id="app"></div>\\n<script>\\nconst SESSION = ' + data + ';\\n' + renderJs + '\\n</scr' + 'ipt>\\n</body>\\n</html>';
   }
 
   var shareModalEl = null;

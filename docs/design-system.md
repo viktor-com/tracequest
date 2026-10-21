@@ -2,7 +2,19 @@
 
 Source: `src/ui/tokens.js` (tokens), `src/ui/components.js` (components, icons), `src/ui/index.js` (`DESIGN_SYSTEM_CSS`). Every page embeds `DESIGN_SYSTEM_CSS` first, then its own screen stylesheet. Screen stylesheets arrange components; they do not invent colours, sizes or radii.
 
-## Where it comes from
+## Identity
+
+The primary mark is the simplified **TQ ligature**, with an open Q curl and a shared top stroke. The expressive wordmark is its horizontal companion. Use the existing artwork rather than recreating the letters with a font.
+
+All assets live in [`src/ui/assets/`](../src/ui/assets/). SVGs contain editable vector paths. PNGs use the same outlines with transparent backgrounds. Files ending in `-light` use white artwork for dark backgrounds; the other mark and wordmark files use charcoal artwork for light backgrounds.
+
+- `tracequest-mark.svg` / `.png`: primary square mark, with a white `-light` variant.
+- `tracequest-wordmark.svg` / `.png`: horizontal wordmark, with a white `-light` variant.
+- `favicon.svg`, `favicon.png`, `favicon.ico`: white mark on a charcoal tile. The ICO contains 16, 24, 32, 48, 64, 128, and 256 pixel images.
+
+[`src/ui/brand.js`](../src/ui/brand.js) supplies the shared header artwork and favicon links. Headers inherit the current theme's text colour. Exported and shared reports embed their artwork and favicon so they work without the server. Keep the existing padding around the mark and scale it proportionally.
+
+## Interface palette
 
 The values are measured from cursor.com and cursor.com/brand (computed styles, October 2026):
 
@@ -13,7 +25,7 @@ The values are measured from cursor.com and cursor.com/brand (computed styles, O
 | Secondary text | ink at 60% | `--text-2` (62–64%), `--text-3` (42–46%) |
 | Borders | ink at 2.5 / 10 / 20% | `--line-1` 6%, `--line-2` 10–11%, `--line-3` 20–22% |
 | Cards | `#1b1913` … `#2b2923` | `--surface-1` … `--surface-4` |
-| Accent | `#f54e00` | `--accent` (brand and attention only) |
+| Accent | `#f54e00` | `--accent` (attention only) |
 | Status | ANSI green `#1f8a65`, red `#cf2d56` | `--ok`, `--bad` (lifted in dark for text contrast) |
 | Type | CursorGothic 400, h1 26px −0.0125em; 14px nav | `--font-sans`, 400 headings with negative tracking; 14px body |
 | Buttons | ink pill, 14px | `.ui-btn--primary` |
@@ -23,7 +35,7 @@ CursorGothic and Berkeley Mono are not bundled. The stacks name them first, so m
 ## Principles
 
 1. **Paper and ink.** Two warm neutrals carry everything. Greys are ink mixed into paper, so they never shift temperature.
-2. **One accent, used rarely.** Orange marks the brand and something that needs attention (high plan usage, compare side B). Selection, focus and primary actions use ink, not colour.
+2. **One accent, used rarely.** The identity stays monochrome. Orange marks something that needs attention (high plan usage, compare side B). Selection, focus and primary actions use ink, not colour.
 3. **Colour means state.** Green is success or live, red is failure, amber is waiting or idle. Agents and tools get muted categorical hues (`--hue-*`), shown as small squares, never as fills behind text.
 4. **Quiet structure.** Hairlines and surface steps, no drop shadows on content. Shadows only lift overlays.
 5. **Numbers are tabular.** Every figure uses `font-variant-numeric: tabular-nums`; columns of numbers align right.

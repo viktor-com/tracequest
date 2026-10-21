@@ -1,3 +1,4 @@
+import { FAVICON_LINKS } from "../ui/brand.js";
 import { statSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve, basename } from "node:path";
@@ -312,6 +313,7 @@ function routeErrorDocument({ docTitle, stateAttr, kicker, title, status, handle
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${FAVICON_LINKS}
 <title>${docTitle}</title>
 ${THEME_BOOT_SCRIPT}
 <style>

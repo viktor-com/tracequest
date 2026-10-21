@@ -1,4 +1,5 @@
 import { sumToolCounts } from "../parse/parse-utils.js";
+import { MARK_SVG, WORDMARK_SVG } from "../ui/brand.js";
 
 const SUM_TOOL_COUNTS_JS = sumToolCounts.toString();
 
@@ -149,6 +150,8 @@ export const CORE_SHELL_JS = `
     // Markdown and Export are server routes, so only a served page offers them.
     const root = typeof document !== 'undefined' ? document.documentElement : null;
     const inApp = !!(root && root.hasAttribute && root.hasAttribute('data-tq-served'));
+    const brand = h('div', { className: 'report-brand', 'aria-label': 'TraceQuest' });
+    brand.innerHTML = ${JSON.stringify(MARK_SVG + WORDMARK_SVG)};
     // Opened from a chat (from=/run?…): the way back is that chat, not Runs.
     const chatBack = chatBackHref();
     const backLink = !inApp ? null : chatBack
@@ -163,6 +166,7 @@ export const CORE_SHELL_JS = `
     const project = session.cwd ? String(session.cwd).split('/').filter(Boolean).pop() : '';
 
     return h('div', { className: 'header' },
+      !inApp ? brand : null,
       backLink,
       h('div', { className: 'header-top' },
         h('div', { className: 'header-title' },

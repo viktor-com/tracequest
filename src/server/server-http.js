@@ -6,6 +6,7 @@ import { setInitialFilter } from "./server-state.js";
 import { redactBody, redactKindFor } from "./redact-body.js";
 import { redactOffThread } from "./redact-pool.js";
 import { markHubReadonly } from "./server-html-helpers.js";
+import { BRAND_ASSETS } from "../ui/brand.js";
 
 /**
  * Hub mode (fact hubmd): the server is a shared, read-only view of collected
@@ -330,9 +331,14 @@ export function createHandle(routeMap) {
         send(res, 302, "", "text/html; charset=utf-8", { Location: `/insights${url.search}` });
       } else if (_hubMode && hubPickerRedirect(url)) {
         send(res, 302, "", "text/html; charset=utf-8", { Location: "/sessions" });
-      } else if (url.pathname === "/favicon.ico") {
-        // No icon is shipped; answer "no content" so browsers stop logging a 404 per page.
-        send(res, 204, "");
+      } else if (BRAND_ASSETS.has(url.pathname)) {
+        if (req.method !== "GET" && req.method !== "HEAD") {
+          send(res, 405, "Method not allowed", "text/plain; charset=utf-8", { Allow: "GET, HEAD" });
+          return;
+        }
+        const { url: assetUrl, type } = BRAND_ASSETS.get(url.pathname);
+        // Public, fixed artwork has no session data to redact or re-encode.
+        sendFinished(res, 200, await readFile(assetUrl), type);
       } else if (handler) {
         await handler(req, res, url);
       } else {

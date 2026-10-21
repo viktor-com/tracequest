@@ -1,3 +1,4 @@
+import { FAVICON_LINKS } from "../ui/brand.js";
 /**
  * /run watch page — Cursor-style live chat transcript for one Run.
  *
@@ -2345,6 +2346,7 @@ export function runPage({ run } = {}) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${FAVICON_LINKS}
 <title>tracequest — run ${esc(id)}</title>
 ${THEME_BOOT_SCRIPT}
 <style>
@@ -3466,6 +3468,7 @@ export function liveSessionPage({ session, readOnly = false } = {}) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${FAVICON_LINKS}
 <title>tracequest — ${esc(statusWord)} session ${esc(hash)}</title>
 ${THEME_BOOT_SCRIPT}
 <style>
@@ -3913,6 +3916,7 @@ export function chatHomePage({ defaultCwd } = {}) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${FAVICON_LINKS}
 <title>tracequest</title>
 ${THEME_BOOT_SCRIPT}
 <style>
