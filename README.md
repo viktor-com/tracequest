@@ -10,118 +10,175 @@
 
 <p align="center">Follow your coding agents. Find what happened.</p>
 
-![A TraceQuest conversation beside its session analytics](docs/assets/hero.png)
+<p align="center">
+  <a href="https://cdn.jsdelivr.net/gh/viktor-com/tracequest@450e9275e14cc6729cc7918caa7af4d97f1e2416/docs/assets/launch/tracequest-launch-film.mp4"><img src="docs/assets/launch/hero.gif" width="960" alt="Asked why the tests in csv-stats keep failing, an agent searches 19 sessions, finds the same import error six times and writes the fix into AGENTS.md. The next run passes."></a>
+</p>
 
-TraceQuest is a local web app and CLI for reading coding-agent sessions. It shows
-each session's messages, tool calls, errors, timing and token usage. It reads
-sessions from Claude Code, Codex CLI, Cursor, Droid (Factory), OpenCode, Grok CLI,
-vktr (Viktor's fork of the Grok CLI), fx (Vercel's coding agent) and DeepSeek Harness.
-It can also import Cursor Cloud Agent sessions and copy sessions from other
-machines over SSH.
+<p align="center">
+  <a href="https://cdn.jsdelivr.net/gh/viktor-com/tracequest@450e9275e14cc6729cc7918caa7af4d97f1e2416/docs/assets/launch/tracequest-launch-film.mp4"><picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/launch/watch-film-dark.svg">
+    <img src="docs/assets/launch/watch-film-light.svg" alt="Watch the launch film (44 seconds, with sound)" width="320" height="48">
+  </picture></a>
+</p>
 
-[Try it](#try-it) · [Features](#features) · [Documentation](docs/README.md)
+<p align="center">
+  <a href="#try-it-in-a-minute"><b>Try it in a minute</b></a> ·
+  <a href="#what-it-does">What it does</a> ·
+  <a href="#works-with">Works with</a> ·
+  <a href="docs/README.md">Documentation</a>
+</p>
 
-The screenshots use the bundled Claude Code samples and synthetic Codex recordings.
-The hub shows copies under demo machine names.
-Costs are estimated from token counts and model prices. They are not billing data.
+Your coding agents already write down everything they do: every prompt, command,
+error, wait and token. TraceQuest reads those session files and shows you what
+happened. It is a local web app and CLI for Claude Code, Codex CLI, Cursor,
+Droid (Factory), OpenCode, Grok CLI, vktr (Viktor's fork of the Grok CLI),
+fx (Vercel's coding agent) and DeepSeek Harness. It runs on your machine, needs
+no account and sends no telemetry.
 
-## Features
+## What it does
 
-### Search and filter sessions
+The commands below assume `tracequest` is on your PATH (`npm link` in the clone, see
+[Try it in a minute](#try-it-in-a-minute)). `node bin/tracequest.js` works too.
 
-![The session list filtered to Codex sessions with errors](docs/assets/browse.png)
+### Every coding agent's sessions, in one index
 
-The session list searches message text. You can filter by project, source,
-machine, model, tool, error count and age. The summary row above the list shows
-totals for the sessions that match.
+<p align="center"><img src="docs/assets/launch/index.gif" width="600" alt="Sessions from this machine, a GPU box, a laptop and Cursor Cloud merge into one searchable index of 19 sessions from 6 sources."></p>
 
-**How to use it:** run `npm start`, open **All sessions**, type a filter such as
-`source:codex errors:>0 test` and press **Enter**. To search from the terminal,
-run `node bin/tracequest.js search "cache invalidation"`.
-[Search commands and filters](docs/cli-reference.md#cli-usage).
+Sessions from this machine, from other machines (copied over SSH) and from Cursor
+Cloud Agents land in one list. Search the message text, or filter by project,
+agent, machine, model, tool, error count and age. The summary row shows totals for
+whatever matches.
 
-### Inspect a session
+```bash
+tracequest search "No module named"      # full-text search across every agent
+tracequest find "source:codex errors:>0" # the same filters as the web app
+```
 
-![A session's activity timeline and per-turn token chart, with chapter markers and a tool error](docs/assets/session.png)
+<details>
+<summary><b>The real screens:</b> the session list and the multi-machine hub</summary>
+<br>
+<img src="docs/assets/browse.png" alt="The session list filtered to Codex sessions with errors">
+<img src="docs/assets/hub.png" alt="A read-only hub listing each machine with its session count and last successful copy">
+</details>
 
-The activity timeline shows when the agent was working and when it was idle. The
-token chart shows input and output tokens for each turn, with markers for chapter
-starts and tool errors. Each chapter lists the prompt, the commands the agent ran,
-their output and any retries.
+### Ask why runs keep failing. Get the cause and a fix.
 
-**How to use it:** open a session and choose **Analytics**, then **Open full page**. Click a bar or a
-chapter to open it. `node bin/tracequest.js latest --open` opens a report for
-your most recent session.
-[Rendering and export options](docs/cli-reference.md#cli-usage).
+<p align="center"><img src="docs/assets/launch/agent-search.gif" width="600" alt="Asked why the tests in csv-stats keep failing, the agent finds four sessions with the same ModuleNotFoundError and a Cursor Cloud run that explains it, then adds the fix to AGENTS.md."></p>
 
-### Find out why tool calls fail
+Your agents can search TraceQuest too. Ask your coding agent why something keeps
+breaking: it runs `tracequest search`, finds the same error across every session
+and every agent, and can write the fix into AGENTS.md so the next run starts with
+it. `handoff` prints the matches as Markdown made for a prompt. It uses the local
+index only, with no model calls.
 
-![Failed tool calls grouped by cause, with error rates per agent](docs/assets/insights.png)
+```bash
+tracequest handoff "No module named" --limit 5
+```
 
-Insights groups failed tool calls by cause. It also shows error rates, retries,
-loops, active time and estimated cost. Expand a row to see the failed output and
-a link to the session it came from. You can limit the figures to a project,
-source, machine or time range. The analysis runs on your machine and makes no
-model calls.
+<details>
+<summary><b>Real output</b> from the demo sessions: <code>tracequest handoff "not ok" --limit 3</code></summary>
 
-**How to use it:** open `/insights` on your TraceQuest server.
-`node bin/tracequest.js insights --refresh` updates the analysis and prints a
-summary in the terminal. [Insights options](docs/cli-reference.md#cli-usage).
+```markdown
+# TraceQuest Search Handoff
 
-### Compare two sessions
+- Query: `not ok`
+- Sort: `relevance`
+- Results: 1
+- Privacy: includes session hashes, metadata, and capped TraceQuest search snippets; no full transcripts or absolute paths.
 
-![Two Codex sessions side by side: duration, turns, tool calls, tokens, cache hits, errors and retries](docs/assets/compare.png)
+## Follow-up Commands
 
-The compare view puts two sessions side by side. It shows duration, tokens,
-cache use, errors, retries, tool counts and chapter outcomes. Each column links
-to the full session.
+- Refresh this handoff: `tracequest handoff 'not ok' --limit 3`
 
-**How to use it:** in **All sessions**, tick the checkboxes of two sessions and
-choose **Compare**. [Browser and session commands](docs/cli-reference.md#cli-usage).
+## Matches
 
-### Read, start and continue conversations
+1. Session `5150abde`
+   - Date: `2026-10-22 20:52`
+   - Source: `claude`
+   - Project: `todo-api`
+   - First prompt: `Add pagination to GET /todos. Keep the default page size at 50.`
+   - Snippets:
+     - `match`: `...use_id": "toolu_0b6f7c_04", "content": "not ok 3 - GET /todos returns every todo expected 120, got 5...`
+     - `match`: `...t": [{"type": "text", "text": "Let me look at the route first."}, {"type": "tool_use", "id": "toolu_0b...`
+   - Commands:
+     - `tracequest render 5150abde`
+     - `tracequest messages 5150abde --pretty`
+```
+</details>
 
-![A Codex session open in the conversation view](docs/assets/runs.png)
+### What went wrong, and where the time went.
 
-The conversation view shows a session's messages and tool output, and updates
-while the agent is still working. **+ New run** starts an installed agent in a
-directory you choose. You can send follow-up messages to runs started from
-TraceQuest and continue supported sessions. Starting and continuing runs needs
-tmux.
+<p align="center"><img src="docs/assets/launch/insights.gif" width="600" alt="Insights: 16 of 82 tool calls failed, grouped by cause with missing module first; 0.3 hours of agent time, $1.64 estimated spend, 7 retries, and error rates for Codex and Claude."></p>
 
-**How to use it:** run `npm start` and choose a session or **+ New run**.
-[Supported agents and setup](docs/cli-reference.md#launching-agent-runs).
+Insights groups failed tool calls by cause. It also shows error rates per agent,
+retries, loops, active time and estimated cost. Expand a cause to see the failed
+output and a link to the session it came from. Each session also gets a timeline
+of when the agent worked and waited, a token chart per turn, and chapters that
+list each prompt, the commands it led to, their output and any retries. The analysis runs
+on your machine and makes no model calls.
 
-### Export reports and write handoffs
+```bash
+tracequest insights --refresh   # or open /insights in the web app
+```
 
-![A standalone HTML session report with Print and Share buttons](docs/assets/reports.png)
+<details>
+<summary><b>The real screens:</b> Insights and a session's timeline</summary>
+<br>
+<img src="docs/assets/insights.png" alt="Failed tool calls grouped by cause, with error rates per agent">
+<img src="docs/assets/session.png" alt="A session's activity timeline and per-turn token chart, with chapter markers and a tool error">
+</details>
 
-**Export** saves a session as a single HTML file with its timeline and chapters.
-**Markdown** saves the session text. The `handoff` command searches your sessions
-and prints Markdown snippets, each with the commands to open the matching session.
+### Watch runs while they're still going. Steer them from the same place.
 
-**How to use it:** open a session and choose **Export** or **Markdown**, or run
-`node bin/tracequest.js handoff "cache invalidation" --limit 5` in the checkout.
-[Handoff and sharing options](docs/cli-reference.md#cli-usage).
+<p align="center"><img src="docs/assets/launch/live-runs.gif" width="600" alt="A Claude Code run reads, searches and edits files live; a test fails, the agent fixes it, and a follow-up message is typed into the same view."></p>
 
-### Collect sessions from several machines
+The conversation view updates while the agent is still working. **+ New run**
+starts an installed agent in a directory you choose. You can send follow-up
+messages to runs started from TraceQuest and continue supported sessions as a new
+run. Runs live in tmux, so `tmux attach -t tracequest` shows the same runs in a
+terminal. Starting and continuing runs needs tmux.
 
-![A read-only hub listing each machine with its session count and last successful copy](docs/assets/hub.png)
+<details>
+<summary><b>The real screen:</b> a Codex session in the conversation view</summary>
+<br>
+<img src="docs/assets/runs.png" alt="A Codex session open in the conversation view">
+</details>
 
-A hub is a read-only TraceQuest server that copies sessions from other machines
-over SSH. The Machines table shows each machine's session count, newest session,
-collection status and last successful copy. A config file lists the machines,
-the folders to copy and the address the server listens on.
+### Yesterday's standup, written from the sessions.
 
-**How to use it:** follow the [hub deployment guide](docs/hub-deployment.md) to
-write a config, import sessions and start the hub. The guide includes a local
-example you can run on one machine. A hub rejects changes and hides values that
-look like secrets. Sessions still contain conversation text, so restrict who can
-reach the hub on your network.
+<p align="center"><img src="docs/assets/launch/standup.gif" width="600" alt="A timeline of yesterday's 19 sessions becomes a standup: progress per project, one blocker that was fixed, and what to ship next, each line linked to its session."></p>
 
-## Try it
+`standup` summarises recent sessions as progress, blockers and next steps, using
+an agent you already have: Claude Code, Codex or Droid is detected for you. Run
+it with `--print-input` first to see exactly what would be sent: session
+metadata, counts and short chapter notes, never full transcripts.
 
-You need **Node.js 22.5 or later** and **git**.
+```bash
+tracequest standup --yesterday --print-input   # what the agent would see
+tracequest standup --yesterday
+```
+
+### And the rest
+
+- **Compare two sessions** side by side: duration, tokens, cache use, errors,
+  retries, tool counts and chapter outcomes. Tick two sessions in **All sessions**
+  and choose **Compare**. [Screenshot](docs/assets/compare.png)
+- **Export and share.** **Export** saves a session as one HTML file with its
+  timeline and chapters, **Markdown** saves its text, and `tracequest share`
+  publishes to a GitHub Gist or Hugging Face. `tracequest latest --open` opens a
+  report for your most recent session. [Screenshot](docs/assets/reports.png)
+- **Collect sessions from several machines.** A hub is a read-only TraceQuest
+  server that copies sessions from other machines over SSH, hides values that look
+  like secrets and rejects changes. Sessions still contain conversation text, so
+  restrict who can reach it. [Hub deployment guide](docs/hub-deployment.md)
+
+The screenshots use the bundled Claude Code samples and synthetic Codex
+recordings; the hub shows copies under demo machine names. Costs are estimated
+from token counts and model prices. They are not billing data.
+
+## Try it in a minute
+
+You need **Node.js 22.5 or later** and **git**. No agent account or API key.
 
 ```bash
 git clone https://github.com/viktor-com/tracequest.git
@@ -130,16 +187,43 @@ npm install
 npm run demo
 ```
 
-Open [localhost:7777](http://localhost:7777). The demo shows two small sample
-sessions that ship with the repository. It needs no agent account or API key.
+Open [localhost:7777](http://localhost:7777). The demo serves two small sample
+sessions that ship with the repository.
+
+<p align="center"><img src="docs/assets/hero.png" alt="A TraceQuest conversation beside its session analytics"></p>
 
 To see your own sessions, stop the demo with **Ctrl-C** and run:
 
 ```bash
-npm start
+npm start   # reads the sessions your agents already wrote
+npm link    # optional: puts the tracequest command on your PATH
 ```
 
+tmux is optional (starting and steering runs); Rust is optional (a faster
+indexer). Prebuilt tarballs for macOS arm64 and Linux x64 are attached to each
+[release](https://github.com/viktor-com/tracequest/releases).
 [Installation, imports and troubleshooting](docs/README.md#start-here).
+
+## Works with
+
+TraceQuest finds sessions where each agent already writes them. There is nothing
+to install in the agents.
+
+| Agent | Sessions read from |
+| --- | --- |
+| Claude Code | `~/.claude/projects/` |
+| Codex CLI | `~/.codex/sessions/` |
+| Cursor | `~/.cursor/projects/` |
+| Cursor Cloud Agents | `tracequest import cursor-cloud` |
+| Droid (Factory) | `~/.factory/sessions/` |
+| OpenCode | `~/.local/share/opencode/opencode.db` |
+| Grok CLI | `~/.grok/sessions/` |
+| vktr (Viktor's fork of the Grok CLI) | `~/.vktr/sessions/` |
+| fx (Vercel's coding agent) | `~/.fx/sessions/` |
+| DeepSeek Harness | `~/.dsh/sessions/` |
+| Any of these on another machine | `tracequest import ssh` |
+
+[Session sources and paths](docs/cli-reference.md#supported-sources).
 
 ## Data and network access
 
@@ -158,4 +242,13 @@ before making it reachable from other machines.
 locations, live-run API, deployment and development guides. It is written so
 that a coding agent can follow it too.
 
-[Contribute](CONTRIBUTING.md) · [Report a bug](https://github.com/viktor-com/tracequest/issues) · [Changelog](CHANGELOG.md) · [MIT License](LICENSE)
+<p align="center">
+  <a href="https://cdn.jsdelivr.net/gh/viktor-com/tracequest@450e9275e14cc6729cc7918caa7af4d97f1e2416/docs/assets/launch/tracequest-launch-film.mp4"><img src="docs/assets/launch/try.gif" width="420" alt="TraceQuest: open source, MIT, runs locally, no telemetry. git clone, npm install, npm run demo, then open localhost:7777."></a>
+</p>
+
+<p align="center">
+  <a href="CONTRIBUTING.md">Contribute</a> ·
+  <a href="https://github.com/viktor-com/tracequest/issues">Report a bug</a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="LICENSE">MIT License</a>
+</p>
