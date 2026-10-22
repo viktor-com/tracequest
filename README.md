@@ -214,14 +214,14 @@ to install in the agents.
 | Claude Code | `~/.claude/projects/` |
 | Codex CLI | `~/.codex/sessions/` |
 | Cursor | `~/.cursor/projects/` |
-| Cursor Cloud Agents | `tracequest import cursor-cloud` |
+| Cursor Cloud | `tracequest import cursor-cloud` |
 | Droid (Factory) | `~/.factory/sessions/` |
 | OpenCode | `~/.local/share/opencode/opencode.db` |
 | Grok CLI | `~/.grok/sessions/` |
-| vktr (Viktor's fork of the Grok CLI) | `~/.vktr/sessions/` |
-| fx (Vercel's coding agent) | `~/.fx/sessions/` |
+| vktr | `~/.vktr/sessions/` |
+| fx | `~/.fx/sessions/` |
 | DeepSeek Harness | `~/.dsh/sessions/` |
-| Any of these on another machine | `tracequest import ssh` |
+| Another machine | `tracequest import ssh` |
 
 [Session sources and paths](docs/cli-reference.md#supported-sources).
 
