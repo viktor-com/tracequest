@@ -5,6 +5,10 @@
   </picture>
 </p>
 
+<h3 align="center">Follow your coding agents. Find what happened.</h3>
+
+<p align="center">A local web app and CLI for the sessions your coding agents already write.</p>
+
 <p align="center">
   <a href="https://cdn.jsdelivr.net/gh/viktor-com/tracequest@450e9275e14cc6729cc7918caa7af4d97f1e2416/docs/assets/launch/tracequest-launch-film.mp4"><picture>
     <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/launch/hero-poster.jpg">
@@ -12,38 +16,24 @@
   </picture></a>
 </p>
 
-<h3 align="center">Follow your coding agents. Find what happened.</h3>
-
 <p align="center">
+  <a href="#try-it-in-a-minute"><picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/launch/try-dark.svg">
+    <img src="docs/assets/launch/try-light.svg" alt="Try it in a minute" width="180" height="44">
+  </picture></a>&nbsp;&nbsp;
   <a href="https://cdn.jsdelivr.net/gh/viktor-com/tracequest@450e9275e14cc6729cc7918caa7af4d97f1e2416/docs/assets/launch/tracequest-launch-film.mp4"><picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/launch/watch-film-dark.svg">
-    <img src="docs/assets/launch/watch-film-light.svg" alt="Watch the launch film (44 seconds, with sound)" width="320" height="48">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/launch/film-dark.svg">
+    <img src="docs/assets/launch/film-light.svg" alt="Watch the launch film (44 seconds, with sound)" width="200" height="44">
   </picture></a>
 </p>
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/launch/agents-dark.svg">
-    <img src="docs/assets/launch/agents-light.svg" alt="Works with Claude Code, Codex, Cursor, Droid, OpenCode, Grok, vktr, fx and DeepSeek Harness" width="429" height="70">
-  </picture>
-</p>
-
-<p align="center">
-  A local web app and CLI for the sessions your coding agents already write.<br>
-  <sub>MIT · runs on your machine · no telemetry · no account</sub>
-</p>
-
-<p align="center">
-  <a href="#try-it-in-a-minute"><b>Try it in a minute</b></a> ·
-  <a href="#what-it-does">What it does</a> ·
-  <a href="docs/README.md">Documentation</a>
-</p>
+<p align="center"><sub>Claude Code · Codex · Cursor · Droid · OpenCode · Grok · vktr · fx · DeepSeek Harness<br>MIT · runs on your machine · no telemetry · no account</sub></p>
 
 ## What it does
 
-<img src="docs/assets/launch/agent-search.webp" align="right" width="400" alt="Asked why the tests in csv-stats keep failing, the agent finds four sessions with the same ModuleNotFoundError and a Cursor Cloud run that explains it, then adds the fix to AGENTS.md.">
+<img src="docs/assets/launch/agent-search.webp" align="right" width="360" vspace="12" alt="Asked why the tests in csv-stats keep failing, the agent finds four sessions with the same ModuleNotFoundError and a Cursor Cloud run that explains it, then adds the fix to AGENTS.md.">
 
-### Ask why runs keep failing.<br>Get the cause and a fix.
+### Agentic analysis
 
 Ask your coding agent why runs in a repo keep failing. With TraceQuest it searches
 every agent's past sessions, finds the cause (sometimes another run already worked
@@ -53,26 +43,26 @@ it out) and writes the fix into AGENTS.md, so the next run starts with it.
 tracequest search "No module named"
 ```
 
-<br clear="right"><br>
+<br clear="right">
 
-<img src="docs/assets/launch/index.webp" align="left" width="400" alt="Sessions from this machine, a GPU box, a laptop and Cursor Cloud merge into one searchable index of 19 sessions from 6 sources.">
+<img src="docs/assets/launch/index.webp" align="left" width="360" vspace="12" alt="Sessions from this machine, a GPU box, a laptop and Cursor Cloud merge into one searchable index of 19 sessions from 6 sources.">
 
-### Every coding agent's sessions,<br>in one index.
+### One index
 
 TraceQuest puts every coding agent's sessions in one index: Claude Code, Codex,
 Cursor, OpenCode, Grok and Droid, from this machine, your other machines over SSH,
 and Cursor Cloud. You can search it, and so can your agents.
 
 ```bash
-tracequest find "source:codex errors:>0"
+tracequest find "errors:>0"
 tracequest import ssh gpu
 ```
 
-<br clear="left"><br>
+<br clear="left">
 
-<img src="docs/assets/launch/insights.webp" align="right" width="400" alt="Insights: 16 of 82 tool calls failed, grouped by cause with missing module first; 0.3 hours of agent time, $1.64 estimated spend, 7 retries, and error rates for Codex and Claude.">
+<img src="docs/assets/launch/insights.webp" align="right" width="360" vspace="12" alt="Insights: 16 of 82 tool calls failed, grouped by cause with missing module first; 0.3 hours of agent time, $1.64 estimated spend, 7 retries, and error rates for Codex and Claude.">
 
-### What went wrong,<br>and where the time went.
+### Insights
 
 It also keeps the numbers: which failures come up most, error rates per agent,
 retries and loops, active time and estimated spend. Narrow it to a project, an
@@ -83,27 +73,22 @@ model calls.
 tracequest insights --refresh
 ```
 
-<br clear="right"><br>
+<br clear="right">
 
-<img src="docs/assets/launch/live-runs.webp" align="left" width="400" alt="A Claude Code run reads, searches and edits files live; a test fails, the agent fixes it, and a follow-up message is typed into the same view.">
+<img src="docs/assets/launch/live-runs.webp" align="left" width="360" vspace="12" alt="A Claude Code run reads, searches and edits files live; a test fails, the agent fixes it, and a follow-up message is typed into the same view.">
 
-### Watch runs while they're still going.<br>Steer them from the same place.
+### The app
 
 There's an app too. Watch a run while the agent is still working, send follow-ups
 to runs you started from it, start a new run in any folder, or continue an earlier
-session.
+session. Run `npm start` and open localhost:7777; starting and continuing runs
+needs tmux.
 
-```bash
-npm start   # then open localhost:7777
-```
+<br clear="left">
 
-<sub>Starting and continuing runs needs tmux.</sub>
+<img src="docs/assets/launch/standup.webp" align="right" width="360" vspace="12" alt="A timeline of yesterday's 19 sessions becomes a standup: progress per project, one blocker that was fixed, and what to ship next, each line linked to its session.">
 
-<br clear="left"><br>
-
-<img src="docs/assets/launch/standup.webp" align="right" width="400" alt="A timeline of yesterday's 19 sessions becomes a standup: progress per project, one blocker that was fixed, and what to ship next, each line linked to its session.">
-
-### Yesterday's standup,<br>written from the sessions.
+### What falls out
 
 Some things come for free once the sessions are indexed. Yesterday's standup,
 written from the sessions by the agent you already use. A handoff that gives a new
@@ -111,23 +96,22 @@ run the relevant parts of earlier sessions, with the commands to open each one.
 
 ```bash
 tracequest standup --yesterday
-tracequest handoff "No module named"
+tracequest handoff "No module"
 ```
 
-<br clear="right"><br>
+<br clear="right">
 
-**Also in the box:** [compare two sessions](docs/assets/compare.png) side by side ·
-export a session as [one HTML report](docs/assets/reports.png) or Markdown ·
-share to a Gist or Hugging Face · a read-only [hub](docs/hub-deployment.md) that
-collects sessions from your machines over SSH.
+**Also in the box**
 
-<sub>The clips run on sample sessions written for them; in the first and the
-standup clip the agent's replies are acted out. Costs are estimated from token
-counts and model prices, not billing data.</sub>
+- [Compare two sessions](docs/assets/compare.png) side by side
+- Export a session as [one HTML report](docs/assets/reports.png) or Markdown, or share it to a Gist or Hugging Face
+- A read-only [hub](docs/hub-deployment.md) that collects sessions from your machines over SSH
+
+<sub>The clips run on sample sessions written for them; in the analysis and standup
+clips the agent's replies are acted out. Costs are estimated from token counts and
+model prices, not billing data.</sub>
 
 ## Try it in a minute
-
-<img src="docs/assets/launch/try.webp" align="left" width="300" alt="TraceQuest: open source, MIT, runs locally, no telemetry. git clone, cd tracequest, npm install, npm run demo, then open localhost:7777.">
 
 TraceQuest is open source (MIT), runs on your machine and sends no telemetry.
 You need **Node.js 22.5+** and **git**; no agent account or API key.
@@ -140,10 +124,8 @@ npm run demo
 ```
 
 Open [localhost:7777](http://localhost:7777) to browse two bundled sample
-sessions. Then **Ctrl-C**, `npm start` for your own sessions, and `npm link` to
-put `tracequest` on your PATH.
-
-<br clear="left"><br>
+sessions. Then press **Ctrl-C** and run `npm start` for your own sessions;
+`npm link` puts `tracequest` on your PATH.
 
 <details>
 <summary><b>Where TraceQuest finds each agent's sessions</b></summary>
@@ -186,8 +168,7 @@ before making it reachable from other machines.
 
 <p align="center">
   <a href="docs/README.md"><b>Documentation</b></a> ·
-  <a href="CONTRIBUTING.md">Contribute</a> ·
-  <a href="https://github.com/viktor-com/tracequest/issues">Report a bug</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
-  <a href="LICENSE">MIT License</a>
+  <a href="LICENSE">MIT</a>
 </p>
