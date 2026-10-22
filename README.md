@@ -10,21 +10,12 @@
 <p align="center">A local web app and CLI for the sessions your coding agents already write.</p>
 
 <p align="center">
-  <a href="https://cdn.jsdelivr.net/gh/viktor-com/tracequest@450e9275e14cc6729cc7918caa7af4d97f1e2416/docs/assets/launch/tracequest-launch-film.mp4"><picture>
-    <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/launch/hero-poster.jpg">
-    <img src="docs/assets/launch/hero.webp" width="960" alt="TraceQuest. Asked why the tests in csv-stats keep failing, an agent searches every agent's sessions, finds the cause in a Cursor Cloud run and writes the fix into AGENTS.md. The next run passes.">
-  </picture></a>
+  <a href="https://cdn.jsdelivr.net/gh/viktor-com/tracequest@450e9275e14cc6729cc7918caa7af4d97f1e2416/docs/assets/launch/tracequest-launch-film.mp4"><picture><source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/launch/hero-poster.jpg"><img src="docs/assets/launch/hero.webp" width="960" alt="TraceQuest. Asked why the tests in csv-stats keep failing, an agent searches every agent's sessions, finds the cause in a Cursor Cloud run and writes the fix into AGENTS.md. The next run passes."></picture></a>
 </p>
 
 <p align="center">
-  <a href="#try-it-in-a-minute"><picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/launch/try-dark.svg">
-    <img src="docs/assets/launch/try-light.svg" alt="Try it in a minute" width="180" height="44">
-  </picture></a>&nbsp;&nbsp;
-  <a href="https://cdn.jsdelivr.net/gh/viktor-com/tracequest@450e9275e14cc6729cc7918caa7af4d97f1e2416/docs/assets/launch/tracequest-launch-film.mp4"><picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/launch/film-dark.svg">
-    <img src="docs/assets/launch/film-light.svg" alt="Watch the launch film (44 seconds, with sound)" width="200" height="44">
-  </picture></a>
+  <a href="#try-it-in-a-minute"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/launch/try-dark.svg"><img src="docs/assets/launch/try-light.svg" alt="Try it in a minute" width="180" height="44"></picture></a>&nbsp;&nbsp;
+  <a href="https://cdn.jsdelivr.net/gh/viktor-com/tracequest@450e9275e14cc6729cc7918caa7af4d97f1e2416/docs/assets/launch/tracequest-launch-film.mp4"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/launch/film-dark.svg"><img src="docs/assets/launch/film-light.svg" alt="Watch the launch film (44 seconds, with sound)" width="200" height="44"></picture></a>
 </p>
 
 <p align="center"><sub>Claude Code · Codex · Cursor · Droid · OpenCode · Grok · vktr · fx · DeepSeek Harness<br>MIT · runs on your machine · no telemetry · no account</sub></p>
