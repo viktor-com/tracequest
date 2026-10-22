@@ -1,4 +1,11 @@
 <p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="src/ui/assets/tracequest-mark-light.svg">
+    <img src="src/ui/assets/tracequest-mark.svg" alt="TraceQuest TQ logo" width="72" height="72">
+  </picture>
+</p>
+
+<p align="center">
   <a href="https://cdn.jsdelivr.net/gh/viktor-com/tracequest@450e9275e14cc6729cc7918caa7af4d97f1e2416/docs/assets/launch/tracequest-launch-film.mp4"><picture>
     <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/launch/hero-poster.jpg">
     <img src="docs/assets/launch/hero.gif" width="960" alt="TraceQuest. Asked why the tests in csv-stats keep failing, an agent searches every agent's sessions, finds the cause in a Cursor Cloud run and writes the fix into AGENTS.md. The next run passes.">
