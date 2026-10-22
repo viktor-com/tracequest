@@ -53,7 +53,7 @@ it out) and writes the fix into AGENTS.md, so the next run starts with it.
 tracequest search "No module named"
 ```
 
-<br clear="right">
+<br clear="right"><br>
 
 <img src="docs/assets/launch/index.webp" align="left" width="400" alt="Sessions from this machine, a GPU box, a laptop and Cursor Cloud merge into one searchable index of 19 sessions from 6 sources.">
 
@@ -68,7 +68,7 @@ tracequest find "source:codex errors:>0"
 tracequest import ssh gpu
 ```
 
-<br clear="left">
+<br clear="left"><br>
 
 <img src="docs/assets/launch/insights.webp" align="right" width="400" alt="Insights: 16 of 82 tool calls failed, grouped by cause with missing module first; 0.3 hours of agent time, $1.64 estimated spend, 7 retries, and error rates for Codex and Claude.">
 
@@ -83,7 +83,7 @@ model calls.
 tracequest insights --refresh
 ```
 
-<br clear="right">
+<br clear="right"><br>
 
 <img src="docs/assets/launch/live-runs.webp" align="left" width="400" alt="A Claude Code run reads, searches and edits files live; a test fails, the agent fixes it, and a follow-up message is typed into the same view.">
 
@@ -99,7 +99,7 @@ npm start   # then open localhost:7777
 
 <sub>Starting and continuing runs needs tmux.</sub>
 
-<br clear="left">
+<br clear="left"><br>
 
 <img src="docs/assets/launch/standup.webp" align="right" width="400" alt="A timeline of yesterday's 19 sessions becomes a standup: progress per project, one blocker that was fixed, and what to ship next, each line linked to its session.">
 
@@ -114,7 +114,7 @@ tracequest standup --yesterday
 tracequest handoff "No module named"
 ```
 
-<br clear="right">
+<br clear="right"><br>
 
 **Also in the box:** [compare two sessions](docs/assets/compare.png) side by side ·
 export a session as [one HTML report](docs/assets/reports.png) or Markdown ·
@@ -143,7 +143,7 @@ Open [localhost:7777](http://localhost:7777) to browse two bundled sample
 sessions. Then **Ctrl-C**, `npm start` for your own sessions, and `npm link` to
 put `tracequest` on your PATH.
 
-<br clear="left">
+<br clear="left"><br>
 
 <details>
 <summary><b>Where TraceQuest finds each agent's sessions</b></summary>
