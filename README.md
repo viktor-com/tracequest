@@ -31,7 +31,7 @@
 
 ## What it does
 
-<img src="docs/assets/launch/agent-search.webp" align="right" width="360" vspace="12" alt="Asked why the tests in csv-stats keep failing, the agent finds four sessions with the same ModuleNotFoundError and a Cursor Cloud run that explains it, then adds the fix to AGENTS.md.">
+<img src="docs/assets/launch/agent-search.webp" align="right" width="360" alt="Asked why the tests in csv-stats keep failing, the agent finds four sessions with the same ModuleNotFoundError and a Cursor Cloud run that explains it, then adds the fix to AGENTS.md.">
 
 ### Agentic analysis
 
@@ -45,7 +45,7 @@ tracequest search "No module named"
 
 <br clear="right">
 
-<img src="docs/assets/launch/index.webp" align="left" width="360" vspace="12" alt="Sessions from this machine, a GPU box, a laptop and Cursor Cloud merge into one searchable index of 19 sessions from 6 sources.">
+<img src="docs/assets/launch/index.webp" align="left" width="360" alt="Sessions from this machine, a GPU box, a laptop and Cursor Cloud merge into one searchable index of 19 sessions from 6 sources.">
 
 ### One index
 
@@ -60,7 +60,7 @@ tracequest import ssh gpu
 
 <br clear="left">
 
-<img src="docs/assets/launch/insights.webp" align="right" width="360" vspace="12" alt="Insights: 16 of 82 tool calls failed, grouped by cause with missing module first; 0.3 hours of agent time, $1.64 estimated spend, 7 retries, and error rates for Codex and Claude.">
+<img src="docs/assets/launch/insights.webp" align="right" width="360" alt="Insights: 16 of 82 tool calls failed, grouped by cause with missing module first; 0.3 hours of agent time, $1.64 estimated spend, 7 retries, and error rates for Codex and Claude.">
 
 ### Insights
 
@@ -75,7 +75,7 @@ tracequest insights --refresh
 
 <br clear="right">
 
-<img src="docs/assets/launch/live-runs.webp" align="left" width="360" vspace="12" alt="A Claude Code run reads, searches and edits files live; a test fails, the agent fixes it, and a follow-up message is typed into the same view.">
+<img src="docs/assets/launch/live-runs.webp" align="left" width="360" alt="A Claude Code run reads, searches and edits files live; a test fails, the agent fixes it, and a follow-up message is typed into the same view.">
 
 ### The app
 
@@ -86,7 +86,7 @@ needs tmux.
 
 <br clear="left">
 
-<img src="docs/assets/launch/standup.webp" align="right" width="360" vspace="12" alt="A timeline of yesterday's 19 sessions becomes a standup: progress per project, one blocker that was fixed, and what to ship next, each line linked to its session.">
+<img src="docs/assets/launch/standup.webp" align="right" width="360" alt="A timeline of yesterday's 19 sessions becomes a standup: progress per project, one blocker that was fixed, and what to ship next, each line linked to its session.">
 
 ### What falls out
 
