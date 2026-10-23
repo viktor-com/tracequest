@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-10-23
+
+### Changed
+
+- New TraceQuest identity: a square TQ mark, a connected serif wordmark and a matching browser favicon across every page.
+
+### Fixed
+
+- Sort the Runs page from its column headers. When, Duration, Tokens, Cost and Grade sort the list; clicking the sorted column, or the active Display menu entry, reverses it (`?sort=cost-asc`), and reload and Back keep the order. Runs with no value sort last either way.
+- Leave Insights from the keyboard: `g` then `c`, `r` or `i` switch sections there as on every other page.
+- Keep the top-bar search box whole at every width. It shrinks with the bar instead of collapsing to a one-letter stub on phones or pushing the bar past the window around 768px, and phone search results stay on screen.
+- Make the New run dialog usable on short screens and when a start fails: it scrolls so Start is always reachable, a folder that does not exist is named under the Folder field in plain words and clears once edited, focus stays in the dialog after a failed start, and the shortcut hint says Ctrl outside macOS.
+
 ## [0.5.2] - 2026-10-20
 
 ### Fixed
