@@ -1418,18 +1418,39 @@ document.addEventListener('click', function(e) {
   }
 });
 
-document.getElementById('sortBar').addEventListener('click', function(e) {
-  var btn = e.target.closest('.sort-btn');
-  if (!btn) return;
-  var sort = btn.dataset.sort;
-  if (sort === currentSort) return;
-  currentSort = sort;
-  document.querySelectorAll('.sort-btn').forEach(function(b) { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
-  btn.classList.add('active');
-  btn.setAttribute('aria-pressed', 'true');
+/* Sort state: a key, highest (newest) first, or key + '-asc' for lowest first. */
+function sortKeyOf(sort) {
+  sort = sort || 'recent';
+  return /-asc$/.test(sort) ? sort.slice(0, -4) : sort;
+}
+function syncSortControls() {
+  var key = sortKeyOf(currentSort);
+  var dir = /-asc$/.test(currentSort || '') ? 'asc' : 'desc';
+  document.querySelectorAll('.sort-btn, .runs-sort').forEach(function(b) {
+    var on = b.dataset.sort === key;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (on) b.dataset.dir = dir; else delete b.dataset.dir;
+    var label = b.textContent.toLowerCase();
+    b.title = on
+      ? 'Sorted by ' + label + (dir === 'asc' ? (key === 'recent' ? ', oldest first' : ', lowest first') : (key === 'recent' ? ', newest first' : ', highest first')) + ' — click to reverse'
+      : 'Sort by ' + label;
+  });
+}
+function chooseSort(key) {
+  currentSort = sortKeyOf(currentSort) === key && !/-asc$/.test(currentSort) ? key + '-asc' : key;
+  syncSortControls();
   closeToolbarMenus();
   currentPage = 1;
   fetchSessions(function() { render(); });
+}
+document.getElementById('sortBar').addEventListener('click', function(e) {
+  var btn = e.target.closest('.sort-btn');
+  if (btn) chooseSort(btn.dataset.sort);
+});
+document.getElementById('runsSortHead').addEventListener('click', function(e) {
+  var btn = e.target.closest('.runs-sort');
+  if (btn) chooseSort(btn.dataset.sort);
 });
 
 
@@ -1808,12 +1829,8 @@ function applyQfFilters() {
 (function() {
   var params = new URLSearchParams(window.location.search);
   var sort = params.get('sort');
-  if (sort) {
-    currentSort = sort;
-    document.querySelectorAll('.sort-btn').forEach(function(b) { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
-    var sortBtn = document.querySelector('.sort-btn[data-sort="' + sort + '"]');
-    if (sortBtn) { sortBtn.classList.add('active'); sortBtn.setAttribute('aria-pressed', 'true'); }
-  }
+  if (sort) currentSort = sort;
+  syncSortControls();
   var expr = params.get('expr');
   if (expr) filterInput.value = expr;
   var grade = params.get('grade');

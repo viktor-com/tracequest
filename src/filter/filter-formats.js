@@ -258,17 +258,29 @@ export function normalizeSortKey(sort) {
   return sort;
 }
 
+/**
+ * Highest (newest) first; a key with an -asc suffix (cost-asc) sorts lowest
+ * first. Rows with no value (0) sort last either way.
+ */
 export function sortSessionList(arr, sort) {
-  switch (normalizeSortKey(sort)) {
-    case 'recent': return arr.sort((a, b) => sessionMtimeMs(b) - sessionMtimeMs(a));
-    case 'duration': return arr.sort((a, b) => (b.durationMs || 0) - (a.durationMs || 0));
-    case 'cost': return arr.sort((a, b) => estimateCost(b) - estimateCost(a));
-    case 'tokens': return arr.sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
-    case 'errors': return arr.sort((a, b) => (b.errors || 0) - (a.errors || 0));
-    case 'files': return arr.sort((a, b) => (b.files || 0) - (a.files || 0));
-    case 'commits': return arr.sort((a, b) => (b.commits || 0) - (a.commits || 0));
-    case 'chapters': return arr.sort((a, b) => (b.chapters || 0) - (a.chapters || 0));
-    case 'grade': return arr.sort((a, b) => computeGrade(b).score - computeGrade(a).score);
-    default: return arr.sort((a, b) => sessionMtimeMs(b) - sessionMtimeMs(a));
+  let key = normalizeSortKey(sort);
+  const dir = key.endsWith('-asc') ? -1 : 1;
+  if (dir < 0) key = normalizeSortKey(key.slice(0, -4));
+  let value;
+  switch (key) {
+    case 'duration': value = (s) => s.durationMs || 0; break;
+    case 'cost': value = estimateCost; break;
+    case 'tokens': value = (s) => s.totalTokens || 0; break;
+    case 'errors': value = (s) => s.errors || 0; break;
+    case 'files': value = (s) => s.files || 0; break;
+    case 'commits': value = (s) => s.commits || 0; break;
+    case 'chapters': value = (s) => s.chapters || 0; break;
+    case 'grade': value = (s) => computeGrade(s).score; break;
+    default: value = sessionMtimeMs;
   }
+  return arr.sort((a, b) => {
+    const va = value(a), vb = value(b);
+    if (dir < 0 && !va !== !vb) return va ? -1 : 1;
+    return dir * (vb - va);
+  });
 }

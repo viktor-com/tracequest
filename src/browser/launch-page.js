@@ -18,12 +18,14 @@ export const LAUNCHER_MODAL_CSS = `
 .launch-overlay {
   position: fixed; inset: 0; z-index: var(--z-dialog);
   display: flex; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px;
+  overflow-y: auto; overscroll-behavior: contain;
   background: var(--scrim); backdrop-filter: blur(3px);
   animation: ui-fade-in var(--dur-2) var(--ease-out);
 }
 .launch-overlay[hidden] { display: none; }
+@media (max-height: 600px) { .launch-overlay { padding-top: 16px; } }
 .launch-modal {
-  width: min(560px, 100%); background: var(--surface-pop); border-radius: var(--radius-xl);
+  flex: none; width: min(560px, 100%); background: var(--surface-pop); border-radius: var(--radius-xl);
   box-shadow: var(--shadow-pop); overflow: hidden; animation: ui-pop-in var(--dur-3) var(--ease-out);
 }
 .launch-modal-head { display: flex; align-items: flex-start; gap: var(--space-3); padding: 22px 22px 6px; }
@@ -57,6 +59,9 @@ export const LAUNCHER_MODAL_CSS = `
 }
 .launch-select:hover, .launch-input:hover, .launch-textarea:hover { box-shadow: inset 0 0 0 1px var(--line-3); }
 .launch-select:focus, .launch-input:focus, .launch-textarea:focus { box-shadow: inset 0 0 0 1px var(--focus); background-color: var(--surface-2); }
+.launch-select[aria-invalid="true"], .launch-input[aria-invalid="true"], .launch-textarea[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--bad); }
+.launch-field-error { font-size: var(--text-xs); color: var(--bad); overflow-wrap: anywhere; }
+.launch-field-error[hidden] { display: none; }
 .launch-select::placeholder, .launch-input::placeholder, .launch-textarea::placeholder { color: var(--text-3); }
 .launch-agents-empty { font-size: var(--text-xs); color: var(--warn); }
 .launch-actions {
@@ -105,20 +110,23 @@ export const LAUNCHER_MODAL_HTML = `<div class="launch-overlay" id="launchOverla
       <div class="launch-row">
         <div class="launch-field">
           <label class="launch-label" for="agentSelect">Agent</label>
-          <select class="launch-select" id="agentSelect"></select>
+          <select class="launch-select" id="agentSelect" aria-describedby="agentSelectError"></select>
           <div class="launch-agents-empty" id="agentsEmpty" hidden>no agents detected on PATH</div>
+          <div class="launch-field-error" id="agentSelectError" hidden></div>
         </div>
         <div class="launch-field">
           <label class="launch-label" for="cwdInput">Folder</label>
-          <input class="launch-input" id="cwdInput" type="text" placeholder="/path/to/project" spellcheck="false">
+          <input class="launch-input" id="cwdInput" type="text" placeholder="/path/to/project" spellcheck="false" aria-describedby="cwdInputError">
+          <div class="launch-field-error" id="cwdInputError" hidden></div>
         </div>
       </div>
       <div class="launch-field">
         <label class="launch-label" for="promptInput">Prompt</label>
-        <textarea class="launch-textarea" id="promptInput" rows="4" placeholder="optional initial prompt — what should the agent do?" spellcheck="false"></textarea>
+        <textarea class="launch-textarea" id="promptInput" rows="4" placeholder="optional initial prompt — what should the agent do?" spellcheck="false" aria-describedby="promptInputError"></textarea>
+        <div class="launch-field-error" id="promptInputError" hidden></div>
       </div>
       <div class="launch-actions">
-        <div class="launch-hint"><kbd>⌘</kbd><kbd>↵</kbd> to start · <kbd>esc</kbd> to close</div>
+        <div class="launch-hint"><kbd id="launchModKey">⌘</kbd><kbd>↵</kbd> to start · <kbd>esc</kbd> to close</div>
         <button class="launch-start" id="startBtn" type="submit">Start</button>
         <div class="launch-error" id="launchError" role="alert" hidden></div>
       </div>
@@ -152,14 +160,43 @@ export const LAUNCHER_CLIENT_JS = `
   var launchError = document.getElementById('launchError');
   var launchClose = document.getElementById('launchClose');
 
+  var launchModKey = document.getElementById('launchModKey');
+  if (launchModKey && !/Mac|iPhone|iPad/.test(navigator.platform || '')) launchModKey.textContent = 'Ctrl';
+
   function showLaunchError(message) {
     launchError.textContent = message;
     launchError.hidden = false;
   }
+  /** The field a POST /api/runs error names ("cwd must be …"), or null. */
+  function launchErrorField(message) {
+    var m = /^(agent|cwd|prompt)\\b/.exec(message || '');
+    return m ? { agent: agentSelect, cwd: cwdInput, prompt: promptInput }[m[1]] : null;
+  }
+  function showFieldError(field, message) {
+    if (field === cwdInput) {
+      var cwd = cwdInput.value.trim();
+      message = cwd
+        ? 'No folder at \\u201c' + cwd + '\\u201d on this machine. Enter the full path of an existing folder.'
+        : 'Enter the folder the agent should work in.';
+    }
+    var el = document.getElementById(field.id + 'Error');
+    el.textContent = message;
+    el.hidden = false;
+    field.setAttribute('aria-invalid', 'true');
+  }
+  function clearFieldError(field) {
+    var el = document.getElementById(field.id + 'Error');
+    if (el) { el.hidden = true; el.textContent = ''; }
+    field.removeAttribute('aria-invalid');
+  }
   function clearLaunchError() {
     launchError.hidden = true;
     launchError.textContent = '';
+    [agentSelect, cwdInput, promptInput].forEach(clearFieldError);
   }
+  [agentSelect, cwdInput, promptInput].forEach(function (field) {
+    field.addEventListener(field === agentSelect ? 'change' : 'input', function () { clearFieldError(field); });
+  });
   async function readLaunchError(res) {
     try {
       var data = await res.json();
@@ -261,22 +298,34 @@ export const LAUNCHER_CLIENT_JS = `
     var body = { agent: agentSelect.value, cwd: cwdInput.value.trim() };
     var prompt = promptInput.value;
     if (prompt) body.prompt = prompt;
+    // Disabling Start drops its focus to the page; a failure hands focus
+    // back inside the dialog, to the field at fault or to Start.
+    var refocus = null;
     try {
       var res = await fetch('/api/runs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!res.ok) { showLaunchError(await readLaunchError(res)); return; }
+      if (!res.ok) {
+        var message = await readLaunchError(res);
+        var field = launchErrorField(message);
+        if (field) showFieldError(field, message);
+        else showLaunchError(message);
+        refocus = field || startBtn;
+        return;
+      }
       var data = await res.json();
       try { localStorage.setItem('tq-launch-cwd', body.cwd); } catch (e) {}
       // Straight into the run's chat — launching IS opening a conversation.
       window.location.href = '/run?id=' + encodeURIComponent(data.id);
     } catch (e) {
       showLaunchError(String(e));
+      refocus = startBtn;
     } finally {
       startInFlight = false;
       startBtn.disabled = false;
+      if (refocus && !launchOverlay.hidden) refocus.focus();
     }
   });
 

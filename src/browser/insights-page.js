@@ -1,8 +1,9 @@
 import { FAVICON_LINKS } from "../ui/brand.js";
 /**
  * /insights — where agents waste time and fail, across every collected machine
- * (facts inspg, inspd, inspr). Server-rendered and script-free: every figure is
- * a labelled row that opens onto the example sessions behind it.
+ * (facts inspg, inspd, inspr). Server-rendered; its only script is the section
+ * shortcuts: every figure is a labelled row that opens onto the example
+ * sessions behind it.
  */
 import { STANDALONE_BASE_CSS } from "../render/render-css.js";
 import { esc } from "../server/server-html-helpers.js";
@@ -320,6 +321,35 @@ function tile(value, label, sub) {
   return `<div class="ins-tile"><div class="ins-tile-val">${esc(value)}</div><div class="ins-tile-label">${esc(label)}</div><div class="ins-tile-sub">${esc(sub)}</div></div>`;
 }
 
+/**
+ * The page's only script: g then c / r / i, the section shortcuts the nav
+ * advertises, so the keyboard can leave Insights as it leaves every other
+ * page. Skipped while typing in a field or with Character keys off, and g c
+ * on the hub, as the other pages do.
+ */
+const SECTION_KEYS_SCRIPT = `<script>
+(function () {
+  var gAt = 0;
+  document.addEventListener("keydown", function (e) {
+    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+    var t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) { gAt = 0; return; }
+    var off = document.documentElement.getAttribute("data-tq-character-keys");
+    try { off = off || localStorage.getItem("tq-character-keys"); } catch (err) {}
+    if (off === "off" || off === "0" || off === "false") return;
+    var k = String(e.key || "").toLowerCase();
+    if (gAt && Date.now() - gAt < 1500) {
+      gAt = 0;
+      var to = { c: "/", r: "/sessions", i: "/insights" }[k];
+      if (k === "c" && document.documentElement.hasAttribute("data-tq-hub")) to = null;
+      if (to) { e.preventDefault(); location.href = to; }
+      return;
+    }
+    gAt = k === "g" ? Date.now() : 0;
+  });
+})();
+</script>`;
+
 /** @param {object} data loadInsightsData() result */
 export function insightsPage(data) {
   const now = Date.parse(data.generatedAt) || Date.now();
@@ -455,6 +485,7 @@ ${appTopStaticHtml("insights")}
   </div>
   <div class="ins-foot">Generated ${esc(data.generatedAt)}. Prompts, error text and commands shown here are redacted for secrets.${t.suspect ? ` ${num(t.suspect)} results flagged as errors by the session parser look like ordinary output and are not counted.` : ""}</div>
 </div>
+${SECTION_KEYS_SCRIPT}
 </body>
 </html>`;
 }

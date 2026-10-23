@@ -33,7 +33,7 @@ tracequest ─┬─ Chat      /            rail of running + recent sessions �
 
 ## The app shell
 
-Every served page starts with the same top bar (`appTopHtml`): mark and wordmark, section nav with the live "N running" count, then search, plan limits, theme, ⌘K and the ink **New run** button. Insights is script-free (it is served to the hub), so it uses `appTopStaticHtml`: same look, no script-driven controls, theme follows the system.
+Every served page starts with the same top bar (`appTopHtml`): mark and wordmark, section nav with the live "N running" count, then search, plan limits, theme, ⌘K and the ink **New run** button. Insights is served to the hub without the app scripts, so it uses `appTopStaticHtml`: same look, no script-driven controls, theme follows the system; its one small script is the g then c / r / i section shortcuts.
 
 - Plan limits collapse to one button showing the tightest windows; the per-machine breakdown opens as a popover.
 - Theme: system by default; the toggle remembers the choice; `THEME_BOOT_SCRIPT` sets it before first paint.
