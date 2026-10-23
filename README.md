@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="src/ui/assets/tracequest-mark-light.svg">
-    <img src="src/ui/assets/tracequest-mark.svg" alt="TraceQuest TQ logo" width="72" height="72">
+    <source media="(prefers-color-scheme: dark)" srcset="src/ui/assets/tracequest-wordmark-light.svg">
+    <img src="src/ui/assets/tracequest-wordmark.svg" alt="TraceQuest" width="215" height="40">
   </picture>
 </p>
 
