@@ -87,17 +87,17 @@ const HTML_MIDDLE = `">
   <div class="qf-bar" id="qfBar" hidden></div>
   </div>
   <div class="runs-inventory">
-    <div class="runs-table-head" aria-hidden="true">
-      <span class="runs-col-check"></span>
-      <div class="runs-table-cols">
-        <span class="runs-col-state">State</span>
-        <span class="runs-col-run">Run</span>
-        <span class="runs-col-time">When</span>
-        <span class="runs-col-duration">Duration</span>
-        <span class="runs-col-tokens">Tokens</span>
-        <span class="runs-col-cost">Cost</span>
-        <span class="runs-col-grade">Grade</span>
-        <span class="runs-col-tools">Tools</span>
+    <div class="runs-table-head">
+      <span class="runs-col-check" aria-hidden="true"></span>
+      <div class="runs-table-cols" id="runsSortHead">
+        <span class="runs-col-state" aria-hidden="true">State</span>
+        <span class="runs-col-run" aria-hidden="true">Run</span>
+        <span class="runs-col-time"><button type="button" class="runs-sort" data-sort="recent">When</button></span>
+        <span class="runs-col-duration"><button type="button" class="runs-sort" data-sort="duration">Duration</button></span>
+        <span class="runs-col-tokens"><button type="button" class="runs-sort" data-sort="tokens">Tokens</button></span>
+        <span class="runs-col-cost"><button type="button" class="runs-sort" data-sort="cost">Cost</button></span>
+        <span class="runs-col-grade"><button type="button" class="runs-sort" data-sort="grade">Grade</button></span>
+        <span class="runs-col-tools" aria-hidden="true">Tools</span>
         <span class="runs-col-actions"></span>
       </div>
     </div>
