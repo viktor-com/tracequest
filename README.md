@@ -105,18 +105,21 @@ model prices, not billing data.</sub>
 ## Try it in a minute
 
 TraceQuest is open source (MIT), runs on your machine and sends no telemetry.
-You need **Node.js 22.5+** and **git**; no agent account or API key.
+You need **Node.js 22.5+** and **git**. Paste this into your coding agent, in
+the project you want to look into:
 
-```bash
-git clone https://github.com/viktor-com/tracequest.git
-cd tracequest
-npm install
-npm run demo
+```text
+Install TraceQuest and use it to find out what went wrong in this project's past agent sessions.
+1. Clone https://github.com/viktor-com/tracequest.git next to this project (../tracequest),
+   then run `npm install` and `npm link` there so the `tracequest` command is on PATH.
+2. Read ../tracequest/docs/cli-reference.md for the commands and filters.
+3. Run `tracequest find "project:<this folder's name> errors:>0"`, then `tracequest search`
+   for the errors you see. Tell me what keeps failing, and propose a fix for AGENTS.md.
 ```
 
-Open [localhost:7777](http://localhost:7777) to browse two bundled sample
-sessions. Then press **Ctrl-C** and run `npm start` for your own sessions;
-`npm link` puts `tracequest` on your PATH.
+To browse it yourself instead, run `npm run demo` in the clone and open
+[localhost:7777](http://localhost:7777) for two bundled sample sessions, or
+`npm start` for your own.
 
 <details>
 <summary><b>Where TraceQuest finds each agent's sessions</b></summary>
