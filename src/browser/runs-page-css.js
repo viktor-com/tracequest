@@ -127,6 +127,8 @@ html, body { min-height: 100%; }
 }
 .sort-btn:hover { background: var(--surface-3); color: var(--text); }
 .sort-btn.active { color: var(--text); background: var(--surface-3); }
+.sort-btn.active::after, .runs-sort.active::after { content: "\\2193"; margin-left: 4px; }
+.sort-btn.active[data-dir="asc"]::after, .runs-sort.active[data-dir="asc"]::after { content: "\\2191"; }
 
 /* ---- overview ---- */
 .dashboard { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-5); padding: 2px 2px 0; }
@@ -220,6 +222,9 @@ body.runs-loading #sessions { opacity: 0.55; transition: opacity var(--dur-3) va
 .runs-col-tools { grid-column: 8; }
 .runs-col-actions { grid-column: 9; }
 .runs-col-state { font-size: 0; }
+.runs-sort { font: inherit; color: inherit; padding: 2px 4px; margin: 0 -4px; border-radius: var(--radius-xs); cursor: pointer; }
+.runs-sort:hover, .runs-sort.active { color: var(--text); }
+.runs-sort:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--focus); }
 
 .session-row-wrap {
   position: relative; border-radius: var(--radius-md);

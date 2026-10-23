@@ -581,6 +581,9 @@ html.theme-switching, html.theme-switching * { transition: background-color var(
 .usage-widget-hint { margin: 0; font-size: var(--text-xs); color: var(--text-3); }
 
 @media (max-width: 900px) {
+  .app-top > .tq-search { flex: 0 1 240px; min-width: 0; }
+  .app-top .tq-search-input, .app-top .tq-search-input:focus { width: 100%; min-width: 0; padding: 0 10px 0 30px; text-overflow: ellipsis; }
+  .app-top .tq-search-kbd { display: none; }
   .app-top .cmdk-trigger { display: none; }
   .app-top .app-limit-chip:nth-child(n+2) { display: none; }
   .app-top .app-limits-btn[data-more]:not([data-more=""])::after { content: none; }
@@ -593,9 +596,7 @@ html.theme-switching, html.theme-switching * { transition: background-color var(
   .app-top .app-live { display: none; }
   .app-top .app-limits-btn { padding: 0 6px; max-width: 22vw; overflow: hidden; }
   .app-top .app-limit-chip { overflow: hidden; text-overflow: ellipsis; }
-  .app-top .tq-search-input { width: 32px; padding: 0 0 0 30px; }
-  .app-top .tq-search-input:focus { width: 160px; }
-  .app-top .tq-search-kbd { display: none; }
+  .app-top .tq-search-list { position: fixed; top: calc(var(--shell-top) - 4px); left: var(--space-3); right: var(--space-3); width: auto; }
   .app-top .new-run-btn span { display: none; }
   .app-top .new-run-btn { padding: 0 9px; margin-left: 0; }
 }
