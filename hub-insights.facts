@@ -9,3 +9,9 @@
   id: insms
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/insights-machine-scope.playwright.test.js
   tags: [insights-machine-scope, implemented]
+
+# examples
+- label: each example session under an Insights error class (CLI `insights --json` and the /insights page) is labelled with that session's count for the whole class and how many of those errors carry the shown message — e.g. '27 errors of this class, 3 with this message; e.g. Error: …' — never a bare 'N×' before the message, so the class count cannot be read as the message's repeat count
+  id: insexn
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/insights-example-note.e2e.test.js
+  tags: [spec, hub-insights, cli, ui, implemented]

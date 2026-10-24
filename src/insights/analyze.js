@@ -24,7 +24,7 @@ import { redactText } from "./redact.js";
 import { MAX_MODEL_WAIT_MS, MAX_STALL_MS, STALL_MS } from "../sessions/active-time.js";
 
 /** Bump when the record shape or any classifier changes: invalidates the cache. */
-export const INSIGHTS_VERSION = 4;
+export const INSIGHTS_VERSION = 5;
 
 export { MAX_MODEL_WAIT_MS, MAX_STALL_MS, STALL_MS };
 
@@ -49,6 +49,16 @@ function oneLine(text, max = EXAMPLE_LEN) {
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 }
 
+/** Per-call lines (Codex's chunk id, timing, token count) dropped when matching two errors' messages. */
+const VOLATILE_LINE = /^(?:Chunk ID: \S+|Wall time:? [\d.]+ seconds|Original token count: \d+)$/i;
+
+function messageKey(text) {
+  return String(text ?? "").split("\n")
+    .map((l) => l.replace(/<\/?tool_use_error>/g, "").replace(/\s+/g, " ").trim())
+    .filter((l) => l && !VOLATILE_LINE.test(l))
+    .join("\n");
+}
+
 function emptyTraps() {
   return {
     "wrong-folder": { count: 0, example: "" },
@@ -70,6 +80,8 @@ export function analyzeSession(session) {
   const callById = new Map();
   const classes = {};
   const examples = {};
+  const exampleKeys = {};
+  const exampleCounts = {};
   const traps = emptyTraps();
   const areas = new Map();
   const recentSigs = [];
@@ -185,7 +197,12 @@ export function analyzeSession(session) {
         errors += 1;
         cls = classifyError(e.text);
         classes[cls] = (classes[cls] || 0) + 1;
-        if (!examples[cls]) examples[cls] = oneLine(e.text);
+        const key = messageKey(e.text);
+        if (!examples[cls]) {
+          examples[cls] = oneLine(e.text);
+          exampleKeys[cls] = key;
+        }
+        if (exampleKeys[cls] === key) exampleCounts[cls] = (exampleCounts[cls] || 0) + 1;
         if (call) sigErrored.set(call.sig, call.n);
         if ((shell || !call) && isWrongFolderError(e.text)) {
           traps["wrong-folder"].count += 1;
@@ -239,6 +256,7 @@ export function analyzeSession(session) {
     suspect,
     classes,
     examples,
+    exampleCounts,
     retries,
     loops: loopSigs.size,
     loopCalls,
