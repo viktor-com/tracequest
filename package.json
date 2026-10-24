@@ -1,6 +1,6 @@
 {
   "name": "tracequest",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "private": true,
   "description": "Stop reading agent logs. Watch them.",
   "repository": {
