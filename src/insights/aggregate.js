@@ -84,6 +84,16 @@ export function sessionRef(row, extra = {}) {
   };
 }
 
+/**
+ * An error class example's note: the session's count for the whole class, how
+ * many of those carry the shown message, then the message (fact insexn).
+ */
+function classNote(n, sameMessage, message) {
+  const head = n === 1 ? "1 error of this class" : `${n} errors of this class`;
+  const same = n > 1 && sameMessage > 0 ? `, ${sameMessage === n ? "all" : sameMessage} with this message` : "";
+  return `${head}${same}; e.g. ${message || ""}`;
+}
+
 function topClasses(classCounts, n = 3) {
   return Object.entries(classCounts)
     .sort((a, b) => b[1] - a[1])
@@ -301,7 +311,7 @@ export function aggregateInsights(rows) {
       sessions: classSessions[id],
       share: rate(count, errors),
       examples: classExamples[id]
-        .map(({ row, n }) => sessionRef(row, { note: `${n}× — ${row.analysis.examples[id] || ""}` })),
+        .map(({ row, n }) => sessionRef(row, { note: classNote(n, row.analysis.exampleCounts?.[id], row.analysis.examples[id]) })),
     }));
 
   const retries = {
