@@ -18,9 +18,9 @@ import { sessionToApiObject, getSessionMeta } from "../server/server-helpers.js"
 import { isSessionHash, resolveSessionHandle, sessionHash } from "../sessions/session-hash.js";
 import { applyExprToApiObjects, evalFilterExpr, parseFilterExpr, FilterParseError } from "../filter/filter.js";
 
-import { writeFileSync, existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { resolve, basename, join } from "node:path";
+import { writeFileSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { resolve, basename, dirname, join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { die, formatCliError } from "./cli-die.js";
 import { k } from "./cli-color.js";
@@ -219,6 +219,37 @@ function normalizeHandoffSort(sort) {
   if (!value || value === "relevance" || value === "score") return "relevance";
   if (value === "recent" || value === "date") return value;
   die(`Invalid handoff sort: ${sort}\nSupported sorts: relevance, recent, date`);
+}
+
+/**
+ * Names of the git repository enclosing the cwd (not a dotfiles repo at HOME), or null: its origin
+ * remote's name, so a worktree in a differently named folder still names its repository, and its folder.
+ */
+function currentRepoNames() {
+  const home = homedir();
+  let dir = process.cwd();
+  while (!existsSync(join(dir, ".git"))) {
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+  if (dir === home) return null;
+  const names = [basename(dir)];
+  try {
+    let gitDir = join(dir, ".git");
+    if (statSync(gitDir).isFile()) {
+      // Worktree: ".git" points at <repo>/.git/worktrees/<name>, whose commondir leads back to <repo>/.git.
+      gitDir = resolve(dir, readFileSync(gitDir, "utf8").match(/^gitdir:\s*(.+)$/m)[1].trim());
+      const common = join(gitDir, "commondir");
+      if (existsSync(common)) gitDir = resolve(gitDir, readFileSync(common, "utf8").trim());
+    }
+    const url = readFileSync(join(gitDir, "config"), "utf8").match(/\[remote "origin"\][^[]*?\burl\s*=\s*(.+)/i)?.[1];
+    const origin = url?.trim().replace(/^["']|["']$/g, "").replace(/\/+$/, "").replace(/(\/\.git|\.git)$/, "").split(/[/:]/).pop();
+    if (origin && !names.includes(origin)) names.unshift(origin);
+  } catch {
+    // Unreadable git metadata: the folder name alone.
+  }
+  return names;
 }
 
 function sortSearchHandoffResults(results, sort) {
@@ -753,7 +784,9 @@ export function cmdSearch(positionals, values) {
     index,
     query,
     limit,
-    isHandoffRecentSort ? { sort: handoffSort } : undefined,
+    isHandoffRecentSort
+      ? { sort: handoffSort }
+      : { rerank: true, currentProject: currentRepoNames() },
   );
   const results = isHandoff
     ? sortSearchHandoffResults(rawResults, handoffSort).slice(0, limit)

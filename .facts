@@ -53,6 +53,12 @@
 - label: a search.idx written before Codex tool output was indexed (format 3) is discarded on load, so already-indexed Codex sessions are re-tokenized and a phrase from their tool output is found without deleting the cache
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'search.idx from before codex tool output' test/bin/codex-tool-output-search.test.js
   tags: [spec, cli-search, codex, implemented]
+- label: tracequest search and tracequest handoff rank a session where the query's words appear together (each at most 24 characters from the next) above sessions that only contain the same words far apart, even when the far-apart sessions score higher on word frequency alone, including a long session that word frequency ranks below more than 150 short matches; sessions that only repeat the whole query word for word, in any case or punctuation (a recorded search for it, "Codex Stop-button"), count such copies once, so they do not outrank the session where its words sit together in their own forms, and words that sit together only in Codex's own injected instructions do not count; a session that ran a search or handoff for the query itself keeps half its score; the query's three rarest words are always looked for together, even when one of them is in most sessions; a search with a quoted phrase keeps word-frequency order so its exact matches are never crowded out
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'words together outrank scattered words' test/bin/tracequest-search-ranking.e2e.test.js
+  tags: [spec, cli-search, handoff, search-ranking, implemented]
+- label: When run inside a git repository (named by its origin remote and by its folder, so a worktree in a differently named folder still counts), tracequest search and tracequest handoff rank sessions whose project is named after that repository, or that name the repository at least 20 times (a session run in a worktree folder), above otherwise equal matches from other projects; run outside a repository, the same query keeps its original order
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'current repository project ranks first' test/bin/tracequest-search-ranking.e2e.test.js
+  tags: [spec, cli-search, handoff, search-ranking, implemented]
 
 ## standup
 - label: tracequest standup help and CLI reference examples show prompt-agent configuration and --print-input auditing before LLM execution
