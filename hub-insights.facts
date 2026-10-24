@@ -3,6 +3,14 @@
   id: hubps
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'summary reports checked, fetched, imported, updated, skipped, and failed counts' test/bin/tracequest-ssh-import-integration.test.js
   tags: [spec, hub-insights, cli, implemented]
+- label: Insights names a machine whose pull fails by its configured host id only: `tracequest insights` text, the `insights --json` hub rows and the /insights machine panel carry no IP address, SSH destination or raw ssh/rsync error line — a failing row shows a short address-free reason such as 'connection timed out' — while ~/.tracequest/import-hosts, .pull-state.json and `tracequest import ssh` output keep the full address for whoever configures or debugs SSH
+  id: hubna
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'names unreachable machines without their address' test/bin/insights-unreachable-hosts.e2e.test.js
+  tags: [spec, hub-insights, cli, implemented]
+- label: `tracequest insights` reports failing pulls in one short line after the machine rows — how many machines, their reasons, and that `tracequest import ssh` shows the ssh error — and no machine row repeats an error
+  id: hubnw
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'warns once about failing pulls' test/bin/insights-unreachable-hosts.e2e.test.js
+  tags: [spec, hub-insights, cli, implemented]
 
 # scope
 - label: Selecting, switching, or clearing a machine in Insights preserves the active filter expression and time range
