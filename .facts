@@ -156,6 +156,20 @@
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'standup --probe-agents' test/bin/tracequest.e2e.test.js
   tags: [spec, standup, agent, probe, privacy, implemented]
 
+## find
+- label: tracequest find <hash> with a session's 8-character hash (as list, find, search and messages print it) lists that session first, ahead of other sessions whose text mentions the hash, in both text and --json output
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'find by session hash' test/bin/tracequest-find-by-id.e2e.test.js
+  tags: [spec, cli-find, implemented]
+- label: tracequest find <id> with a session's full native id (the UUID in its file or directory name, e.g. a Claude session UUID or the UUID at the end of a Codex rollout file) lists that session first; files nested under that session (subagents) are not treated as id matches
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'find by full session id' test/bin/tracequest-find-by-id.e2e.test.js
+  tags: [spec, cli-find, implemented]
+- label: the runs page search box (GET /api/sessions?expr=<hash>) returns the session with that hash first, through the same filter code as tracequest find
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'runs search by session hash' test/bin/tracequest-find-by-id.e2e.test.js
+  tags: [spec, cli-find, implemented]
+- label: tracequest find with ordinary text that is not a session id keeps its existing matching and recency order
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'find by text unchanged' test/bin/tracequest-find-by-id.e2e.test.js
+  tags: [spec, cli-find, implemented]
+
 # render
 - label: rendered session Playwright coverage verifies keyboard navigation, native filter activation, and accessible state updates in a real rendered session viewer
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'rendered session keyboard' test/browser/rendered-session-keyboard.playwright.test.js

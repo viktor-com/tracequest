@@ -2,6 +2,7 @@ import { includesLower } from "../parse/parse-utils.js";
 import { computeGrade, sortSessionList } from "./filter-formats.js";
 import { tokenize } from "../sessions/search-tokenizer.js";
 import { getSearchIndex } from "../sessions/search-index.js";
+import { isSessionHash, sessionHashFor } from "../sessions/session-hash.js";
 import {
   intersectSets,
   pathsFromPostingMatches,
@@ -211,6 +212,21 @@ export function parseFilterExpr(input) {
   return parseOr();
 }
 
+const SESSION_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * True when a lowercased free-text value names this session: its 8-char hash,
+ * or its native UUID as found in the session file name (Claude, Codex rollout,
+ * Cursor) or as the session's own directory (DeepSeek Harness). Files nested
+ * deeper under a session (subagents) do not carry its id (fact jm0).
+ */
+function matchesSessionId(session, v) {
+  if (isSessionHash(v)) return (session.sessionHash || sessionHashFor(session)) === v;
+  if (!SESSION_UUID_RE.test(v)) return false;
+  const segments = String(session.path || "").toLowerCase().split(/[\\/]/);
+  return segments[segments.length - 1].includes(v) || segments[segments.length - 2] === v;
+}
+
 function matchTerm(session, term, now, ctx) {
   const v = term.valueLower ?? term.value.toLowerCase();
   let result;
@@ -253,6 +269,7 @@ function matchTerm(session, term, now, ctx) {
     }
     case 'live': result = !!session.live; break;
     case 'text': {
+      if (matchesSessionId(session, v)) { result = true; break; }
       // BM25 path: if a precomputed match set is available for this term value,
       // use it (facts 0oy, cw8). Quoted phrases additionally verify exact substring
       // presence via on-demand scan (fact yd3).
@@ -400,6 +417,7 @@ export function buildBm25FilterContext(ast) {
  */
 export function applyExprToApiObjects(apiObjects, expr, sort) {
   let result = apiObjects;
+  let idValues = [];
   const exprTrimmed = expr && String(expr).trim();
   if (exprTrimmed) {
     const ast = parseFilterExpr(exprTrimmed);
@@ -411,8 +429,21 @@ export function applyExprToApiObjects(apiObjects, expr, sort) {
         if (evalFilterExpr(apiObjects[i], ast, now, bm25Ctx)) filtered.push(apiObjects[i]);
       }
       result = filtered;
+      idValues = collectTextTermValues(ast)
+        .map((value) => value.toLowerCase())
+        .filter((v) => isSessionHash(v) || SESSION_UUID_RE.test(v));
     }
   }
   sortSessionList(result, sort || "recent");
+  // A session named by its id leads the list, ahead of sessions that merely
+  // mention the id in their text (facts bxs, jm0).
+  if (idValues.length) {
+    const named = [];
+    const rest = [];
+    for (const obj of result) {
+      (idValues.some((v) => matchesSessionId(obj, v)) ? named : rest).push(obj);
+    }
+    if (named.length) result = named.concat(rest);
+  }
   return result;
 }
