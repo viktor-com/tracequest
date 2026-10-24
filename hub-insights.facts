@@ -23,3 +23,9 @@
   id: insexn
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/insights-example-note.e2e.test.js
   tags: [spec, hub-insights, cli, ui, implemented]
+
+# traps
+- label: tracequest insights counts a trap's waiting only from the stalls the stalls line totals — a gap of 5 min to 6 h before a command's or sub-agent's tool result — so no trap's waiting exceeds the report's stalls waiting; a test command whose result comes more than 6 h after the session's previous event (the session was left, e.g. on an approval prompt) adds no waiting and is no Test-runner hang unless it timed out, and time between CI polls is not CI waiting
+  id: instw
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/insights-trap-waiting.e2e.test.js
+  tags: [spec, insights-traps, implemented]
