@@ -44,6 +44,15 @@
 - label: tracequest's synthetic standup/handoff smoke exercises legacy search --format handoff with --sort date, proving the documented date alias stays Markdown-only on stdout and does not invoke prompt-agent detection or probes
   command: TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup/handoff maintainer verification script is documented and wired|handoff command discoverability appears in help and README' test/bin/tracequest.e2e.test.js
   tags: [spec, handoff, smoke, release, compatibility, implemented]
+- label: a Codex session's function_call_output and custom_tool_call_output text is part of its search terms in both the Node indexer and the sidecar (the whole output up to 2000 chars, else its first and last 1000 chars), so tracequest search '"<phrase>"' finds a Codex session whose phrase occurs only in a tool output, and its first snippet contains the phrase
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'codex tool output phrase' test/bin/codex-tool-output-search.test.js
+  tags: [spec, cli-search, codex, implemented]
+- label: the snippets of a search made only of quoted phrases are occurrences of those phrases, never matches of a phrase's separate words
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'phrase-only snippets' test/bin/codex-tool-output-search.test.js
+  tags: [spec, cli-search, implemented]
+- label: a search.idx written before Codex tool output was indexed (format 3) is discarded on load, so already-indexed Codex sessions are re-tokenized and a phrase from their tool output is found without deleting the cache
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'search.idx from before codex tool output' test/bin/codex-tool-output-search.test.js
+  tags: [spec, cli-search, codex, implemented]
 
 ## standup
 - label: tracequest standup help and CLI reference examples show prompt-agent configuration and --print-input auditing before LLM execution

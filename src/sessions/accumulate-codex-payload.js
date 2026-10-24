@@ -1,11 +1,21 @@
 import { billingTokenUsage, addTokenUsage } from "../parse/token-accounting.js";
-import { normalizeToolName } from "../parse/parse-enrich.js";
+import { extractToolResultText, normalizeToolName } from "../parse/parse-enrich.js";
 import { codexCommandExecutionCmd, codexSubThreadItem, visitCodexEventMsgPayload } from "../parse/codex-event-msg.js";
 import { isCodexToolPayloadError, visitCodexResponseItemPayload } from "../parse/codex-response-item.js";
-import { parseToolArgs } from "../parse/parse-utils.js";
-import { trackIndexTool } from "./session-meta.js";
+import { parseToolArgs, safeSlice } from "../parse/parse-utils.js";
+import { pushIndexSearchChunk, trackIndexTool } from "./session-meta.js";
 
 const GIT_COMMIT_RE = /\bgit\b.*\bcommit\b/i;
+/** A tool output is searchable whole up to twice this, else by its first and last this many chars (fact alq). */
+const TOOL_OUTPUT_SEARCH_EDGE = 1000;
+
+function pushCodexToolOutputSearchText(payload, state) {
+  const text = extractToolResultText(payload.output);
+  if (!text) return;
+  pushIndexSearchChunk(state, text.length <= 2 * TOOL_OUTPUT_SEARCH_EDGE
+    ? text
+    : `${safeSlice(text, TOOL_OUTPUT_SEARCH_EDGE)} ${text.slice(-TOOL_OUTPUT_SEARCH_EDGE)}`);
+}
 
 function accumulateCodexFunctionCall(name, argumentsRaw, filePath, state) {
   const tn = normalizeToolName(name);
@@ -87,9 +97,11 @@ export function accumulateCodexResponseItemPayload(p, filePath, state) {
     },
     onFunctionCallOutput(payload) {
       if (isCodexToolPayloadError(payload)) state.errors++;
+      pushCodexToolOutputSearchText(payload, state);
     },
     onCustomToolCallOutput(payload) {
       if (isCodexToolPayloadError(payload)) state.errors++;
+      pushCodexToolOutputSearchText(payload, state);
     },
     onCustomToolCall(payload) {
       const tn = normalizeToolName(payload.name);

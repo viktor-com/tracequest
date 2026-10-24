@@ -30,7 +30,8 @@ import { mkdir, open, rename } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
 
-export const SEARCH_IDX_VERSION = 3;
+/** 4: Codex tool output is tokenized, so older indexes are rebuilt (fact qy2). */
+export const SEARCH_IDX_VERSION = 4;
 
 /** Sessions whose term lists the index keeps for direct removal (fact hsi3). */
 const MAX_REMEMBERED_DOCS = 256;
