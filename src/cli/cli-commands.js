@@ -19,8 +19,8 @@ import { isSessionHash, resolveSessionHandle, sessionHash } from "../sessions/se
 import { applyExprToApiObjects, evalFilterExpr, parseFilterExpr, FilterParseError } from "../filter/filter.js";
 
 import { writeFileSync, existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { resolve, basename, join } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { resolve, basename, dirname, join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { die, formatCliError } from "./cli-die.js";
 import { k } from "./cli-color.js";
@@ -219,6 +219,18 @@ function normalizeHandoffSort(sort) {
   if (!value || value === "relevance" || value === "score") return "relevance";
   if (value === "recent" || value === "date") return value;
   die(`Invalid handoff sort: ${sort}\nSupported sorts: relevance, recent, date`);
+}
+
+/** Name of the git repository enclosing the cwd (not a dotfiles repo at HOME), or null. */
+function currentRepoName() {
+  const home = homedir();
+  let dir = process.cwd();
+  while (true) {
+    if (existsSync(join(dir, ".git"))) return dir === home ? null : basename(dir);
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
 }
 
 function sortSearchHandoffResults(results, sort) {
@@ -753,7 +765,9 @@ export function cmdSearch(positionals, values) {
     index,
     query,
     limit,
-    isHandoffRecentSort ? { sort: handoffSort } : undefined,
+    isHandoffRecentSort
+      ? { sort: handoffSort }
+      : { rerank: true, currentProject: currentRepoName() },
   );
   const results = isHandoff
     ? sortSearchHandoffResults(rawResults, handoffSort).slice(0, limit)
