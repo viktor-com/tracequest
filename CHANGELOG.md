@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-10-24
+
 ### Fixed
 
+- Label each Insights error-class example with what its number counts: "27 errors of this class, 3 with this message; e.g. …" instead of "27× — …", which read as the message repeating 27 times.
+- Show machines whose pull fails by their configured name only. The `insights` text, `--json` and the web Machines panel no longer print the SSH address or raw ssh error; one short line names the reason, and `tracequest import ssh` still shows the full error.
+- Find a session by its hash or full id: `tracequest find a5591345` and the Runs search box list that session first, ahead of sessions that only mention the id.
+- Keep the session view's follow-up box from covering the What went wrong list and the end of the page, at desktop and phone widths.
 - Insights trap waiting is now part of the stalls total. A test run or CI poll counts only the 5 min to 6 h waits the stalls line adds up, so a test whose result came hours later because the session sat on an approval prompt is no longer a Test-runner hang worth 17 h, and the time between CI polls is no longer CI waiting.
 - Find exact error strings that a Codex session only printed in a tool output. `tracequest search '"cannot contain whitespace"'` used to miss most such sessions because Codex tool output was never indexed; it now is (whole up to 2000 characters, else its first and last 1000), and a phrase-only search shows the phrase itself as the snippet rather than its separate words. The search index rebuilds once on the first run after upgrading.
 - Stop retrying an unreachable SSH host on every scheduled `import ssh`. A host whose pull failed is skipped until 15 minutes later, the wait doubling with each further failure up to 2 hours, and a good pull goes back to every run. `import ssh <host>` still pulls it right away.
