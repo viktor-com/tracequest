@@ -11,6 +11,10 @@
   id: hubnw
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'warns once about failing pulls' test/bin/insights-unreachable-hosts.e2e.test.js
   tags: [spec, hub-insights, cli, implemented]
+- label: an `import ssh` run over the configured host list (import-hosts file or --config hosts) skips a host whose last pull failed until min(15 min × 2^(consecutiveFailures−1), 2 h) has passed since its lastAttemptAt — a skipped host prints one 'backing off' line and its pull record is left unchanged — while a host named on the command line is always attempted, and a successful pull resets consecutiveFailures to 0 so the next run attempts it again
+  id: hubbo
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/ssh-pull-backoff.e2e.test.js
+  tags: [hub-insights, cli, implemented]
 
 # scope
 - label: Selecting, switching, or clearing a machine in Insights preserves the active filter expression and time range

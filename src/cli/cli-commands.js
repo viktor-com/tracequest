@@ -1142,7 +1142,8 @@ export async function cmdImport(positionals, values) {
       die(err?.message || String(err));
     }
     let hosts = positionals.slice(1);
-    if (!hosts.length) hosts = loadImportHostsFile();
+    const backoff = !hosts.length;
+    if (backoff) hosts = loadImportHostsFile();
     if (!hosts.length) {
       die("tracequest import ssh <host> [host...]\nOr list hosts in ~/.tracequest/import-hosts (one per line).");
     }
@@ -1155,6 +1156,7 @@ export async function cmdImport(positionals, values) {
         identity,
         port,
         as: values.as || null,
+        backoff,
         out: (line) => console.log(line),
         warn: (line) => console.error(k.yellow(line)),
       });

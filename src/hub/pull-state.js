@@ -15,6 +15,9 @@ export const PULL_STATE_FILE = ".pull-state.json";
 /** A host whose last good pull is older than this is shown as stale. */
 export const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 export const LOCAL_HOST_ID = "local";
+/** Wait after one failed pull; each further failure doubles it up to the cap (fact hubbo). */
+export const PULL_BACKOFF_BASE_MS = 15 * 60 * 1000;
+export const PULL_BACKOFF_CAP_MS = 2 * 60 * 60 * 1000;
 
 export function pullStatePath(hostsRoot = resolveHostsRoot()) {
   return join(hostsRoot, PULL_STATE_FILE);
@@ -35,6 +38,14 @@ export function readPullState(hostsRoot = resolveHostsRoot()) {
   } catch {
     return {};
   }
+}
+
+/** Epoch ms before which a failing host is not pulled again; null when it is due. */
+export function pullRetryAt(record) {
+  const failures = record?.consecutiveFailures || 0;
+  const last = Date.parse(record?.lastAttemptAt ?? "");
+  if (record?.ok !== false || failures < 1 || !Number.isFinite(last)) return null;
+  return last + Math.min(PULL_BACKOFF_BASE_MS * 2 ** (failures - 1), PULL_BACKOFF_CAP_MS);
 }
 
 /** Keep the first line of an ssh/rsync error: enough to act on, never a dump. */

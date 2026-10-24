@@ -19,7 +19,7 @@ import { homedir, tmpdir } from "node:os";
 import { resolveHostsRoot } from "../sessions/session-discovery-paths.js";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
 import { collectUsageLimitsForRemote } from "../usage/ssh-collect.js";
-import { recordPulls } from "../hub/pull-state.js";
+import { pullRetryAt, readPullState, recordPulls } from "../hub/pull-state.js";
 import { hubConfig } from "../hub/config.js";
 
 const execFileAsync = promisify(execFile);
@@ -286,6 +286,7 @@ export async function runSshImport({
   identity = null,
   port = null,
   as: asId = null,
+  backoff = false,
   fixtureRoot = process.env.TRACEQUEST_IMPORT_SSH_FIXTURE || null,
   runRsync = defaultRunRsync,
   runSsh = defaultRunSsh,
@@ -327,7 +328,24 @@ export async function runSshImport({
     }
   }
 
+  let pullState = {};
+  if (backoff) {
+    try {
+      pullState = readPullState();
+    } catch (err) {
+      warn(`warning: could not read the pull record: ${err.message}`);
+    }
+  }
+
   for (const { spec, hostId, sources } of refs) {
+    // A host from the configured list that keeps failing is retried on a
+    // doubling, capped delay instead of on every scheduled run (fact hubbo).
+    const retryAt = pullRetryAt(pullState[hostId]);
+    if (retryAt !== null && Date.now() < retryAt) {
+      const failures = pullState[hostId].consecutiveFailures;
+      out(`skip ${hostId} (backing off after ${failures} failed pulls in a row, next try after ${new Date(retryAt).toISOString()})`);
+      continue;
+    }
     const pending = [];
     let hostFailed = false;
     const outcome = { hostId, spec, fetched: 0, changed: 0, skipped: 0, failed: 0, error: "" };
