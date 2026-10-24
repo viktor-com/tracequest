@@ -256,7 +256,7 @@ function hubTable(hub, now, query) {
       : h.lastSuccessAt ? ago(Date.parse(h.lastSuccessAt), now) : "never";
     const detail = h.error
       ? `${h.error}${h.consecutiveFailures > 1 ? ` (${h.consecutiveFailures} failed pulls in a row)` : ""}`
-      : h.spec && h.spec !== h.host ? h.spec : "";
+      : "";
     return `<tr data-host="${esc(h.host)}" data-state="${esc(h.state)}">
   <td><a href="${esc(scopeHref(query, { host: h.host }))}">${esc(h.host)}</a>${detail ? `<div class="ins-cell-sub">${esc(detail)}</div>` : ""}</td>
   <td><span class="ins-state" data-state="${esc(h.state)}"><span class="ins-state-dot"></span>${esc(STATE_LABEL[h.state] || h.state)}</span></td>

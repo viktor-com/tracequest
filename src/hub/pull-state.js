@@ -43,6 +43,26 @@ function firstLine(text) {
   return line.length > 200 ? `${line.slice(0, 199)}…` : line;
 }
 
+const PULL_FAILURE_REASONS = [
+  [/timed out/i, "connection timed out"],
+  [/Connection refused/i, "connection refused"],
+  [/Could not resolve hostname|Name or service not known|nodename nor servname/i, "host name not found"],
+  [/No route to host|Network is unreachable/i, "no route to host"],
+  [/Host key verification failed/i, "host key check failed"],
+  [/Permission denied|Too many authentication failures/i, "ssh login refused"],
+  [/Connection closed|Connection reset/i, "connection closed"],
+];
+
+/**
+ * A short reason for a failed pull that never carries an address (fact hubna).
+ * The full ssh/rsync line stays in the pull record and `import ssh` output.
+ */
+export function pullFailureReason(error) {
+  const text = String(error ?? "");
+  for (const [re, reason] of PULL_FAILURE_REASONS) if (re.test(text)) return reason;
+  return "pull failed";
+}
+
 /**
  * Merge this run's per-host outcomes into the pull record.
  * @param {Array<{hostId, spec, fetched, changed, skipped, failed, error}>} outcomes
@@ -79,7 +99,8 @@ export function recordPulls(outcomes, { hostsRoot = resolveHostsRoot(), now = Da
 /**
  * One row per machine the hub knows about: this box's own sessions first, then
  * every host that is configured, was pulled, or has imported sessions on disk.
- * state is local | fresh | stale | failing | never.
+ * state is local | fresh | stale | failing | never. Rows name a machine by its
+ * host id only: no SSH destination and no raw error, which may hold an address.
  */
 export function buildHubStatus({
   sessions = [],
@@ -96,11 +117,9 @@ export function buildHubStatus({
     row.newest = Math.max(row.newest, sessionMtimeMs(s));
     counts.set(id, row);
   }
-  const specs = new Map(configured.map((h) => [h.hostId, h.spec]));
-  const ids = new Set([...specs.keys(), ...Object.keys(pullState), ...importedHosts]);
+  const ids = new Set([...configured.map((h) => h.hostId), ...Object.keys(pullState), ...importedHosts]);
   const rows = [{
     host: LOCAL_HOST_ID,
-    spec: null,
     state: "local",
     sessions: counts.get(LOCAL_HOST_ID)?.sessions || 0,
     newestSessionAt: counts.get(LOCAL_HOST_ID)?.newest || null,
@@ -119,14 +138,13 @@ export function buildHubStatus({
     }
     rows.push({
       host: id,
-      spec: specs.get(id) || pull?.spec || null,
       state,
       sessions: counts.get(id)?.sessions || 0,
       newestSessionAt: counts.get(id)?.newest || null,
       lastAttemptAt: pull?.lastAttemptAt || null,
       lastSuccessAt: pull?.lastSuccessAt || null,
       consecutiveFailures: pull?.consecutiveFailures || 0,
-      error: pull?.error || null,
+      error: pull?.error ? pullFailureReason(pull.error) : null,
     });
   }
   return rows;

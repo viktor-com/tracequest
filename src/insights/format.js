@@ -23,7 +23,12 @@ export function formatInsights(data) {
   lines.push("machines:");
   for (const h of data.hub) {
     const pulled = h.state === "local" ? "" : `, last good pull ${h.lastSuccessAt || "never"}`;
-    lines.push(`  ${h.host.padEnd(18)} ${h.state.padEnd(8)} ${String(h.sessions).padStart(6)} sessions${pulled}${h.error ? ` — ${h.error}` : ""}`);
+    lines.push(`  ${h.host.padEnd(18)} ${h.state.padEnd(8)} ${String(h.sessions).padStart(6)} sessions${pulled}`);
+  }
+  const failing = data.hub.filter((h) => h.error);
+  if (failing.length) {
+    const reasons = [...new Set(failing.map((h) => h.error))].join(", ");
+    lines.push(`  ${failing.length} machine${failing.length === 1 ? "" : "s"} failing to pull (${reasons}); \`tracequest import ssh\` shows the ssh error`);
   }
   lines.push("");
   lines.push("top error classes:");
