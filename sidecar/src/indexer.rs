@@ -1814,6 +1814,55 @@ fn codex_payload_error(payload: &serde_json::Value) -> bool {
         .any(|key| payload.get(key).is_some_and(codex_output_error))
 }
 
+/// A tool output is searchable whole up to twice this, else by its first and
+/// last this many chars (fact alq, mirrors Node TOOL_OUTPUT_SEARCH_EDGE).
+const TOOL_OUTPUT_SEARCH_EDGE: usize = 1000;
+
+/// Append a Codex tool output's text (a string, or its text blocks joined like
+/// Node extractToolResultText) to the search text.
+fn append_codex_tool_output_search_text(search_text: &mut String, output: &serde_json::Value) {
+    fn block_text(b: &serde_json::Value) -> Option<&str> {
+        match b.get("type").and_then(|v| v.as_str()) {
+            Some("text" | "input_text" | "output_text") => b.get("text").and_then(|v| v.as_str()),
+            _ => None,
+        }
+    }
+    let joined;
+    let text = match output {
+        serde_json::Value::String(s) => s.as_str(),
+        serde_json::Value::Array(items) => {
+            joined = items
+                .iter()
+                .filter_map(block_text)
+                .collect::<Vec<_>>()
+                .join("\n");
+            joined.as_str()
+        }
+        _ => block_text(output).unwrap_or(""),
+    };
+    if text
+        .char_indices()
+        .nth(2 * TOOL_OUTPUT_SEARCH_EDGE)
+        .is_none()
+    {
+        append_index_search_text(search_text, text);
+        return;
+    }
+    let head_end = text
+        .char_indices()
+        .nth(TOOL_OUTPUT_SEARCH_EDGE)
+        .map_or(text.len(), |(i, _)| i);
+    let tail_start = text
+        .char_indices()
+        .rev()
+        .nth(TOOL_OUTPUT_SEARCH_EDGE - 1)
+        .map_or(0, |(i, _)| i);
+    append_index_search_text(
+        search_text,
+        &format!("{} {}", &text[..head_end], &text[tail_start..]),
+    );
+}
+
 /// Raw codex index: `model` keeps its original session_meta-first precedence
 /// (model_provider, else the first turn_context model). Session indexing goes
 /// through `index_codex_session`, which reports the model id (fact cdxmodel);
@@ -2129,10 +2178,16 @@ fn index_codex_with_named_model(path: &Path) -> (IndexEntry, Option<String>, Bil
                     }
                 }
             }
-            if matches!(ptype, Some("function_call_output" | "custom_tool_call_output"))
-                && codex_payload_error(&payload)
-            {
-                errors += 1;
+            if matches!(
+                ptype,
+                Some("function_call_output" | "custom_tool_call_output")
+            ) {
+                if codex_payload_error(&payload) {
+                    errors += 1;
+                }
+                if let Some(output) = payload.get("output") {
+                    append_codex_tool_output_search_text(&mut search_text, output);
+                }
             }
             if ptype == Some("custom_tool_call") {
                 if let Some(name) = payload.get("name").and_then(|v| v.as_str()) {

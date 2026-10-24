@@ -442,9 +442,13 @@ export function searchSessions(sessions, index, query, maxResults = 50, options 
 
   if (!candidates.length) return [];
 
-  // Expanded vocab terms matched (for snippet extraction, fact n03)
+  // Expanded vocab terms of unquoted tokens matched (for snippet extraction, fact n03);
+  // a phrase's separate words never become snippets of their own (fact l5g).
+  const unquotedTokens = new Set();
+  for (const { token, fromPhrase } of termList) if (!fromPhrase) unquotedTokens.add(token);
   const expandedTerms = new Set();
-  for (const { matches } of resolvedTerms) {
+  for (const { queryToken, matches } of resolvedTerms) {
+    if (!unquotedTokens.has(queryToken)) continue;
     for (const { term } of matches) expandedTerms.add(term);
   }
 

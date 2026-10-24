@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Insights trap waiting is now part of the stalls total. A test run or CI poll counts only the 5 min to 6 h waits the stalls line adds up, so a test whose result came hours later because the session sat on an approval prompt is no longer a Test-runner hang worth 17 h, and the time between CI polls is no longer CI waiting.
+- Find exact error strings that a Codex session only printed in a tool output. `tracequest search '"cannot contain whitespace"'` used to miss most such sessions because Codex tool output was never indexed; it now is (whole up to 2000 characters, else its first and last 1000), and a phrase-only search shows the phrase itself as the snippet rather than its separate words. The search index rebuilds once on the first run after upgrading.
 
 ## [0.5.3] - 2026-10-23
 
