@@ -773,7 +773,16 @@ const VIEW_CONTINUE_CHIP_CSS = `<style>
 .vc-send:disabled { opacity: 0.4; cursor: default; }
 .view-continue-chip[data-mode="cwd"] { box-shadow: var(--shadow-pop), 0 0 0 1px var(--warn); }
 .view-continue-chip[data-mode="cwd"] .vc-glyph { color: var(--warn); }
-@media print { .view-continue-chip { display: none !important; } }
+/* The strip the floating chips occupy is a bottom bar, so session content
+   scrolls out of view at its edge instead of passing under the composer. */
+.view-continue-band {
+  position: fixed; left: 0; right: 0; bottom: 0; height: var(--vc-reserve, 0px); z-index: calc(var(--z-popover, 200) - 1);
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px);
+  box-shadow: inset 0 1px 0 var(--line-1);
+}
+body { padding-bottom: var(--vc-reserve, 0px); }
+@media print { .view-continue-chip, .view-continue-band { display: none !important; } body { padding-bottom: 0; } }
 </style>
 `;
 
@@ -845,7 +854,8 @@ function continueChipHtml(session, mods, { stacked = false } = {}) {
   if (!sessionContinuable(source, mods)) return "";
   const agent = agentForSource(source);
   const style = stacked ? ' style="bottom: 64px"' : "";
-  return `${VIEW_CONTINUE_CHIP_CSS}<form class="view-continue-chip" id="continueSessionChip" data-mode="prompt" data-continue-session="${esc(session.sessionHash || "")}"${style} title="Continue this conversation as a new tracequest run (${esc(agent)} resumes it in tmux)">
+  return `${VIEW_CONTINUE_CHIP_CSS}<div class="view-continue-band" id="viewContinueBand" aria-hidden="true"></div>
+<form class="view-continue-chip" id="continueSessionChip" data-mode="prompt" data-continue-session="${esc(session.sessionHash || "")}"${style} title="Continue this conversation as a new tracequest run (${esc(agent)} resumes it in tmux)">
   <div class="vc-msg" id="viewContinueMsg" hidden></div>
   <div class="vc-row">
     <span class="vc-glyph" id="viewContinueGlyph">&#8635;&#xFE0E;</span>
@@ -861,6 +871,16 @@ function continueChipHtml(session, mods, { stacked = false } = {}) {
   var msg = document.getElementById("viewContinueMsg");
   var sendBtn = document.getElementById("viewContinueSend");
   var pendingPrompt = "";
+  // Reserve the chips' strip: the composer's height (it grows with a
+  // message) plus a margin above it equal to its offset from the bottom.
+  function reserve() {
+    var r = form.getBoundingClientRect();
+    var h = Math.ceil(2 * window.innerHeight - r.top - r.bottom);
+    document.documentElement.style.setProperty("--vc-reserve", h + "px");
+  }
+  reserve();
+  window.addEventListener("resize", reserve);
+  if (window.ResizeObserver) new ResizeObserver(reserve).observe(form);
   function fail(text) {
     msg.textContent = text;
     msg.hidden = false;
