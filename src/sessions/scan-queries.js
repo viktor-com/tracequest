@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { closeSync, existsSync, fstatSync, openSync, readSync } from "node:fs";
 import { join } from "node:path";
 import { isClaudeProgressFillerLine, isCursorCloudMetaLine } from "../parse/claude-jsonl-index.js";
 import { isCodexIndexSkippableLine } from "../parse/codex-event-msg.js";
@@ -323,8 +323,8 @@ function bm25Score(tf, docLen, avgDocLen, N, df) {
  * @param {Map<string,object>} index - metadata index (firstPrompt, model, etc.)
  * @param {string} query
  * @param {number} [maxResults=50]
- * @param {{ sort?: "recent"|"date", phraseScanCap?: number, snippets?: boolean }} [options]
- * @returns {object[]} result rows sorted by BM25 score descending, or by mtime descending when options.sort is recent/date
+ * @param {{ sort?: "recent"|"date", phraseScanCap?: number, snippets?: boolean, rerank?: boolean, currentProject?: string }} [options]
+ * @returns {object[]} result rows sorted by BM25 score descending (re-ranked by rerankCandidates when options.rerank), or by mtime descending when options.sort is recent/date
  */
 export function searchSessions(sessions, index, query, maxResults = 50, options = {}) {
   if (!query || !query.trim()) return [];
@@ -438,6 +438,8 @@ export function searchSessions(sessions, index, query, maxResults = 50, options 
   candidates.sort((a, b) => b.score - a.score);
   if (options?.sort === "recent" || options?.sort === "date") {
     candidates.sort((a, b) => sessionMtimeMs(sessionByPath.get(b.path)) - sessionMtimeMs(sessionByPath.get(a.path)));
+  } else if (options?.rerank) {
+    rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSets, postings, N, finalToken, options.currentProject);
   }
 
   if (!candidates.length) return [];
@@ -541,6 +543,213 @@ export function searchSessions(sessions, index, query, maxResults = 50, options 
   }
 
   return results;
+}
+
+// ---------------------------------------------------------------------------
+// CLI relevance re-rank: query words together, current project (search-ranking facts)
+// ---------------------------------------------------------------------------
+
+/** Top BM25 candidates scanned for query words that sit together. */
+const RERANK_BM25_POOL = 150;
+/** Further candidates scanned: those where every distinctive query word is most frequent. */
+const RERANK_ALL_WORDS_POOL = 50;
+/** Two query words are together when at most this many characters separate them. */
+const NEAR_GAP = 24;
+/** Bytes of each session file scanned for query words together. */
+const NEAR_SCAN_BYTES = 8 * 1024 * 1024;
+/** Words in more than this share of sessions are not looked for together, beyond the query's two rarest. */
+const NEAR_COMMON = 0.5;
+/** Same step as one quarter of the query being together. */
+const PROJECT_BOOST = 0.25;
+
+function projectKey(name) {
+  return String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Whether a session belongs to the project named `project`. Claude stores the
+ * cwd as a dash-joined folder ("-home-me-code-tracequest"), other sources the
+ * cwd basename ("tracequest").
+ */
+function isProjectSession(session, project) {
+  const key = projectKey(project);
+  if (!key) return false;
+  const p = projectKey(session.project);
+  return p === key || p.endsWith(`-${key}`);
+}
+
+function readFilePrefix(filePath, maxBytes) {
+  const fd = openSync(filePath, "r");
+  try {
+    const buf = Buffer.allocUnsafe(Math.min(fstatSync(fd).size, maxBytes));
+    return buf.subarray(0, readSync(fd, buf, 0, buf.length, 0));
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/** Visit a session's searchable text as UTF-8 bytes: the file prefix for JSONL sources, one row/part otherwise. */
+function forEachSessionText(session, onText) {
+  const source = session.source || "claude";
+  if (source === "opencode") {
+    const sessionId = openCodeSessionFileId(session);
+    if (!sessionId) return;
+    withOpenCodeDb((db) => {
+      const rows = db.prepare(`
+        SELECT ${OPENCODE_PART_TEXT_BODY_SQL} AS body FROM part p JOIN message m ON p.message_id = m.id
+        WHERE m.session_id = ? AND json_extract(p.data, '$.type') IN (${OPENCODE_TERM_INDEX_PART_TYPES_SQL})
+      `).all(sessionId);
+      for (const { body } of rows) onText(Buffer.from(String(body || "")));
+    });
+    return;
+  }
+  if (source === "dsh") {
+    for (const line of dshScanLines(session)) onText(Buffer.from(line));
+    return;
+  }
+  const filePath = isGrokFamily(source) ? join(session.path, "chat_history.jsonl") : session.path;
+  if (!existsSync(filePath)) return;
+  onText(readFilePrefix(filePath, NEAR_SCAN_BYTES));
+}
+
+const isAlnumCode = (c) => (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57);
+const isUpperCode = (c) => c >= 65 && c <= 90;
+
+/** Token boundary before byte i, matching the search tokenizer (non-alphanumeric or a camelCase lower→upper step). */
+function isTokenBoundary(buf, i) {
+  if (i <= 0 || i >= buf.length) return true;
+  const a = buf[i - 1];
+  const b = buf[i];
+  if (!isAlnumCode(a) || !isAlnumCode(b)) return true;
+  return isUpperCode(b) && !isUpperCode(a);
+}
+
+/** Byte patterns of a lowercase ASCII token as it appears in text: word, Word, WORD. */
+function caseVariants(word) {
+  return [...new Set([word, word[0].toUpperCase() + word.slice(1), word.toUpperCase()])].map((v) => Buffer.from(v));
+}
+
+/**
+ * Build a scorer for query words together in a session's text. A run is a
+ * stretch of query-word hits each within NEAR_GAP characters of the previous
+ * one. Returns `share`: the largest IDF-weighted share of the query found in
+ * one run of at least two different words, rounded down to quarters; and
+ * `runs`: how many runs reached two different words. The final query word
+ * matches as a prefix, like its BM25 prefix expansion.
+ */
+function nearTermScorer(resolvedTerms, weights, distinct, finalToken) {
+  const n = resolvedTerms.length;
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const none = { share: 0, runs: 0 };
+  if (!totalWeight) return () => none;
+  const needles = [];
+  for (const q of distinct) {
+    const { queryToken, matches } = resolvedTerms[q];
+    const prefix = queryToken === finalToken;
+    for (const bytes of caseVariants(queryToken)) needles.push({ q, bytes, prefix });
+    for (const { term } of matches) {
+      if (term === queryToken || (prefix && term.startsWith(queryToken))) continue;
+      for (const bytes of caseVariants(term)) needles.push({ q, bytes, prefix: false });
+    }
+  }
+
+  return (session) => {
+    let best = 0;
+    let runs = 0;
+    try {
+      forEachSessionText(session, (buf) => {
+        const hits = [];
+        for (const { q, bytes, prefix } of needles) {
+          for (let i = buf.indexOf(bytes); i !== -1; i = buf.indexOf(bytes, i + 1)) {
+            const end = i + bytes.length;
+            if (!isTokenBoundary(buf, i)) continue;
+            if (!prefix && !isTokenBoundary(buf, end)) continue;
+            hits.push(i, end, q);
+          }
+        }
+        if (hits.length < 6) return;
+        const order = Array.from({ length: hits.length / 3 }, (_, k) => k * 3).sort((a, b) => hits[a] - hits[b]);
+        const inRun = new Array(n).fill(false);
+        let runEnd = -Infinity;
+        let runTerms = 0;
+        let runWeight = 0;
+        for (const h of order) {
+          const q = hits[h + 2];
+          if (hits[h] - runEnd > NEAR_GAP) {
+            inRun.fill(false);
+            runTerms = 0;
+            runWeight = 0;
+          }
+          if (!inRun[q]) {
+            inRun[q] = true;
+            runWeight += weights[q];
+            if (++runTerms === 2) runs++;
+            if (runTerms >= 2 && runWeight > best) best = runWeight;
+          }
+          runEnd = Math.max(runEnd, hits[h + 1]);
+        }
+      });
+    } catch (err) {
+      warnScanQueryFailed("nearTermScorer", session.path || "unknown", err);
+      return none;
+    }
+    return { share: Math.floor((best / totalWeight) * 4 + 1e-9) / 4, runs };
+  };
+}
+
+/**
+ * Candidate indices the near-words scorer scans: the top BM25 hits, plus the
+ * sessions whose least frequent distinctive query word is still most frequent.
+ * BM25 penalises long sessions, which on a large hub buries the long session
+ * that is about the query below hundreds of short incidental matches.
+ */
+function rerankPool(candidates, resolvedTerms, weights, distinct, postings) {
+  const pool = new Set();
+  for (let i = 0; i < Math.min(RERANK_BM25_POOL, candidates.length); i++) pool.add(i);
+  if (candidates.length <= pool.size) return pool;
+  const tfs = distinct.map((q) => {
+    const tf = new Map();
+    for (const { term, weight } of resolvedTerms[q].matches) {
+      const posting = postings.get(term);
+      if (posting) for (const [path, n] of posting) tf.set(path, (tf.get(path) || 0) + n * weight);
+    }
+    return tf;
+  });
+  const weakest = [];
+  for (let i = RERANK_BM25_POOL; i < candidates.length; i++) {
+    let min = Infinity;
+    for (let k = 0; k < distinct.length; k++) {
+      const tf = tfs[k].get(candidates[i].path) || 0;
+      min = Math.min(min, (weights[distinct[k]] * tf) / (tf + BM25_K1));
+    }
+    weakest.push([min, i]);
+  }
+  weakest.sort((a, b) => b[0] - a[0]);
+  for (const [, i] of weakest.slice(0, RERANK_ALL_WORDS_POOL)) pool.add(i);
+  return pool;
+}
+
+/**
+ * Re-rank BM25-sorted candidates in place. Sessions with more of the query
+ * together, plus PROJECT_BOOST for the current project, come first; then
+ * sessions where the words sit together more often; BM25 order breaks ties.
+ */
+function rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSets, postings, N, finalToken, currentProject) {
+  const weights = termMatchSets.map((set) => Math.log((N - set.size + 0.5) / (set.size + 0.5) + 1));
+  // Common words ("the", "with") barely matter, and searching them dominates the scan cost.
+  const rarest = [...weights.keys()].sort((a, b) => weights[b] - weights[a]).slice(0, 2);
+  const distinct = [...weights.keys()].filter((q) => termMatchSets[q].size <= N * NEAR_COMMON || rarest.includes(q));
+  const near = resolvedTerms.length > 1 ? nearTermScorer(resolvedTerms, weights, distinct, finalToken) : null;
+  if (!near && !currentProject) return;
+  const pool = near ? rerankPool(candidates, resolvedTerms, weights, distinct, postings) : null;
+  for (let i = 0; i < candidates.length; i++) {
+    const c = candidates[i];
+    const s = sessionByPath.get(c.path);
+    const { share, runs } = pool?.has(i) ? near(s) : { share: 0, runs: 0 };
+    c.boost = share + (currentProject && isProjectSession(s, currentProject) ? PROJECT_BOOST : 0);
+    c.runs = runs;
+  }
+  candidates.sort((a, b) => b.boost - a.boost || b.runs - a.runs || b.score - a.score);
 }
 
 /** Slice [start, end); collapse newlines only when the slice contains any. */
