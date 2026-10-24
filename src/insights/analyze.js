@@ -24,12 +24,10 @@ import { redactText } from "./redact.js";
 import { MAX_MODEL_WAIT_MS, MAX_STALL_MS, STALL_MS } from "../sessions/active-time.js";
 
 /** Bump when the record shape or any classifier changes: invalidates the cache. */
-export const INSIGHTS_VERSION = 5;
+export const INSIGHTS_VERSION = 6;
 
 export { MAX_MODEL_WAIT_MS, MAX_STALL_MS, STALL_MS };
 
-/** Two CI polls further apart than this are separate waits. */
-export const CI_POLL_GAP_MS = 30 * 60 * 1000;
 /** A test command that keeps the agent waiting this long counts as a hang. */
 export const TEST_HANG_MS = 10 * 60 * 1000;
 /** Same call this many times inside LOOP_WINDOW calls is a loop. */
@@ -99,10 +97,11 @@ export function analyzeSession(session) {
   let firstTs = NaN;
   let timedEvents = 0;
   let prevType = "";
-  let lastCiAt = NaN;
 
   for (const e of events) {
     const ts = ms(e.timestamp);
+    // A trap's waiting is the stall this event ends, so it is part of stallMs.
+    let toolStallMs = 0;
     if (Number.isFinite(ts) && Number.isFinite(prevTs)) {
       const gap = ts - prevTs;
       if (gap >= STALL_MS) {
@@ -116,6 +115,7 @@ export function analyzeSession(session) {
         if (toolWait || modelWait) {
           stalls += 1;
           stallMs += gap;
+          if (toolWait) toolStallMs = gap;
           if (!longestStall || gap > longestStall.ms) {
             longestStall = { ms: gap, after: toolWait ? oneLine(`${pending.name}: ${pending.input}`, 100) : "a model turn" };
           }
@@ -167,11 +167,6 @@ export function analyzeSession(session) {
             }
           }
           if (isCiWaitCommand(input)) {
-            // Time between polls is time spent waiting on CI, not working.
-            if (Number.isFinite(ts) && Number.isFinite(lastCiAt) && ts - lastCiAt <= CI_POLL_GAP_MS) {
-              traps["ci-wait"].ms += Math.max(0, ts - lastCiAt);
-            }
-            if (Number.isFinite(ts)) lastCiAt = ts;
             traps["ci-wait"].count += 1;
             traps["ci-wait"].sleepSec += sleepSeconds(input);
             if (!traps["ci-wait"].example) traps["ci-wait"].example = oneLine(input);
@@ -182,12 +177,8 @@ export function analyzeSession(session) {
 
     if (e.type === "tool_result") {
       const call = e.toolUseId ? callById.get(e.toolUseId) : null;
-      const waited = call && Number.isFinite(ts) && Number.isFinite(call.ts) ? Math.max(0, ts - call.ts) : 0;
       const shell = call ? isShellTool(call.name) : false;
-      if (call && shell && isCiWaitCommand(call.input)) {
-        traps["ci-wait"].ms += waited;
-        if (Number.isFinite(ts)) lastCiAt = ts;
-      }
+      if (call && shell && isCiWaitCommand(call.input)) traps["ci-wait"].ms += toolStallMs;
 
       let cls = null;
       // Confirmed status survives truncation and outranks display-text heuristics.
@@ -209,9 +200,9 @@ export function analyzeSession(session) {
           if (!traps["wrong-folder"].example) traps["wrong-folder"].example = oneLine(e.text);
         }
       }
-      if (call && shell && isTestRunnerCommand(call.input) && (cls === "timeout" || waited >= TEST_HANG_MS)) {
+      if (call && shell && isTestRunnerCommand(call.input) && (cls === "timeout" || toolStallMs >= TEST_HANG_MS)) {
         traps["test-hang"].count += 1;
-        traps["test-hang"].ms += waited;
+        traps["test-hang"].ms += toolStallMs;
         if (!traps["test-hang"].example) traps["test-hang"].example = oneLine(call.input);
       }
     }

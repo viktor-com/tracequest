@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Insights trap waiting is now part of the stalls total. A test run or CI poll counts only the 5 min to 6 h waits the stalls line adds up, so a test whose result came hours later because the session sat on an approval prompt is no longer a Test-runner hang worth 17 h, and the time between CI polls is no longer CI waiting.
+
 ## [0.5.3] - 2026-10-23
 
 ### Changed
