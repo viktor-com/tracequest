@@ -5,7 +5,7 @@ import { isCodexIndexSkippableLine } from "../parse/codex-event-msg.js";
 import { isGrokChatScanSkippableLine } from "../parse/grok-chat-index.js";
 import { isFactoryScanSkippableLine } from "../parse/parse-factory.js";
 import { forEachJsonlLine, forEachJsonlLineFromFile } from "../parse/jsonl-read.js";
-import { includesLower, indexOfLower, parseEscapedJsonString, safeSlice } from "../parse/parse-utils.js";
+import { indexOfLower, parseEscapedJsonString, safeSlice } from "../parse/parse-utils.js";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
 import { sessionHash } from "./session-hash.js";
 import { sessionMtimeMs } from "./session-list.js";
@@ -928,8 +928,11 @@ function scanSkipLineForSource(source) {
   return isClaudeProgressFillerLine;
 }
 
-function createJsonlQueryScanState() {
+function createJsonlQueryScanState(query) {
   return {
+    textPattern: queryTextPattern(query),
+    // Lowercasing turns U+212A into "k" and U+0130 into "i" + U+0307: only such queries gain matches.
+    lowerAddsMatches: /[ik]/.test(query),
     snippets: [],
     seenCmds: new Set(),
     seenFiles: new Set(),
@@ -940,22 +943,19 @@ function createJsonlQueryScanState() {
 
 /** Shared per-line scan step for in-memory and file-backed JSONL query walks. */
 function accumulateJsonlLineForQuery(line, query, max, filePathPattern, state) {
-  collectStructuredSnippetsFromLine(
-    line,
-    query,
-    state.snippets,
-    max,
-    state.seenCmds,
-    state.seenFiles,
-    filePathPattern,
-  );
+  return accumulateLineFieldsForQuery(createLineFields(line, filePathPattern), query, max, state);
+}
+
+/** One query's step over a line whose fields are shared with the other queries of the scan. */
+function accumulateLineFieldsForQuery(fields, query, max, state) {
+  collectStructuredSnippetsFromFields(fields, query, state.snippets, max, state.seenCmds, state.seenFiles);
 
   if (
     state.snippets.length === 0 &&
     !state.firstTextLine &&
-    (line.includes(query) || includesLower(line, query))
+    (fields.line.includes(query) || lineIncludesLower(fields, query, state))
   ) {
-    state.firstTextLine = line;
+    state.firstTextLine = fields.line;
   }
 
   if (state.snippets.length >= max) {
@@ -975,7 +975,7 @@ function finalizeJsonlQueryScan(state, query) {
 
 /** LRU cache hit: scan JSONL line-by-line (no full-text toLowerCase). */
 function scanInMemoryJsonlLines(lines, query, max, filePathPattern = RE_FILE_PATH, skipLine) {
-  const state = createJsonlQueryScanState();
+  const state = createJsonlQueryScanState(query);
 
   forEachScanJsonlLine(lines, (line) => {
     if (skipLine?.(line)) return true;
@@ -986,7 +986,7 @@ function scanInMemoryJsonlLines(lines, query, max, filePathPattern = RE_FILE_PAT
 }
 
 function createJsonlQueryScanStates(queries) {
-  return new Map(queries.map((query) => [query, createJsonlQueryScanState()]));
+  return new Map(queries.map((query) => [query, createJsonlQueryScanState(query)]));
 }
 
 function finalizeJsonlQueryScanStates(states) {
@@ -997,11 +997,13 @@ function finalizeJsonlQueryScanStates(states) {
   return snippetsByQuery;
 }
 
+/** All queries test one line: its fields are extracted, decoded and lowercased once, not once per query. */
 function accumulateJsonlLineForQueries(line, queries, max, filePathPattern, states) {
+  const fields = createLineFields(line, filePathPattern);
   for (const query of queries) {
     const state = states.get(query);
     if (!state || state.stoppedEarly) continue;
-    accumulateJsonlLineForQuery(line, query, max, filePathPattern, state);
+    accumulateLineFieldsForQuery(fields, query, max, state);
   }
   return !states.get(queries[0])?.stoppedEarly;
 }
@@ -1017,48 +1019,152 @@ function scanInMemoryJsonlLinesForQueries(lines, queries, max, filePathPattern =
   return finalizeJsonlQueryScanStates(states);
 }
 
-function collectStructuredSnippetsFromLine(
-  line,
-  query,
-  snippets,
-  max,
-  seenCmds,
-  seenFiles,
-  filePathPattern = RE_FILE_PATH
-) {
-  if (line.includes('"command"')) {
-    for (const m of line.matchAll(RE_COMMAND)) {
-      if (snippets.length >= max) return;
-      const cmd = parseEscapedJsonString(m[1]);
-      if (cmd && includesLower(cmd, query)) {
-        const snippet = structuredFieldSnippet(cmd, query);
-        if (!seenCmds.has(snippet)) {
-          seenCmds.add(snippet);
-          snippets.push({ type: "command", snippet });
-        }
+/**
+ * A scanned line's command, file-path and error fields plus its lowercase text, each computed
+ * on first use and shared by every query that tests the line. Queries are lowercase, and for a
+ * non-empty haystack and query `includesLower(s, q)` equals `s.toLowerCase().includes(q)`.
+ */
+function createLineFields(line, filePathPattern = RE_FILE_PATH) {
+  return { line, filePathPattern, keys: -1, lower: null, lowersToAscii: null, commands: null, files: null, errors: null };
+}
+
+const KEY_COMMAND = 1;
+const KEY_FILE = 2;
+const KEY_ERROR = 4;
+const KEY_ALL = KEY_COMMAND | KEY_FILE | KEY_ERROR;
+const RE_FIELD_KEY = /"(?:command|file_path|path|error|Error|stderr)"/g;
+
+/**
+ * Which of `"command"`, `"file_path"`/`"path"` and `"error"`/`"Error"`/`"stderr"` occur in the
+ * line, found in one regex pass instead of six `includes` scans. Each search restarts one
+ * character after the previous match start, so overlapping keys are seen as `includes` sees them.
+ */
+function lineFieldKeys(fields) {
+  if (fields.keys === -1) {
+    const { line } = fields;
+    let keys = 0;
+    RE_FIELD_KEY.lastIndex = 0;
+    let m;
+    while (keys !== KEY_ALL && (m = RE_FIELD_KEY.exec(line)) !== null) {
+      const c = line.charCodeAt(m.index + 1);
+      keys |= c === 0x63 ? KEY_COMMAND : c === 0x66 || c === 0x70 ? KEY_FILE : KEY_ERROR; // c, f/p, e/E/s
+      RE_FIELD_KEY.lastIndex = m.index + 1;
+    }
+    fields.keys = keys;
+  }
+  return fields.keys;
+}
+
+function lineFieldsLower(fields) {
+  if (fields.lower === null) fields.lower = fields.line.toLowerCase();
+  return fields.lower;
+}
+
+const RE_PLAIN_QUERY = /^[a-z0-9 _-]+$/;
+/** U+0130 and U+212A are the only characters whose lowercase contains ASCII ("i̇", "k"). */
+const RE_LOWERS_TO_ASCII = /[\u0130\u212a]/;
+
+/** Case-insensitive regex for a plain [a-z0-9 _-] query (8x faster than lowercasing each line); else null. */
+function queryTextPattern(query) {
+  return RE_PLAIN_QUERY.test(query) ? new RegExp(query, "i") : null;
+}
+
+/**
+ * `line.toLowerCase().includes(query)`. A non-unicode /i regex matches a plain query exactly
+ * where ASCII case folding does; lowercasing adds matches only through U+0130 and U+212A.
+ */
+function lineIncludesLower(fields, query, { textPattern, lowerAddsMatches }) {
+  if (textPattern === null) return lineFieldsLower(fields).includes(query);
+  if (textPattern.test(fields.line)) return true;
+  if (!lowerAddsMatches) return false;
+  if (fields.lowersToAscii === null) fields.lowersToAscii = RE_LOWERS_TO_ASCII.test(fields.line);
+  return fields.lowersToAscii && lineFieldsLower(fields).includes(query);
+}
+
+const NO_FIELD_MATCHES = { raws: [], values: [], lowers: [] };
+const UNDECODED = Symbol("undecoded");
+
+/** Capture group 1 of every match; values/lowers are filled lazily by fieldValue/fieldIncludes. */
+function fieldMatches(line, pattern, decode) {
+  const raws = [];
+  for (const m of line.matchAll(pattern)) raws.push(m[1]);
+  if (!raws.length) return NO_FIELD_MATCHES;
+  return { raws, decode, values: new Array(raws.length).fill(UNDECODED), lowers: new Array(raws.length).fill(null) };
+}
+
+function lineCommands(fields) {
+  if (fields.commands === null) {
+    fields.commands = lineFieldKeys(fields) & KEY_COMMAND
+      ? fieldMatches(fields.line, RE_COMMAND, true)
+      : NO_FIELD_MATCHES;
+  }
+  return fields.commands;
+}
+
+function lineFiles(fields) {
+  if (fields.files === null) {
+    fields.files = lineFieldKeys(fields) & KEY_FILE
+      ? fieldMatches(fields.line, fields.filePathPattern, false)
+      : NO_FIELD_MATCHES;
+  }
+  return fields.files;
+}
+
+function lineErrors(fields) {
+  if (fields.errors === null) {
+    fields.errors = lineFieldKeys(fields) & KEY_ERROR
+      ? fieldMatches(fields.line, RE_ERROR_FIELD, true)
+      : NO_FIELD_MATCHES;
+  }
+  return fields.errors;
+}
+
+/** JSON-decoded (commands, errors) or raw (file paths) field value, decoded at most once. */
+function fieldValue(matches, i) {
+  if (matches.values[i] === UNDECODED) {
+    matches.values[i] = matches.decode ? parseEscapedJsonString(matches.raws[i]) : matches.raws[i];
+  }
+  return matches.values[i];
+}
+
+/** Whether a non-empty field value contains the lowercase query, ignoring case. */
+function fieldIncludes(matches, i, query) {
+  if (matches.lowers[i] === null) matches.lowers[i] = fieldValue(matches, i).toLowerCase();
+  return matches.lowers[i].includes(query);
+}
+
+function collectStructuredSnippetsFromFields(fields, query, snippets, max, seenCmds, seenFiles) {
+  const commands = lineCommands(fields);
+  for (let i = 0; i < commands.raws.length; i++) {
+    if (snippets.length >= max) return;
+    const cmd = fieldValue(commands, i);
+    if (cmd && fieldIncludes(commands, i, query)) {
+      const snippet = structuredFieldSnippet(cmd, query);
+      if (!seenCmds.has(snippet)) {
+        seenCmds.add(snippet);
+        snippets.push({ type: "command", snippet });
       }
     }
   }
 
-  if (snippets.length < max && (line.includes('"file_path"') || line.includes('"path"'))) {
-    for (const m of line.matchAll(filePathPattern)) {
+  if (snippets.length < max) {
+    const files = lineFiles(fields);
+    for (let i = 0; i < files.raws.length; i++) {
       if (snippets.length >= max) return;
-      const fp = m[1];
-      if (includesLower(fp, query) && !seenFiles.has(fp)) {
+      const fp = files.raws[i];
+      if (fieldIncludes(files, i, query) && !seenFiles.has(fp)) {
         seenFiles.add(fp);
         snippets.push({ type: "file", snippet: fp });
       }
     }
   }
 
-  if (
-    snippets.length < max &&
-    (line.includes('"error"') || line.includes('"Error"') || line.includes('"stderr"'))
-  ) {
-    for (const m of line.matchAll(RE_ERROR_FIELD)) {
+  if (snippets.length < max) {
+    const errors = lineErrors(fields);
+    for (let i = 0; i < errors.raws.length; i++) {
       if (snippets.length >= max) return;
-      const err = parseEscapedJsonString(m[1]);
-      if (err && includesLower(err, query)) {
+      const err = fieldValue(errors, i);
+      if (err && fieldIncludes(errors, i, query)) {
         const snippet = structuredFieldSnippet(err, query);
         snippets.push({ type: "error", snippet });
       }
@@ -1125,7 +1231,7 @@ export function scanJsonlFileForQuery(
   filePathPattern = RE_FILE_PATH,
   skipLine,
 ) {
-  const state = createJsonlQueryScanState();
+  const state = createJsonlQueryScanState(query);
   const cachedLines = [];
 
   forEachJsonlLineFromFile(filePath, (text, start, end) => {
@@ -1208,7 +1314,7 @@ export function scanSessionForQuery(session, query, max = 3) {
   }
 }
 
-function scanSessionForQueries(session, queries, max = 3) {
+export function scanSessionForQueries(session, queries, max = 3) {
   const source = session.source || "claude";
   if (queries.length === 0) return new Map();
   try {
