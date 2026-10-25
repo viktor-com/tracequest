@@ -7,6 +7,8 @@ import { detectLiveSessions, stampLive } from "../sessions/live-sessions.js";
 import { indexSession } from "../sessions/index.js";
 import { currentHealedIndexEntry } from "../sessions/index-writers.js";
 import { attachSessionSummary } from "../sessions/session-summary.js";
+import { getSearchIndex } from "../sessions/search-index.js";
+import { captureStderr, openSearchResultCache } from "./search-result-cache.js";
 import { serve } from "../server.js";
 // normalizeProjectFolder (not projectLabel) is the single project-normalisation
 // used by every CLI printer, so `list` / `find` / `latest` / `search` render the
@@ -777,20 +779,31 @@ export function cmdSearch(positionals, values) {
     }
   }
   status(k.dim(`Building index for ${sessions.length} sessions...`));
-  const index = buildIndex(sessions);
   const isHandoffRecentSort = isHandoff && (handoffSort === "recent" || handoffSort === "date");
-  const rawResults = searchSessions(
-    sessions,
-    index,
-    query,
-    limit,
-    isHandoffRecentSort
-      ? { sort: handoffSort }
-      : { rerank: true, currentProject: currentRepoNames() },
-  );
-  const results = isHandoff
-    ? sortSearchHandoffResults(rawResults, handoffSort).slice(0, limit)
-    : rawResults;
+  const currentProject = isHandoffRecentSort ? null : currentRepoNames();
+  // Exact repeats on an unchanged corpus replay the remembered results (search-perf facts).
+  const resultCache = values.filter ? null
+    : openSearchResultCache(sessions, { query, limit, format, sort: handoffSort, currentProject });
+  let results = resultCache?.hit?.results;
+  if (results) {
+    process.stderr.write(resultCache.hit.stderr);
+  } else {
+    const stopCapture = resultCache ? captureStderr() : null;
+    const index = buildIndex(sessions);
+    const rawResults = searchSessions(
+      sessions,
+      index,
+      query,
+      limit,
+      isHandoffRecentSort
+        ? { sort: handoffSort }
+        : { rerank: true, currentProject },
+    );
+    results = isHandoff
+      ? sortSearchHandoffResults(rawResults, handoffSort).slice(0, limit)
+      : rawResults;
+    if (resultCache) resultCache.remember(results, stopCapture(), getSearchIndex()._generation === 1);
+  }
   if (isHandoff) {
     process.stdout.write(formatSearchHandoff(query, results, {
       limit,
