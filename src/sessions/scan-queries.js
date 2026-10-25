@@ -178,6 +178,11 @@ function fuzzyExpand(queryTerm, si) {
  * @returns {string[]}
  */
 export function prefixExpand(prefix, postings) {
+  // An index opened from search.bin finds the same terms, in the same order,
+  // by binary search instead of decoding the whole vocabulary (fact ohy).
+  if (typeof postings.termsWithPrefix === "function") {
+    return postings.termsWithPrefix(prefix).filter((term) => term !== prefix);
+  }
   const results = [];
   for (const term of postings.keys()) {
     if (term !== prefix && term.startsWith(prefix)) results.push(term);
