@@ -1,6 +1,7 @@
 //! CLI entrypoints for scan and index subcommands.
 
 use crate::indexer::{build_index, write_index_cache};
+use crate::near::{near, NearRequest};
 use crate::scan::scan;
 use crate::types::Session;
 use clap::{Parser, Subcommand};
@@ -47,12 +48,31 @@ pub enum Commands {
         #[arg(long = "term-freqs", hide = true)]
         term_freqs: bool,
     },
+    /// Scan session files for query words together (the CLI's near-words re-rank).
+    /// Reads one JSON request on stdin; prints `[[best, runs, searched] | null, ...]`.
+    Near,
 }
 
 pub fn run() {
     let cli = Cli::parse();
 
     match cli.command {
+        Commands::Near => {
+            let mut raw = String::new();
+            std::io::stdin()
+                .read_to_string(&mut raw)
+                .expect("failed to read near request from stdin");
+            let result = serde_json::from_str::<NearRequest>(&raw)
+                .map_err(|e| e.to_string())
+                .and_then(|req| near(&req));
+            match result {
+                Ok(results) => println!("{}", serde_json::to_string(&results).unwrap()),
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(2);
+                }
+            }
+        }
         Commands::Scan { roots, filter } => {
             let roots: Vec<String> = serde_json::from_str(&roots)
                 .expect("--roots must be a valid JSON array of strings");
