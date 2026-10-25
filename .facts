@@ -75,6 +75,9 @@
 - label: scanning one multi-megabyte session for the snippets of six words takes less than three times as long as scanning it for one word (the per-word scan of 29b56c6 took more than four times as long)
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'one-pass snippet scan cost' test/bin/snippet-scan-one-pass.test.js
   tags: [spec, cli-search, search-perf, implemented]
+- label: The combined search speed branches preserve the existing search and handoff ranking, exact result replay and cache invalidation behavior in the integration tests
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/tracequest-search-ranking.e2e.test.js test/bin/near-cache.test.js test/bin/search-result-cache.test.js
+  tags: [spec, search-speed-integration]
 
 ## standup
 - label: tracequest standup help and CLI reference examples show prompt-agent configuration and --print-input auditing before LLM execution
