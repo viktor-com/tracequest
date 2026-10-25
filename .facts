@@ -84,6 +84,12 @@
 - label: The combined search speed branches preserve the existing search and handoff ranking, exact result replay and cache invalidation behavior in the integration tests
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/tracequest-search-ranking.e2e.test.js test/bin/near-cache.test.js test/bin/search-result-cache.test.js
   tags: [spec, search-speed-integration]
+- label: tracequest search and tracequest handoff without --filter remember their ranked results (with snippets) in search-results.json in the tracequest cache dir, keyed on the exact query, limit, format, sort and current repository plus a fingerprint of every discovered session (path, size, mtime, source, project), the size, mtime and inode of index.json and search.idx, the TRACEQUEST_* environment and the tracequest code files; an exact repeat with that whole key unchanged prints the remembered results without loading the index or reading session files, and its stdout and stderr are byte-identical to the run that computed them
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'result cache repeat' test/bin/search-result-cache.test.js
+  tags: [spec, cli-search, handoff, search-perf]
+- label: the search result cache only stores results from a run that left index.json and search.idx untouched, and a session whose file changed (size or mtime), a new or removed session, another query, limit, format, sort or repository, or a rewritten index misses the cache, so the next search prints what an uncached search prints; --filter searches, TRACEQUEST_VERBOSE=1 and TRACEQUEST_NO_RESULT_CACHE=1 never use it
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'result cache invalidation' test/bin/search-result-cache.test.js
+  tags: [spec, cli-search, handoff, search-perf]
 
 ## standup
 - label: tracequest standup help and CLI reference examples show prompt-agent configuration and --print-input auditing before LLM execution

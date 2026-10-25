@@ -8,6 +8,8 @@ import { homedir } from "node:os";
 import { resolve, basename, dirname, join } from "node:path";
 import { findSessions as discoverCliSessions, buildIndex, searchSessions } from "../sessions.js";
 import { buildIndexForFilteredSearch } from "../sessions/index-writers.js";
+import { getSearchIndex } from "../sessions/search-index.js";
+import { captureStderr, openSearchResultCache } from "./search-result-cache.js";
 // normalizeProjectFolder (not projectLabel) is the single project-normalisation
 // used by every CLI printer, so `list` / `find` / `latest` / `search` render the
 // exact same project string that /api/sessions returns for the same record.
@@ -238,22 +240,31 @@ export async function cmdSearch(positionals, values) {
     }
   }
   status(k.dim(`Building index for ${sessions.length} sessions...`));
-  // A filtered search indexes (and persists) every discovered session, then
-  // ranks against the filtered ones alone (fact bks).
-  const index = values.filter ? buildIndexForFilteredSearch(discovered, sessions) : buildIndex(sessions);
   const isHandoffRecentSort = isHandoff && (handoffSort === "recent" || handoffSort === "date");
-  const rawResults = searchSessions(
-    sessions,
-    index,
-    query,
-    limit,
-    isHandoffRecentSort
-      ? { sort: handoffSort }
-      : { rerank: true, currentProject: currentRepoNames() },
-  );
-  const results = isHandoff
-    ? sortSearchHandoffResults(rawResults, handoffSort).slice(0, limit)
-    : rawResults;
+  const currentProject = isHandoffRecentSort ? null : currentRepoNames();
+  // Exact repeats on an unchanged corpus replay the remembered results (search-perf facts).
+  const resultCache = values.filter ? null
+    : openSearchResultCache(sessions, { query, limit, format, sort: handoffSort, currentProject });
+  let results = resultCache?.hit?.results;
+  if (results) {
+    process.stderr.write(resultCache.hit.stderr);
+  } else {
+    const stopCapture = resultCache ? captureStderr() : null;
+    const index = values.filter ? buildIndexForFilteredSearch(discovered, sessions) : buildIndex(sessions);
+    const rawResults = searchSessions(
+      sessions,
+      index,
+      query,
+      limit,
+      isHandoffRecentSort
+        ? { sort: handoffSort }
+        : { rerank: true, currentProject },
+    );
+    results = isHandoff
+      ? sortSearchHandoffResults(rawResults, handoffSort).slice(0, limit)
+      : rawResults;
+    if (resultCache) resultCache.remember(results, stopCapture(), getSearchIndex()._generation === 1);
+  }
   if (isHandoff) {
     process.stdout.write(formatSearchHandoff(query, results, {
       limit,
