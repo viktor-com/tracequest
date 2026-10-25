@@ -59,6 +59,16 @@
 - label: When run inside a git repository (named by its origin remote and by its folder, so a worktree in a differently named folder still counts), tracequest search and tracequest handoff rank sessions whose project is named after that repository, or that name the repository at least 20 times (a session run in a worktree folder), above otherwise equal matches from other projects; run outside a repository, the same query keeps its original order
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'current repository project ranks first' test/bin/tracequest-search-ranking.e2e.test.js
   tags: [spec, cli-search, handoff, search-ranking, implemented]
+- label: a tracequest search or handoff with --filter leaves index.json and search.idx holding every discovered session, so the next unfiltered search re-indexes nothing, while the filtered results are still ranked with the word statistics (session count, word document counts, average length, vocabulary) of the filtered sessions alone
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'filtered search keeps the full index' test/bin/search-startup-perf.test.js
+  tags: [cli-search, search-perf, implemented]
+- label: the sidecar scan remembers each Codex session's project in scan-meta.json in the tracequest cache dir, keyed by file path, size and mtime, so a repeat scan reads no unchanged Codex file, a file whose size or mtime changed is read again, and the scan output is the same with and without the cache
+  command: cd sidecar && cargo test -q scan_meta_cache && cd .. && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'scan meta cache' test/bin/search-startup-perf.test.js
+  tags: [cli-search, search-perf, implemented]
+- label: tracequest search and tracequest handoff without --filter load only the search command's modules: the HTML renderer, the server, share, standup, import and usage-limit modules are not loaded
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'search loads only search modules' test/bin/search-startup-perf.test.js
+  tags: [cli-search, search-perf, implemented]
+- the sidecar scan stats only directory entries whose file name marks a session file (rollout-*.jsonl, chat_history.jsonl, *.jsonl), not every file inside a Grok, vktr, Codex, Claude, Cursor or Factory session directory @search-perf @implemented
 
 ## standup
 - label: tracequest standup help and CLI reference examples show prompt-agent configuration and --print-input auditing before LLM execution

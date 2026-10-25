@@ -232,6 +232,11 @@ export function indexPath() {
   return join(cacheDir(), "index.json");
 }
 
+/** The sidecar scan's file metadata cache (fact 5vs). */
+export function scanMetaCachePath() {
+  return join(cacheDir(), "scan-meta.json");
+}
+
 let _indexDiskMtimeCoalesce = undefined;
 let _indexDiskMtimeCoalesceDepth = 0;
 let _indexDiskMtimeStatCalls = 0;
@@ -475,14 +480,14 @@ export function runSidecar(op, args, parseSuccess, spawnExtra = {}) {
  * the time limit is SIGKILLed and the caller gets null (JS fallback, fact hsa2).
  * Resolves to parseSuccess(result) or null; never rejects.
  */
-export function runSidecarAsync(op, args, parseSuccess, { input = null, timeoutMs } = {}) {
+export function runSidecarAsync(op, args, parseSuccess, { input = null, timeoutMs, env } = {}) {
   const sidecar = detectSidecar();
   if (!sidecar) return Promise.resolve(null);
   const limit = timeoutMs ?? sidecarTimeoutMs(op);
   return new Promise((resolve) => {
     let child;
     try {
-      child = spawn(sidecar, args, { stdio: ["pipe", "pipe", "pipe"] });
+      child = spawn(sidecar, args, { stdio: ["pipe", "pipe", "pipe"], ...(env ? { env } : {}) });
     } catch (e) {
       console.warn(`Sidecar ${op} spawn failed, falling back to JS:`, e.message);
       resolve(null);
@@ -547,6 +552,8 @@ let _resultMapCache = null;
 let _resultMapKey = null;
 let _writeTimer = null;
 const INDEX_WRITE_DELAY_MS = 30_000;
+/** Set by buildIndexForFilteredSearch: the in-memory indexes hold a subset and are never written. */
+let _narrowedForFilteredSearch = false;
 
 /** True once we've registered the process exit handler. */
 let _exitHandlerRegistered = false;
@@ -596,6 +603,8 @@ export function flushDeferredIndexWrites() {
     _writeTimer = null;
   }
   _removePendingSignalHandlers();
+  // The in-memory indexes were narrowed to a filtered search's sessions: never persist them.
+  if (_narrowedForFilteredSearch) return;
   try {
     writeIndexFileToDisk();
   } catch (err) {
@@ -685,6 +694,7 @@ export function resetIndexWritersForTests() {
   _removePendingSignalHandlers();
   _exitHandlerRegistered = false;
   _sidecarPath = undefined;
+  _narrowedForFilteredSearch = false;
   _searchIdxLoaded = false;
   _searchIdxLoadFailedExistingFile = false;
   _resetSearchIndexForTests();
@@ -722,7 +732,7 @@ export function sessionPayloadForSidecarIndex(s) {
 }
 
 function writeIndexFileToDisk() {
-  if (!_indexFileCache) return;
+  if (!_indexFileCache || _narrowedForFilteredSearch) return;
   const indexJson = JSON.stringify(_indexFileCache);
   if (indexJson.length > MAX_INDEX_JSON_SIZE) {
     console.warn(
@@ -1433,6 +1443,27 @@ export function buildIndex(sessions, opts = {}) {
     }));
   }
   return step.value;
+}
+
+/**
+ * Index for a filtered CLI search (fact bks): `sessions` (every discovered
+ * session) is indexed and persisted like any unfiltered search, then the
+ * in-memory search index is narrowed to `matching` — the same prune a build of
+ * the subset alone performs — so BM25 statistics and the vocabulary come from
+ * the filtered sessions, as filtered searches have always ranked. Pending
+ * full-corpus writes are flushed first; the narrowed index is never written,
+ * so the next unfiltered search finds index.json and search.idx whole.
+ * For a short-lived process that queries once and exits (the CLI).
+ */
+export function buildIndexForFilteredSearch(sessions, matching) {
+  const result = buildIndex(sessions);
+  if (_writeTimer) flushDeferredIndexWrites();
+  _narrowedForFilteredSearch = true;
+  const validPaths = new Set();
+  for (const s of matching) validPaths.add(s.path);
+  // pruneIndexCache's guard: a cache no larger than the subset is not pruned.
+  if (_indexCachePathCount > validPaths.size) getSearchIndex().pruneRemovedSessions(validPaths);
+  return result;
 }
 
 /** Async builds run one at a time: each sees the cache the previous one left. */
