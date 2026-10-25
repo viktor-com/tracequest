@@ -11,6 +11,8 @@ mod fx_dsh_tests;
 mod indexer_tests;
 #[cfg(test)]
 mod scan_tests;
+#[cfg(test)]
+mod scan_cache_tests;
 
 fn main() {
     cli::run();

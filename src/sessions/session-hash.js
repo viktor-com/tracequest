@@ -41,12 +41,30 @@ export function resolveSessionHandle(input, sessions) {
  */
 const _hashByPath = new Map();
 const _pathsByHash = new Map();
+/**
+ * Paths reported but not hashed yet: hashing every discovered path costs a
+ * sha256 each, which a command that never resolves a hash (search, list)
+ * should not pay, so they are hashed on the first lookup.
+ */
+let _pendingPaths = [];
+const MAX_PENDING_PATHS = 100_000;
 
 export function rememberSessionPaths(sessions) {
   if (!Array.isArray(sessions)) return;
   for (const s of sessions) {
     const path = s?.path;
-    if (typeof path !== "string" || !path || _hashByPath.has(path)) continue;
+    if (typeof path === "string" && path) _pendingPaths.push(path);
+  }
+  // A long-lived process (serve) rescans often without resolving a hash: fold
+  // the queue into the memo now and then, so it never grows without bound.
+  if (_pendingPaths.length > MAX_PENDING_PATHS) hashPendingPaths();
+}
+
+function hashPendingPaths() {
+  const pending = _pendingPaths;
+  _pendingPaths = [];
+  for (const path of pending) {
+    if (_hashByPath.has(path)) continue;
     const hash = sessionHash(path);
     _hashByPath.set(path, hash);
     let paths = _pathsByHash.get(hash);
@@ -58,6 +76,7 @@ export function rememberSessionPaths(sessions) {
 /** The one existing remembered session file whose hash is `hash`, else null. */
 export function rememberedSessionPathForHash(hash) {
   if (!isSessionHash(hash)) return null;
+  if (_pendingPaths.length) hashPendingPaths();
   const paths = _pathsByHash.get(hash);
   if (!paths || paths.size !== 1) return null;
   const [path] = paths;
@@ -66,6 +85,7 @@ export function rememberedSessionPathForHash(hash) {
 }
 
 export function forgetSessionPathsForTests() {
+  _pendingPaths = [];
   _hashByPath.clear();
   _pathsByHash.clear();
 }

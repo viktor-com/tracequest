@@ -2,11 +2,14 @@
 
 use crate::types::{parse_opencode_timestamp, Session, Source};
 use jwalk::WalkDir;
+use rayon::prelude::*;
 use regex::Regex;
 use rusqlite::Connection;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::time::SystemTime;
 
@@ -97,8 +100,74 @@ fn make_session(
     }
 }
 
-/// Scan all agent data roots in parallel and return sessions sorted by mtime descending.
+/// Environment variable naming the scan metadata cache file (fact 5vs). Node sets
+/// it to `<tracequest cache dir>/scan-meta.json`; unset or empty, nothing is cached.
+pub(crate) const SCAN_META_CACHE_ENV: &str = "TRACEQUEST_SCAN_CACHE";
+const SCAN_META_CACHE_VERSION: u32 = 1;
+
+/// What a scan learned by reading session files, so the next scan need not read
+/// them again: per Codex root, each rollout's (size, mtime ns, project). The
+/// project comes from the rollout's first line, which is written once at start;
+/// a size or mtime change still re-reads the file.
+#[derive(Serialize, Deserialize, Default)]
+pub(crate) struct ScanMetaCache {
+    v: u32,
+    codex: HashMap<String, HashMap<String, (u64, u64, String)>>,
+}
+
+impl ScanMetaCache {
+    pub(crate) fn load(path: &Path) -> ScanMetaCache {
+        fs::read(path)
+            .ok()
+            .and_then(|raw| serde_json::from_slice::<ScanMetaCache>(&raw).ok())
+            .filter(|c| c.v == SCAN_META_CACHE_VERSION)
+            .unwrap_or_default()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn codex_entries(&self) -> usize {
+        self.codex.values().map(|m| m.len()).sum()
+    }
+
+    /// Write atomically (temp file + rename); a cache that cannot be written only
+    /// makes the next scan slower.
+    pub(crate) fn save(&mut self, path: &Path) {
+        self.v = SCAN_META_CACHE_VERSION;
+        let Ok(raw) = serde_json::to_vec(self) else { return };
+        if let Some(dir) = path.parent() {
+            let _ = fs::create_dir_all(dir);
+        }
+        let tmp = PathBuf::from(format!("{}.{}.tmp", path.display(), std::process::id()));
+        if fs::write(&tmp, raw).is_ok() && fs::rename(&tmp, path).is_err() {
+            let _ = fs::remove_file(&tmp);
+        }
+    }
+}
+
+/// (size, mtime in ns since the epoch) — the key a cached file read is valid for.
+fn file_stamp(metadata: &std::fs::Metadata) -> Option<(u64, u64)> {
+    let mtime = metadata.modified().ok()?.duration_since(SystemTime::UNIX_EPOCH).ok()?;
+    Some((metadata.len(), u64::try_from(mtime.as_nanos()).ok()?))
+}
+
+/// Scan all agent data roots and return sessions sorted by mtime descending,
+/// using the scan metadata cache named by `TRACEQUEST_SCAN_CACHE` when set.
 pub fn scan(roots: &[String], filter: Option<&str>) -> Vec<Session> {
+    let cache_path = std::env::var_os(SCAN_META_CACHE_ENV)
+        .filter(|p| !p.is_empty())
+        .map(PathBuf::from);
+    scan_with_meta_cache(roots, filter, cache_path.as_deref())
+}
+
+/// `scan` with an explicit metadata cache file (None: read every file, cache nothing).
+/// The returned sessions are the same with or without the cache.
+pub(crate) fn scan_with_meta_cache(
+    roots: &[String],
+    filter: Option<&str>,
+    cache_path: Option<&Path>,
+) -> Vec<Session> {
+    let mut cache = cache_path.map(ScanMetaCache::load);
+    let mut cache_changed = false;
     // Iterate roots SEQUENTIALLY. Each per-source scanner uses jwalk, which runs
     // its directory walk on rayon's global thread pool. Nesting a `roots.par_iter()`
     // on top of that same pool starved jwalk's inner tasks and dropped results
@@ -112,7 +181,11 @@ pub fn scan(roots: &[String], filter: Option<&str>) -> Vec<Session> {
             let source = infer_source(root)?;
             let sessions = match source {
                 Source::Claude => scan_claude(root, filter),
-                Source::Codex => scan_codex(root, filter),
+                Source::Codex => {
+                    let (sessions, changed) = scan_codex(root, filter, cache.as_mut());
+                    cache_changed |= changed;
+                    sessions
+                }
                 Source::Cursor => scan_cursor(root, filter),
                 Source::CursorCloud => scan_cursor_cloud(root, filter),
                 Source::Factory => scan_factory(root, filter),
@@ -126,6 +199,10 @@ pub fn scan(roots: &[String], filter: Option<&str>) -> Vec<Session> {
         })
         .flatten()
         .collect();
+
+    if let (true, Some(cache), Some(path)) = (cache_changed, cache.as_mut(), cache_path) {
+        cache.save(path);
+    }
 
     all_sessions.sort_by(|a, b| b.mtime.cmp(&a.mtime));
     all_sessions
@@ -146,15 +223,15 @@ pub(crate) fn scan_cursor(root: &str, filter: Option<&str>) -> Vec<Session> {
     for entry in WalkDir::new(root).max_depth(5) {
         let Ok(entry) = entry else { continue };
         let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+            continue;
+        }
         let metadata = match entry.metadata() {
             Ok(m) => m,
             Err(_) => continue,
         };
 
         if !metadata.is_file() {
-            continue;
-        }
-        if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
             continue;
         }
 
@@ -211,15 +288,15 @@ pub(crate) fn scan_cursor_cloud(root: &str, filter: Option<&str>) -> Vec<Session
     for entry in WalkDir::new(root).max_depth(2) {
         let Ok(entry) = entry else { continue };
         let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+            continue;
+        }
         let metadata = match entry.metadata() {
             Ok(m) => m,
             Err(_) => continue,
         };
 
         if !metadata.is_file() {
-            continue;
-        }
-        if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
             continue;
         }
 
@@ -258,15 +335,15 @@ fn scan_claude_family(root: &str, filter: Option<&str>, source: &str) -> Vec<Ses
     for entry in WalkDir::new(root).max_depth(4) {
         let Ok(entry) = entry else { continue };
         let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+            continue;
+        }
         let metadata = match entry.metadata() {
             Ok(m) => m,
             Err(_) => continue,
         };
 
         if !metadata.is_file() {
-            continue;
-        }
-        if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
             continue;
         }
 
@@ -432,32 +509,83 @@ pub(crate) fn extract_codex_project(path: &Path) -> String {
     "codex".to_string()
 }
 
-fn scan_codex(root: &str, filter: Option<&str>) -> Vec<Session> {
-    let mut sessions = Vec::new();
-
+/// Codex rollouts under `root`. Each project comes from the rollout's first line:
+/// taken from `cache` when the file's size and mtime match, otherwise read (in
+/// parallel). Returns the sessions in walk order and whether `cache` changed.
+fn scan_codex(
+    root: &str,
+    filter: Option<&str>,
+    cache: Option<&mut ScanMetaCache>,
+) -> (Vec<Session>, bool) {
+    let mut files = Vec::new();
     for entry in WalkDir::new(root) {
         let Ok(entry) = entry else { continue };
         let path = entry.path();
-        let metadata = match entry.metadata() {
-            Ok(m) => m,
-            Err(_) => continue,
-        };
-
-        if !metadata.is_file() {
-            continue;
-        }
         let file_name = path.file_name().and_then(|f| f.to_str()).unwrap_or("");
         if !file_name.ends_with(".jsonl") || !file_name.starts_with("rollout-") {
             continue;
         }
+        let metadata = match entry.metadata() {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+        if !metadata.is_file() {
+            continue;
+        }
+        files.push((path, metadata));
+    }
 
-        let project = extract_codex_project(&path);
-        if filter.map_or(true, |f| project.contains(f)) {
-            sessions.push(make_session(&path, &project, "codex", &metadata, None));
+    let known = cache
+        .as_ref()
+        .and_then(|c| c.codex.get(root))
+        .map(|m| m.len())
+        .unwrap_or(0);
+    let cached = cache.as_ref().and_then(|c| c.codex.get(root));
+    let stamps: Vec<Option<(u64, u64)>> = files.iter().map(|(_, m)| file_stamp(m)).collect();
+    let mut projects: Vec<Option<String>> = files
+        .iter()
+        .zip(&stamps)
+        .map(|((path, _), stamp)| {
+            let (size, mtime) = (*stamp)?;
+            let (c_size, c_mtime, project) = cached?.get(path.to_str()?)?;
+            (*c_size == size && *c_mtime == mtime).then(|| project.clone())
+        })
+        .collect();
+    let misses: Vec<usize> = (0..files.len()).filter(|&i| projects[i].is_none()).collect();
+    let read: Vec<String> = misses
+        .par_iter()
+        .map(|&i| extract_codex_project(&files[i].0))
+        .collect();
+    for (&i, project) in misses.iter().zip(read) {
+        projects[i] = Some(project);
+    }
+
+    let mut changed = false;
+    if let Some(cache) = cache {
+        let mut entries = HashMap::with_capacity(files.len());
+        for (((path, _), stamp), project) in files.iter().zip(&stamps).zip(&projects) {
+            if let (Some((size, mtime)), Some(path), Some(project)) = (stamp, path.to_str(), project) {
+                entries.insert(path.to_string(), (*size, *mtime, project.clone()));
+            }
+        }
+        // Changed: a file was read that can be cached, or a cached file is gone.
+        let cacheable_read = misses
+            .iter()
+            .any(|&i| stamps[i].is_some() && files[i].0.to_str().is_some());
+        changed = cacheable_read || entries.len() != known;
+        if changed {
+            cache.codex.insert(root.to_string(), entries);
         }
     }
 
-    sessions
+    let mut sessions = Vec::new();
+    for ((path, metadata), project) in files.iter().zip(projects) {
+        let project = project.unwrap_or_default();
+        if filter.map_or(true, |f| project.contains(f)) {
+            sessions.push(make_session(path, &project, "codex", metadata, None));
+        }
+    }
+    (sessions, changed)
 }
 
 pub(crate) fn scan_factory(root: &str, filter: Option<&str>) -> Vec<Session> {
@@ -471,15 +599,15 @@ pub(crate) fn scan_factory(root: &str, filter: Option<&str>) -> Vec<Session> {
     for entry in WalkDir::new(root).max_depth(2) {
         let Ok(entry) = entry else { continue };
         let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+            continue;
+        }
         let metadata = match entry.metadata() {
             Ok(m) => m,
             Err(_) => continue,
         };
 
         if !metadata.is_file() {
-            continue;
-        }
-        if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
             continue;
         }
 
@@ -531,15 +659,15 @@ pub(crate) fn scan_grok_family(root: &str, filter: Option<&str>, source: &str) -
     for entry in WalkDir::new(root).max_depth(3) {
         let Ok(entry) = entry else { continue };
         let path = entry.path();
+        if path.file_name().and_then(|f| f.to_str()) != Some("chat_history.jsonl") {
+            continue;
+        }
         let metadata = match entry.metadata() {
             Ok(m) => m,
             Err(_) => continue,
         };
 
         if !metadata.is_file() {
-            continue;
-        }
-        if path.file_name().and_then(|f| f.to_str()) != Some("chat_history.jsonl") {
             continue;
         }
 

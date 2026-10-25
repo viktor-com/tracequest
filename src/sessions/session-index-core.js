@@ -10,7 +10,7 @@ import { indexOpenCode } from "./session-index-opencode.js";
 import { indexDsh, indexFx } from "./session-index-fx-dsh.js";
 import { discoveryRoots, discoverSessions } from "./session-discovery.js";
 import { resolveHostsRoot, stampImportedHost } from "./session-discovery-paths.js";
-import { runSidecar, runSidecarAsync, sidecarAvailable } from "./index-writers.js";
+import { runSidecar, runSidecarAsync, scanMetaCachePath, sidecarAvailable } from "./index-writers.js";
 import { sortSessionsByMtimeDesc } from "./session-list.js";
 import { rememberSessionPaths } from "./session-hash.js";
 
@@ -78,6 +78,11 @@ function sidecarScanArgs(projectFilter) {
   return args;
 }
 
+/** Scans reuse what earlier scans read from session files (fact 5vs). */
+function sidecarScanEnv() {
+  return { ...process.env, TRACEQUEST_SCAN_CACHE: scanMetaCachePath() };
+}
+
 function finishFoundSessions(sessions, projectFilter) {
   if (!sessions) {
     sessions = [];
@@ -90,7 +95,7 @@ function finishFoundSessions(sessions, projectFilter) {
 }
 
 export function findSessions(projectFilter) {
-  const sessions = runSidecar("scan", sidecarScanArgs(projectFilter), (result) => parseSidecarScanStdout(result.stdout));
+  const sessions = runSidecar("scan", sidecarScanArgs(projectFilter), (result) => parseSidecarScanStdout(result.stdout), { env: sidecarScanEnv() });
   return finishFoundSessions(sessions, projectFilter);
 }
 
@@ -99,7 +104,7 @@ export function findSessions(projectFilter) {
  * asynchronous child, so the event loop keeps answering while it walks.
  */
 export async function findSessionsAsync(projectFilter) {
-  const sessions = await runSidecarAsync("scan", sidecarScanArgs(projectFilter), (result) => parseSidecarScanStdout(result.stdout));
+  const sessions = await runSidecarAsync("scan", sidecarScanArgs(projectFilter), (result) => parseSidecarScanStdout(result.stdout), { env: sidecarScanEnv() });
   return finishFoundSessions(sessions, projectFilter);
 }
 
@@ -112,7 +117,7 @@ export async function findSessionsAsync(projectFilter) {
 export async function findSessionsInRootsAsync(roots) {
   if (!sidecarAvailable()) return null;
   if (!roots.length) return [];
-  const sessions = await runSidecarAsync("scan", ["scan", "--roots", JSON.stringify(roots)], (result) => parseSidecarScanStdout(result.stdout));
+  const sessions = await runSidecarAsync("scan", ["scan", "--roots", JSON.stringify(roots)], (result) => parseSidecarScanStdout(result.stdout), { env: sidecarScanEnv() });
   if (!sessions) return null;
   const hostsRoot = resolveHostsRoot();
   for (const session of sessions) stampImportedHost(session, hostsRoot);
