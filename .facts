@@ -69,6 +69,12 @@
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'search loads only search modules' test/bin/search-startup-perf.test.js
   tags: [cli-search, search-perf, implemented]
 - the sidecar scan stats only directory entries whose file name marks a session file (rollout-*.jsonl, chat_history.jsonl, *.jsonl), not every file inside a Grok, vktr, Codex, Claude, Cursor or Factory session directory @search-perf @implemented
+- label: tracequest search and tracequest handoff build a result's snippets for all of its matched words in one pass over the session: each line's command, file-path and error fields are found, decoded and lowercased once and then tested against every word, and the snippets (text, type, order, per-word limit, stop when the first word has its snippets) are exactly the ones the per-word scan of 29b56c6 gives, for claude- and grok-format sessions, whether the lines come from the file or from the in-process line cache, including words that only match after lowercasing a Kelvin sign or a dotted capital I, fields decoded from \u escapes, and overlapping field keys
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'one-pass snippets match per-word scans' test/bin/snippet-scan-one-pass.test.js
+  tags: [spec, cli-search, handoff, search-perf, implemented]
+- label: scanning one multi-megabyte session for the snippets of six words takes less than three times as long as scanning it for one word (the per-word scan of 29b56c6 took more than four times as long)
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'one-pass snippet scan cost' test/bin/snippet-scan-one-pass.test.js
+  tags: [spec, cli-search, search-perf, implemented]
 
 ## standup
 - label: tracequest standup help and CLI reference examples show prompt-agent configuration and --print-input auditing before LLM execution
