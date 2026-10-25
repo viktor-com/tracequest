@@ -14,6 +14,7 @@ import { OPENCODE_TERM_INDEX_PART_TYPES_SQL } from "./session-index-opencode.js"
 import { tokenize } from "./search-tokenizer.js";
 import { getSearchIndex } from "./search-index.js";
 import { isGrokFamily } from "./session-layout.js";
+import { nearCacheEnabled, nearCacheStamp, openNearCache } from "./near-cache.js";
 import { isDshScanLine, readDshText } from "../parse/parse-dsh.js";
 
 /** Hoisted scan patterns (global; String.matchAll resets lastIndex per call). */
@@ -592,11 +593,22 @@ function isProjectSession(session, project) {
 function readFilePrefix(filePath, maxBytes) {
   const fd = openSync(filePath, "r");
   try {
-    const buf = Buffer.allocUnsafe(Math.min(fstatSync(fd).size, maxBytes));
-    return buf.subarray(0, readSync(fd, buf, 0, buf.length, 0));
+    return readFdPrefix(fd, fstatSync(fd).size, maxBytes);
   } finally {
     closeSync(fd);
   }
+}
+
+function readFdPrefix(fd, size, maxBytes) {
+  const buf = Buffer.allocUnsafe(Math.min(size, maxBytes));
+  return buf.subarray(0, readSync(fd, buf, 0, buf.length, 0));
+}
+
+/** The JSONL file whose prefix is a session's searchable text, or null for sources read row by row (OpenCode, dsh). */
+function sessionTextFile(session) {
+  const source = session.source || "claude";
+  if (source === "opencode" || source === "dsh") return null;
+  return isGrokFamily(source) ? join(session.path, "chat_history.jsonl") : session.path;
 }
 
 /** Visit a session's searchable text as UTF-8 bytes: the file prefix for JSONL sources, one row/part otherwise. */
@@ -675,7 +687,7 @@ function caseVariants(word) {
  * of its score. The
  * final query word matches as a prefix, like its BM25 prefix expansion.
  */
-function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) {
+export function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) {
   const n = resolvedTerms.length;
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   if (!totalWeight) return () => 0;
@@ -696,13 +708,23 @@ function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) 
     }
   }
 
-  return (session) => {
-    let best = 0;
+  // What a scan keeps depends only on the text and on these needles and rules, so it is cached per session file.
+  const cache = nearCacheEnabled() ? openNearCache(JSON.stringify([
+    NEAR_GAP, NEAR_SCAN_BYTES, SEARCH_CALL_RE.source, verbatim || "",
+    needles.map(({ q, bytes, prefix }) => [q, bytes.toString("latin1"), prefix ? 1 : 0]),
+  ])) : null;
+
+  /**
+   * Scan text for the counted runs: `r` how many count, `q` the distinct
+   * sequences of query words (first appearance order) of counted runs, `s`
+   * whether the session searched for the query.
+   */
+  const scanSession = (forEachText) => {
     let runs = 0;
     let copies = 0;
     let searched = false;
-    try {
-      forEachSessionText(session, (buf, skip) => {
+    const seqs = new Map();
+    forEachText((buf, skip) => {
         const hits = [];
         for (const { q, bytes, prefix } of needles) {
           for (let i = buf.indexOf(bytes); i !== -1; i = buf.indexOf(bytes, i + 1)) {
@@ -717,10 +739,9 @@ function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) 
         const inRun = new Array(n).fill(false);
         let runStart = 0;
         let runEnd = -Infinity;
-        let runTerms = 0;
-        let runWeight = 0;
+        let runSeq = [];
         const closeRun = () => {
-          if (runTerms < 2) return;
+          if (runSeq.length < 2) return;
           const copy = (verbatim && wordOffsets.some((o) => runStart >= o && runStart - o + verbatim.length >= runEnd &&
             buf.toString("latin1", runStart - o, runStart - o + verbatim.length).toLowerCase() === verbatim)) ||
             (verbatimWords && ` ${buf.toString("latin1", runStart, runEnd).toLowerCase().replace(/[^a-z0-9]+/g, " ")} `.includes(verbatimWords));
@@ -729,7 +750,8 @@ function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) 
           }
           if (copy && copies++) return;
           runs++;
-          if (runWeight > best) best = runWeight;
+          const key = runSeq.join(",");
+          if (!seqs.has(key)) seqs.set(key, runSeq);
         };
         let skipAt = 0;
         for (const h of order) {
@@ -742,24 +764,59 @@ function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) 
             closeRun();
             inRun.fill(false);
             runStart = hits[h];
-            runTerms = 0;
-            runWeight = 0;
+            runSeq = [];
           }
           if (!inRun[q]) {
             inRun[q] = true;
-            runWeight += weights[q];
-            runTerms++;
+            runSeq.push(q);
           }
           runEnd = Math.max(runEnd, hits[h + 1]);
         }
         closeRun();
-      });
+    });
+    return { r: runs, s: searched ? 1 : 0, q: [...seqs.values()] };
+  };
+
+  // The best run's IDF-weighted share of the query (weights summed in the order the run met its words), times the
+  // square root of the runs that count, halved for a session that searched for the query.
+  const score = (found) => {
+    let best = 0;
+    for (const seq of found.q) {
+      let runWeight = 0;
+      for (const q of seq) runWeight += weights[q];
+      if (runWeight > best) best = runWeight;
+    }
+    return (best / totalWeight) * Math.sqrt(found.r) * (found.s ? SEARCHER_FACTOR : 1);
+  };
+
+  const scorer = (session) => {
+    try {
+      const filePath = cache ? sessionTextFile(session) : null;
+      if (!filePath) return score(scanSession((onText) => forEachSessionText(session, onText)));
+      if (!existsSync(filePath)) return 0;
+      const fd = openSync(filePath, "r");
+      try {
+        const st = fstatSync(fd, { bigint: true });
+        const stamp = nearCacheStamp(st);
+        let found = cache.get(filePath, stamp);
+        if (!found) {
+          const buf = readFdPrefix(fd, Number(st.size), NEAR_SCAN_BYTES);
+          const skip = session.source === "codex" ? codexInjectedRanges(buf) : null;
+          found = scanSession((onText) => onText(buf, skip));
+          cache.set(filePath, stamp, found);
+        }
+        return score(found);
+      } finally {
+        closeSync(fd);
+      }
     } catch (err) {
       warnScanQueryFailed("nearTermScorer", session.path || "unknown", err);
       return 0;
     }
-    return (best / totalWeight) * Math.sqrt(runs) * (searched ? SEARCHER_FACTOR : 1);
   };
+  /** Write what this query's scans found, for the next search with the same words. */
+  scorer.flush = () => cache?.flush();
+  return scorer;
 }
 
 /**
@@ -828,6 +885,7 @@ function rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSet
     const c = candidates[i];
     c.near = (pool?.has(i) ? near(sessionByPath.get(c.path)) : 0) * (1 + PROJECT_BOOST * c.inProject);
   }
+  near?.flush?.();
   candidates.sort((a, b) => b.near - a.near || b.inProject - a.inProject || b.score - a.score);
 }
 
