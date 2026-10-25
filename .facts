@@ -46,10 +46,10 @@
   tags: [spec, handoff, smoke, release, compatibility, implemented]
 - label: tracequest search and tracequest handoff keep what the near-words re-rank finds in each session file (how many runs of query words together count, the query words of each counted run in the order they appear, whether the session searched for the query) in a near/ folder of the cache directory, one file per set of looked-for words and byte patterns, each entry stamped with the session file's size, modification time and inode; a later search with the same words scores an unchanged session from that cache without reading the file, giving exactly (bit for bit) the score the uncached scan of 29b56c6 gives, also when the word weights differ, while a session file that changed is scanned again and scored as the uncached scan scores its new content; Claude, Codex (its injected lines still ignored) and Grok-format sessions are cached, OpenCode and dsh sessions are always scanned, and TRACEQUEST_NEAR_CACHE=0 turns the cache off
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'near-words cache scores' test/bin/near-cache.test.js
-  tags: [spec, cli-search, handoff, search-perf]
+  tags: [spec, cli-search, handoff, search-perf, implemented]
 - label: re-scoring six two-megabyte sessions for a repeated query from the near-words cache takes under a tenth of the time of scanning them
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'near-words cache is fast' test/bin/near-cache.test.js
-  tags: [spec, cli-search, search-perf]
+  tags: [spec, cli-search, search-perf, implemented]
 - label: a Codex session's function_call_output and custom_tool_call_output text is part of its search terms in both the Node indexer and the sidecar (the whole output up to 2000 chars, else its first and last 1000 chars), so tracequest search '"<phrase>"' finds a Codex session whose phrase occurs only in a tool output, and its first snippet contains the phrase
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'codex tool output phrase' test/bin/codex-tool-output-search.test.js
   tags: [spec, cli-search, codex, implemented]
@@ -83,13 +83,13 @@
   tags: [spec, cli-search, search-perf, implemented]
 - label: The combined search speed branches preserve the existing search and handoff ranking, exact result replay and cache invalidation behavior in the integration tests
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/tracequest-search-ranking.e2e.test.js test/bin/near-cache.test.js test/bin/search-result-cache.test.js
-  tags: [spec, search-speed-integration]
+  tags: [spec, search-speed-integration, implemented]
 - label: tracequest search and tracequest handoff without --filter remember their ranked results (with snippets) in search-results.json in the tracequest cache dir, keyed on the exact query, limit, format, sort and current repository plus a fingerprint of every discovered session (path, size, mtime, source, project), the size, mtime and inode of index.json and search.idx, the TRACEQUEST_* environment and the tracequest code files; an exact repeat with that whole key unchanged prints the remembered results without loading the index or reading session files, and its stdout and stderr are byte-identical to the run that computed them
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'result cache repeat' test/bin/search-result-cache.test.js
-  tags: [spec, cli-search, handoff, search-perf]
+  tags: [spec, cli-search, handoff, search-perf, implemented]
 - label: the search result cache only stores results from a run that left index.json and search.idx untouched, and a session whose file changed (size or mtime), a new or removed session, another query, limit, format, sort or repository, or a rewritten index misses the cache, so the next search prints what an uncached search prints; --filter searches, TRACEQUEST_VERBOSE=1 and TRACEQUEST_NO_RESULT_CACHE=1 never use it
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'result cache invalidation' test/bin/search-result-cache.test.js
-  tags: [spec, cli-search, handoff, search-perf]
+  tags: [spec, cli-search, handoff, search-perf, implemented]
 
 ## standup
 - label: tracequest standup help and CLI reference examples show prompt-agent configuration and --print-input auditing before LLM execution
