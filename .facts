@@ -304,10 +304,10 @@
 # search
 - label: next to search.idx the search index is also written as search.bin, a binary copy that a later process opens without parsing the whole index and from which it decodes only the posting lists its query looks up; an index opened from search.bin gives the same words, sessions, word counts, document lengths and iteration orders as the same index loaded from search.idx, before and after it is changed, so search and handoff rank exactly as before; a search.bin that is from another format version or no longer matches search.idx (rewritten, replaced or corrupted) is ignored, the index is loaded from search.idx and search.bin is rewritten
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'binary search index' test/bin/search-index-binary.test.js
-  tags: [spec, search-perf, cli-search]
+  tags: [spec, search-perf, cli-search, implemented]
 - label: opening a 3,000-session search index from search.bin and looking up a three-word query (with prefix expansion of the last word) takes under a tenth of the time of loading the same index from search.idx
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'search.bin opens fast' test/bin/search-index-binary.test.js
-  tags: [spec, search-perf, cli-search]
+  tags: [spec, search-perf, cli-search, implemented]
 - label: a process that opened the search index from search.bin and never changed it does not rewrite search.idx or search.bin when it flushes its deferred writes
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'unchanged index opened from search.bin' test/bin/search-index-binary.test.js
-  tags: [spec, search-perf, cli-search]
+  tags: [spec, search-perf, cli-search, implemented]
