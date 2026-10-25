@@ -14,6 +14,7 @@ serde_json = "1.0"
 rayon = "1.10"
 jwalk = "0.8"
 memmap2 = "0.9"
+memchr = "2"
 rusqlite = { version = "0.32", features = ["bundled"] }
 chrono = { version = "0.4", features = ["serde"] }
 regex = "1.10"

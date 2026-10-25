@@ -15,6 +15,7 @@ import { tokenize } from "./search-tokenizer.js";
 import { getSearchIndex } from "./search-index.js";
 import { isGrokFamily } from "./session-layout.js";
 import { isDshScanLine, readDshText } from "../parse/parse-dsh.js";
+import { sidecarNearScan } from "./near-sidecar.js";
 
 /** Hoisted scan patterns (global; String.matchAll resets lastIndex per call). */
 const RE_FILE_PATH = /"file_path":\s*"([^"]+)"/g;
@@ -599,6 +600,13 @@ function readFilePrefix(filePath, maxBytes) {
   }
 }
 
+/** The JSONL file holding a session's text, or null for sources stored otherwise (OpenCode rows, dsh). */
+function sessionTextFile(session) {
+  const source = session.source || "claude";
+  if (source === "opencode" || source === "dsh") return null;
+  return isGrokFamily(source) ? join(session.path, "chat_history.jsonl") : session.path;
+}
+
 /** Visit a session's searchable text as UTF-8 bytes: the file prefix for JSONL sources, one row/part otherwise. */
 function forEachSessionText(session, onText) {
   const source = session.source || "claude";
@@ -618,7 +626,7 @@ function forEachSessionText(session, onText) {
     for (const line of dshScanLines(session)) onText(Buffer.from(line));
     return;
   }
-  const filePath = isGrokFamily(source) ? join(session.path, "chat_history.jsonl") : session.path;
+  const filePath = sessionTextFile(session);
   if (!existsSync(filePath)) return;
   const buf = readFilePrefix(filePath, NEAR_SCAN_BYTES);
   onText(buf, source === "codex" ? codexInjectedRanges(buf) : null);
@@ -674,11 +682,13 @@ function caseVariants(word) {
  * `search`/`handoff` command ran this search itself and keeps SEARCHER_FACTOR
  * of its score. The
  * final query word matches as a prefix, like its BM25 prefix expansion.
+ * Returns `{ score(session), scoreMany(sessions) }`; scoreMany has the
+ * sidecar scan session files in parallel and gives the same scores.
  */
-function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) {
+export function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) {
   const n = resolvedTerms.length;
   const totalWeight = weights.reduce((a, b) => a + b, 0);
-  if (!totalWeight) return () => 0;
+  if (!totalWeight) return { score: () => 0, scoreMany: (sessions) => sessions.map(() => 0) };
   // The query's words in order with case and punctuation ignored ("Codex Stop-button"): a run containing them is a copy too.
   const verbatimWords = verbatim ? ` ${verbatim.replace(/[^a-z0-9]+/g, " ").trim()} ` : null;
   // Where each word of the verbatim query starts: a run (of searched words only) is a copy when
@@ -696,7 +706,9 @@ function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) 
     }
   }
 
-  return (session) => {
+  const scoreOf = (best, runs, searched) => (best / totalWeight) * Math.sqrt(runs) * (searched ? SEARCHER_FACTOR : 1);
+
+  const score = (session) => {
     let best = 0;
     let runs = 0;
     let copies = 0;
@@ -758,8 +770,35 @@ function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) 
       warnScanQueryFailed("nearTermScorer", session.path || "unknown", err);
       return 0;
     }
-    return (best / totalWeight) * Math.sqrt(runs) * (searched ? SEARCHER_FACTOR : 1);
+    return scoreOf(best, runs, searched);
   };
+
+  /**
+   * Scores of `sessions`, in order (search-perf facts): the sidecar scans the
+   * session files in parallel; sessions it does not cover (sidecar missing or
+   * failed, unreadable file, OpenCode/dsh text) are scored by the JS scan.
+   */
+  const scoreMany = (sessions) => {
+    const files = [];
+    const fileAt = [];
+    sessions.forEach((session, k) => {
+      let file = null;
+      try {
+        file = session ? sessionTextFile(session) : null;
+      } catch {
+        // No usable path: the JS scan reports it.
+      }
+      if (!file) return;
+      files.push([file, session.source === "codex"]);
+      fileAt.push(k);
+    });
+    const scanned = sidecarNearScan({ needles, weights, verbatim: verbatim || null, verbatimWords, gap: NEAR_GAP, maxBytes: NEAR_SCAN_BYTES }, files);
+    const scores = new Array(sessions.length);
+    if (scanned) fileAt.forEach((k, j) => { if (scanned[j]) scores[k] = scoreOf(scanned[j][0], scanned[j][1], scanned[j][2]); });
+    return sessions.map((session, k) => scores[k] ?? score(session));
+  };
+
+  return { score, scoreMany };
 }
 
 /**
@@ -823,10 +862,12 @@ function rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSet
     c.inProject = repoNames.some((name) => isProjectSession(s, name)) ||
       repoTerms.some((terms) => terms.every((t) => (postings.get(t)?.get(c.path) || 0) >= REPO_MENTIONS)) ? 1 : 0;
   }
-  const pool = near ? rerankPool(candidates, resolvedTerms, weights, distinct, postings) : null;
+  const pool = near ? [...rerankPool(candidates, resolvedTerms, weights, distinct, postings)] : [];
+  const poolScores = near ? near.scoreMany(pool.map((i) => sessionByPath.get(candidates[i].path))) : [];
+  const nearOf = new Map(pool.map((i, k) => [i, poolScores[k]]));
   for (let i = 0; i < candidates.length; i++) {
     const c = candidates[i];
-    c.near = (pool?.has(i) ? near(sessionByPath.get(c.path)) : 0) * (1 + PROJECT_BOOST * c.inProject);
+    c.near = (nearOf.get(i) ?? 0) * (1 + PROJECT_BOOST * c.inProject);
   }
   candidates.sort((a, b) => b.near - a.near || b.inProject - a.inProject || b.score - a.score);
 }

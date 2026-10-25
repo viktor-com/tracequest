@@ -300,3 +300,11 @@
 - Brand asset URLs return intact image bytes in regular and read-only hub mode, and packaged installations include every runtime brand asset @branding-integration @implemented
 - Every README product screenshot and UI example is rendered from the current TraceQuest interface with the canonical TQ mark and wordmark; screenshot refresh checks the displayed brand before capture @spec @branding-media @implemented
 - Documentation recordings use the current identity, and historical regression images show the relevant evidence without obsolete app branding @spec @branding-media @implemented
+
+# search
+- label: when the sidecar is available, the near-words re-rank of tracequest search and tracequest handoff reads the candidate pool's session files (first 8 MB each) in one parallel sidecar near scan instead of in Node, and every session's near-words score is bit-identical to the JS scan's, including case variants, camelCase and prefix word boundaries, verbatim query copies, recorded searches, Codex injected lines, latin1 bytes and the 8 MB cap; OpenCode and dsh sessions, files the sidecar cannot read, and runs without the sidecar are scored by the JS scan with the same result
+  command: npm run build:sidecar >/dev/null 2>&1 && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/near-sidecar-scan.test.js
+  tags: [spec, cli-search, search-perf, search-ranking, implemented]
+- label: the sidecar near subcommand reads one JSON request on stdin (needles as hex bytes, weights as f64 bit patterns, the verbatim query as UTF-16 code units) and prints per file [best run weight, counted runs, ran a search for the query] or null when the file cannot be read
+  command: cd sidecar && cargo test near_
+  tags: [spec, search-perf, sidecar, implemented]
