@@ -1314,8 +1314,7 @@ function* buildIndexSteps(sessions, opts = {}) {
       // current now, not the object captured before the sidecar ran.
       if (_indexFileCache !== null && _indexFileCache !== cache) cache = _indexFileCache;
       // Merge sidecar entries into metadata cache and SearchIndex (facts 8rj, wyt).
-      // The sidecar emits termFreqs (plain object) for freshly parsed/search-stale
-      // entries; convert to Map and upsert via the same path as JS indexers.
+      // The SearchIndex terms of the entries it re-read come from the JS indexer (fact ln2).
       const reread = [];
       for (const [path, data] of sidecarIndex) {
         if (!Object.hasOwn(cache, path)) _indexCachePathCount++;

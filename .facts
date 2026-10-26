@@ -350,7 +350,7 @@
   tags: [spec, search-perf, sidecar, implemented]
 - label: when the sidecar indexes sessions it still writes their index.json metadata, but the search terms (words and counts) that search.idx stores for each session it re-read, in a full or a delta run, are the ones the JS indexer stores for that session without the sidecar (for example the text of a long Claude tool result, which the sidecar's own terms leave out), so search and handoff find and rank the same sessions with and without the sidecar
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'sidecar index search terms' test/bin/sidecar-index-terms.test.js
-  tags: [spec, cli-search, handoff, search-ranking, sidecar, sidecar-parity]
+  tags: [spec, cli-search, handoff, search-ranking, sidecar, sidecar-parity, implemented]
 - label: a search.idx of format 4, whose sessions can hold the sidecar's own search terms, is not used: the next search or handoff rebuilds it as format 5 with the JS indexer's terms, with or without the sidecar
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'search index format' test/bin/sidecar-index-terms.test.js
-  tags: [spec, cli-search, handoff, search-ranking, sidecar, sidecar-parity]
+  tags: [spec, cli-search, handoff, search-ranking, sidecar, sidecar-parity, implemented]
