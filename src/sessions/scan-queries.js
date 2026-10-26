@@ -1,11 +1,11 @@
-import { existsSync } from "node:fs";
+import { closeSync, existsSync, fstatSync, openSync, readSync } from "node:fs";
 import { join } from "node:path";
 import { isClaudeProgressFillerLine, isCursorCloudMetaLine } from "../parse/claude-jsonl-index.js";
 import { isCodexIndexSkippableLine } from "../parse/codex-event-msg.js";
 import { isGrokChatScanSkippableLine } from "../parse/grok-chat-index.js";
 import { isFactoryScanSkippableLine } from "../parse/parse-factory.js";
 import { forEachJsonlLine, forEachJsonlLineFromFile } from "../parse/jsonl-read.js";
-import { includesLower, indexOfLower, parseEscapedJsonString, safeSlice } from "../parse/parse-utils.js";
+import { indexOfLower, parseEscapedJsonString, safeSlice } from "../parse/parse-utils.js";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
 import { sessionHash } from "./session-hash.js";
 import { sessionMtimeMs } from "./session-list.js";
@@ -14,7 +14,9 @@ import { OPENCODE_TERM_INDEX_PART_TYPES_SQL } from "./session-index-opencode.js"
 import { tokenize } from "./search-tokenizer.js";
 import { getSearchIndex } from "./search-index.js";
 import { isGrokFamily } from "./session-layout.js";
+import { nearCacheEnabled, nearCacheStamp, openNearCache } from "./near-cache.js";
 import { isDshScanLine, readDshText } from "../parse/parse-dsh.js";
+import { sidecarNearScan } from "./near-sidecar.js";
 
 /** Hoisted scan patterns (global; String.matchAll resets lastIndex per call). */
 const RE_FILE_PATH = /"file_path":\s*"([^"]+)"/g;
@@ -178,6 +180,11 @@ function fuzzyExpand(queryTerm, si) {
  * @returns {string[]}
  */
 export function prefixExpand(prefix, postings) {
+  // An index opened from search.bin finds the same terms, in the same order,
+  // by binary search instead of decoding the whole vocabulary (fact ohy).
+  if (typeof postings.termsWithPrefix === "function") {
+    return postings.termsWithPrefix(prefix).filter((term) => term !== prefix);
+  }
   const results = [];
   for (const term of postings.keys()) {
     if (term !== prefix && term.startsWith(prefix)) results.push(term);
@@ -323,8 +330,8 @@ function bm25Score(tf, docLen, avgDocLen, N, df) {
  * @param {Map<string,object>} index - metadata index (firstPrompt, model, etc.)
  * @param {string} query
  * @param {number} [maxResults=50]
- * @param {{ sort?: "recent"|"date", phraseScanCap?: number, snippets?: boolean }} [options]
- * @returns {object[]} result rows sorted by BM25 score descending, or by mtime descending when options.sort is recent/date
+ * @param {{ sort?: "recent"|"date", phraseScanCap?: number, snippets?: boolean, rerank?: boolean, currentProject?: string|string[] }} [options]
+ * @returns {object[]} result rows sorted by BM25 score descending (re-ranked by rerankCandidates when options.rerank), or by mtime descending when options.sort is recent/date
  */
 export function searchSessions(sessions, index, query, maxResults = 50, options = {}) {
   if (!query || !query.trim()) return [];
@@ -438,6 +445,11 @@ export function searchSessions(sessions, index, query, maxResults = 50, options 
   candidates.sort((a, b) => b.score - a.score);
   if (options?.sort === "recent" || options?.sort === "date") {
     candidates.sort((a, b) => sessionMtimeMs(sessionByPath.get(b.path)) - sessionMtimeMs(sessionByPath.get(a.path)));
+  } else if (options?.rerank && !phrases.length) {
+    // Quoted phrases keep BM25 order: their bounded verification scan must reach the exact matches.
+    // An unquoted query copied word for word is usually a recorded search for it, not the work itself.
+    const verbatim = query.toLowerCase().trim().replace(/\s+/g, " ");
+    rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSets, postings, N, finalToken, verbatim, options.currentProject);
   }
 
   if (!candidates.length) return [];
@@ -543,6 +555,378 @@ export function searchSessions(sessions, index, query, maxResults = 50, options 
   return results;
 }
 
+// ---------------------------------------------------------------------------
+// CLI relevance re-rank: query words together, current project (search-ranking facts)
+// ---------------------------------------------------------------------------
+
+/** Top BM25 candidates scanned for query words that sit together. */
+const RERANK_BM25_POOL = 150;
+/** Further candidates scanned: those where every distinctive query word is most frequent. */
+const RERANK_ALL_WORDS_POOL = 50;
+/** Sessions of the current repository scanned beyond the BM25 pool, most word-frequent first. */
+const RERANK_REPO_POOL = 200;
+/** A session naming the current repository at least this often belongs to it (e.g. one run in a worktree folder). */
+const REPO_MENTIONS = 20;
+/** Two query words are together when at most this many characters separate them. */
+const NEAR_GAP = 24;
+/** Bytes of each session file scanned for query words together. */
+const NEAR_SCAN_BYTES = 8 * 1024 * 1024;
+/** Words in more than this share of sessions are not looked for together, beyond the query's three rarest. */
+const NEAR_COMMON = 0.5;
+/** Near-words score raise for sessions of the current repository. */
+const PROJECT_BOOST = 0.25;
+/** Near-words score kept by a session that ran a search for the query itself: it was looking for the work. */
+const SEARCHER_FACTOR = 0.5;
+/** A copy of the query right after a `search` or `handoff` command word (only quotes or spaces between) is a recorded search for it. */
+const SEARCH_CALL_RE = /(?:^|[^a-z0-9_-])(?:search|handoff)[\s\\"'`]+$/;
+
+function projectKey(name) {
+  return String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Whether a session belongs to the project named `project`. Claude stores the
+ * cwd as a dash-joined folder ("-home-me-code-tracequest"), other sources the
+ * cwd basename ("tracequest").
+ */
+function isProjectSession(session, project) {
+  const key = projectKey(project);
+  if (!key) return false;
+  const p = projectKey(session.project);
+  return p === key || p.endsWith(`-${key}`);
+}
+
+function readFilePrefix(filePath, maxBytes) {
+  const fd = openSync(filePath, "r");
+  try {
+    return readFdPrefix(fd, fstatSync(fd).size, maxBytes);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function readFdPrefix(fd, size, maxBytes) {
+  const buf = Buffer.allocUnsafe(Math.min(size, maxBytes));
+  return buf.subarray(0, readSync(fd, buf, 0, buf.length, 0));
+}
+
+/** The JSONL file whose prefix is a session's searchable text, or null for sources read row by row (OpenCode, dsh). */
+function sessionTextFile(session) {
+  const source = session.source || "claude";
+  if (source === "opencode" || source === "dsh") return null;
+  return isGrokFamily(source) ? join(session.path, "chat_history.jsonl") : session.path;
+}
+
+/** Visit a session's searchable text as UTF-8 bytes: the file prefix for JSONL sources, one row/part otherwise. */
+function forEachSessionText(session, onText) {
+  const source = session.source || "claude";
+  if (source === "opencode") {
+    const sessionId = openCodeSessionFileId(session);
+    if (!sessionId) return;
+    withOpenCodeDb((db) => {
+      const rows = db.prepare(`
+        SELECT ${OPENCODE_PART_TEXT_BODY_SQL} AS body FROM part p JOIN message m ON p.message_id = m.id
+        WHERE m.session_id = ? AND json_extract(p.data, '$.type') IN (${OPENCODE_TERM_INDEX_PART_TYPES_SQL})
+      `).all(sessionId);
+      for (const { body } of rows) onText(Buffer.from(String(body || "")));
+    });
+    return;
+  }
+  if (source === "dsh") {
+    for (const line of dshScanLines(session)) onText(Buffer.from(line));
+    return;
+  }
+  const filePath = sessionTextFile(session);
+  if (!existsSync(filePath)) return;
+  const buf = readFilePrefix(filePath, NEAR_SCAN_BYTES);
+  onText(buf, source === "codex" ? codexInjectedRanges(buf) : null);
+}
+
+/**
+ * Byte ranges of the lines Codex writes itself rather than the person or the
+ * work: session metadata and turn context (base instructions), developer
+ * messages, and the injected first user context ("# AGENTS.md instructions",
+ * XML-wrapped blocks; see isCodexDisplayableUserText). Every Codex session
+ * carries them, so query words there say nothing about the session.
+ */
+function codexInjectedRanges(buf) {
+  const ranges = [];
+  for (let start = 0; start < buf.length;) {
+    let end = buf.indexOf(10, start);
+    if (end === -1) end = buf.length;
+    const head = buf.toString("latin1", start, Math.min(end, start + 400));
+    if (head.includes('"type":"session_meta"') || head.includes('"type":"turn_context"') ||
+      head.includes('"role":"developer"') ||
+      (head.includes('"role":"user"') && /"text":"(?:# AGENTS\.md instructions|<)/.test(head))) {
+      ranges.push(start, end);
+    }
+    start = end + 1;
+  }
+  return ranges;
+}
+
+const isAlnumCode = (c) => (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57);
+const isUpperCode = (c) => c >= 65 && c <= 90;
+
+/** Token boundary before byte i, matching the search tokenizer (non-alphanumeric or a camelCase lower→upper step). */
+function isTokenBoundary(buf, i) {
+  if (i <= 0 || i >= buf.length) return true;
+  const a = buf[i - 1];
+  const b = buf[i];
+  if (!isAlnumCode(a) || !isAlnumCode(b)) return true;
+  return isUpperCode(b) && !isUpperCode(a);
+}
+
+/** Byte patterns of a lowercase ASCII token as it appears in text: word, Word, WORD. */
+function caseVariants(word) {
+  return [...new Set([word, word[0].toUpperCase() + word.slice(1), word.toUpperCase()])].map((v) => Buffer.from(v));
+}
+
+/**
+ * Build a scorer for query words together in a session's text. A run is a
+ * stretch of query-word hits each within NEAR_GAP characters of the previous
+ * one; it counts when it holds at least two different query words. The score
+ * is the largest IDF-weighted share of the query found in one run, times the
+ * square root of how many runs count. Runs that copy the query (`verbatim`)
+ * count once per session; a session where a copy is the argument of a
+ * `search`/`handoff` command ran this search itself and keeps SEARCHER_FACTOR
+ * of its score. The
+ * final query word matches as a prefix, like its BM25 prefix expansion.
+ * Returns a callable scorer with `score(session)`, `scoreMany(sessions)` and `flush()`; scoreMany has the
+ * sidecar scan session files in parallel and gives the same scores.
+ */
+export function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) {
+  const n = resolvedTerms.length;
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  if (!totalWeight) return { score: () => 0, scoreMany: (sessions) => sessions.map(() => 0) };
+  // The query's words in order with case and punctuation ignored ("Codex Stop-button"): a run containing them is a copy too.
+  const verbatimWords = verbatim ? ` ${verbatim.replace(/[^a-z0-9]+/g, " ").trim()} ` : null;
+  // Where each word of the verbatim query starts: a run (of searched words only) is a copy when
+  // the verbatim text starts that far before it and covers it.
+  const wordOffsets = [];
+  if (verbatim) for (let i = 0; i < verbatim.length; i++) if (i === 0 || verbatim[i - 1] === " ") wordOffsets.push(i);
+  const needles = [];
+  for (const q of distinct) {
+    const { queryToken, matches } = resolvedTerms[q];
+    const prefix = queryToken === finalToken;
+    for (const bytes of caseVariants(queryToken)) needles.push({ q, bytes, prefix });
+    for (const { term } of matches) {
+      if (term === queryToken || (prefix && term.startsWith(queryToken))) continue;
+      for (const bytes of caseVariants(term)) needles.push({ q, bytes, prefix: false });
+    }
+  }
+
+  // What a scan keeps depends only on the text and on these needles and rules, so it is cached per session file.
+  const cache = nearCacheEnabled() ? openNearCache(JSON.stringify([
+    NEAR_GAP, NEAR_SCAN_BYTES, SEARCH_CALL_RE.source, verbatim || "",
+    needles.map(({ q, bytes, prefix }) => [q, bytes.toString("latin1"), prefix ? 1 : 0]),
+  ])) : null;
+
+  /**
+   * Scan text for the counted runs: `r` how many count, `q` the distinct
+   * sequences of query words (first appearance order) of counted runs, `s`
+   * whether the session searched for the query.
+   */
+  const scanSession = (forEachText) => {
+    let runs = 0;
+    let copies = 0;
+    let searched = false;
+    const seqs = new Map();
+    forEachText((buf, skip) => {
+        const hits = [];
+        for (const { q, bytes, prefix } of needles) {
+          for (let i = buf.indexOf(bytes); i !== -1; i = buf.indexOf(bytes, i + 1)) {
+            const end = i + bytes.length;
+            if (!isTokenBoundary(buf, i)) continue;
+            if (!prefix && !isTokenBoundary(buf, end)) continue;
+            hits.push(i, end, q);
+          }
+        }
+        if (hits.length < 6) return;
+        const order = Array.from({ length: hits.length / 3 }, (_, k) => k * 3).sort((a, b) => hits[a] - hits[b]);
+        const inRun = new Array(n).fill(false);
+        let runStart = 0;
+        let runEnd = -Infinity;
+        let runSeq = [];
+        const closeRun = () => {
+          if (runSeq.length < 2) return;
+          const copy = (verbatim && wordOffsets.some((o) => runStart >= o && runStart - o + verbatim.length >= runEnd &&
+            buf.toString("latin1", runStart - o, runStart - o + verbatim.length).toLowerCase() === verbatim)) ||
+            (verbatimWords && ` ${buf.toString("latin1", runStart, runEnd).toLowerCase().replace(/[^a-z0-9]+/g, " ")} `.includes(verbatimWords));
+          if (copy && !searched) {
+            searched = SEARCH_CALL_RE.test(buf.toString("latin1", Math.max(0, runStart - 24), runStart).toLowerCase());
+          }
+          if (copy && copies++) return;
+          runs++;
+          const key = runSeq.join(",");
+          if (!seqs.has(key)) seqs.set(key, runSeq);
+        };
+        let skipAt = 0;
+        for (const h of order) {
+          if (skip) {
+            while (skipAt < skip.length && skip[skipAt + 1] <= hits[h]) skipAt += 2;
+            if (skipAt < skip.length && skip[skipAt] <= hits[h]) continue;
+          }
+          const q = hits[h + 2];
+          if (hits[h] - runEnd > NEAR_GAP) {
+            closeRun();
+            inRun.fill(false);
+            runStart = hits[h];
+            runSeq = [];
+          }
+          if (!inRun[q]) {
+            inRun[q] = true;
+            runSeq.push(q);
+          }
+          runEnd = Math.max(runEnd, hits[h + 1]);
+        }
+        closeRun();
+    });
+    return { r: runs, s: searched ? 1 : 0, q: [...seqs.values()] };
+  };
+
+  // The best run's IDF-weighted share of the query (weights summed in the order the run met its words), times the
+  // square root of the runs that count, halved for a session that searched for the query.
+  const score = (found) => {
+    let best = 0;
+    for (const seq of found.q) {
+      let runWeight = 0;
+      for (const q of seq) runWeight += weights[q];
+      if (runWeight > best) best = runWeight;
+    }
+    return (best / totalWeight) * Math.sqrt(found.r) * (found.s ? SEARCHER_FACTOR : 1);
+  };
+
+  const scorer = (session) => {
+    try {
+      const filePath = cache ? sessionTextFile(session) : null;
+      if (!filePath) return score(scanSession((onText) => forEachSessionText(session, onText)));
+      if (!existsSync(filePath)) return 0;
+      const fd = openSync(filePath, "r");
+      try {
+        const st = fstatSync(fd, { bigint: true });
+        const stamp = nearCacheStamp(st);
+        let found = cache.get(filePath, stamp);
+        if (!found) {
+          const buf = readFdPrefix(fd, Number(st.size), NEAR_SCAN_BYTES);
+          const skip = session.source === "codex" ? codexInjectedRanges(buf) : null;
+          found = scanSession((onText) => onText(buf, skip));
+          cache.set(filePath, stamp, found);
+        }
+        return score(found);
+      } finally {
+        closeSync(fd);
+      }
+    } catch (err) {
+      warnScanQueryFailed("nearTermScorer", session.path || "unknown", err);
+      return 0;
+    }
+  };
+
+  /**
+   * Scores of `sessions`, in order (search-perf facts): the sidecar scans the
+   * session files in parallel; sessions it does not cover (sidecar missing or
+   * failed, unreadable file, OpenCode/dsh text) are scored by the JS scan.
+   */
+  const scoreOf = (best, runs, searched) => (best / totalWeight) * Math.sqrt(runs) * (searched ? SEARCHER_FACTOR : 1);
+  const scoreMany = (sessions) => {
+    const files = [];
+    const fileAt = [];
+    sessions.forEach((session, k) => {
+      let file = null;
+      try {
+        file = session ? sessionTextFile(session) : null;
+      } catch {
+        // No usable path: the JS scan reports it.
+      }
+      if (!file) return;
+      files.push([file, session.source === "codex"]);
+      fileAt.push(k);
+    });
+    const scanned = sidecarNearScan({ needles, weights, verbatim: verbatim || null, verbatimWords, gap: NEAR_GAP, maxBytes: NEAR_SCAN_BYTES }, files);
+    const scores = new Array(sessions.length);
+    if (scanned) fileAt.forEach((k, j) => { if (scanned[j]) scores[k] = scoreOf(scanned[j][0], scanned[j][1], scanned[j][2]); });
+    return sessions.map((session, k) => scores[k] ?? scorer(session));
+  };
+
+  scorer.score = scorer;
+  scorer.scoreMany = scoreMany;
+  scorer.flush = () => cache?.flush();
+  return scorer;
+}
+
+/**
+ * Candidate indices the near-words scorer scans: the top BM25 hits, plus the
+ * sessions whose least frequent distinctive query word is still most frequent.
+ * BM25 penalises long sessions, which on a large hub buries the long session
+ * that is about the query below hundreds of short incidental matches.
+ */
+function rerankPool(candidates, resolvedTerms, weights, distinct, postings) {
+  // Ranked by the weakest distinctive word. The current repository's sessions are scanned too, most
+  // word-frequent first up to RERANK_REPO_POOL: index counts alone pick them unreliably on a large hub.
+  const pool = new Set();
+  for (let i = 0; i < Math.min(RERANK_BM25_POOL, candidates.length); i++) pool.add(i);
+  if (candidates.length <= pool.size) return pool;
+  const tfs = distinct.map((q) => {
+    const tf = new Map();
+    for (const { term, weight } of resolvedTerms[q].matches) {
+      const posting = postings.get(term);
+      if (posting) for (const [path, n] of posting) tf.set(path, (tf.get(path) || 0) + n * weight);
+    }
+    return tf;
+  });
+  const weakest = [];
+  const repo = [];
+  for (let i = RERANK_BM25_POOL; i < candidates.length; i++) {
+    let min = Infinity;
+    let sum = 0;
+    for (let k = 0; k < distinct.length; k++) {
+      const tf = tfs[k].get(candidates[i].path) || 0;
+      min = Math.min(min, (weights[distinct[k]] * tf) / (tf + BM25_K1));
+      sum += weights[distinct[k]] * Math.log1p(tf);
+    }
+    weakest.push([min, i]);
+    if (candidates[i].inProject) repo.push([sum, i]);
+  }
+  weakest.sort((a, b) => b[0] - a[0]);
+  for (const [, i] of weakest.slice(0, RERANK_ALL_WORDS_POOL)) pool.add(i);
+  repo.sort((a, b) => b[0] - a[0]);
+  for (const [, i] of repo.slice(0, RERANK_REPO_POOL)) pool.add(i);
+  return pool;
+}
+
+/**
+ * Re-rank BM25-sorted candidates in place by the near-words score, raised by
+ * PROJECT_BOOST for sessions of the current repository (named after it, or
+ * naming it REPO_MENTIONS times); then those sessions first; BM25 order
+ * breaks ties.
+ */
+function rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSets, postings, N, finalToken, verbatim, currentProject) {
+  const weights = termMatchSets.map((set) => Math.log((N - set.size + 0.5) / (set.size + 0.5) + 1));
+  // Common words ("the", "with") barely matter, and searching them dominates the scan cost.
+  const rarest = [...weights.keys()].sort((a, b) => weights[b] - weights[a]).slice(0, 3);
+  const distinct = [...weights.keys()].filter((q) => termMatchSets[q].size <= N * NEAR_COMMON || rarest.includes(q));
+  const near = resolvedTerms.length > 1 ? nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) : null;
+  // The current repository may go by several names (its origin remote, its folder).
+  const repoNames = [currentProject].flat().filter(Boolean);
+  if (!near && !repoNames.length) return;
+  const repoTerms = repoNames.map((name) => tokenize(name)).filter((terms) => terms.length);
+  for (const c of candidates) {
+    const s = sessionByPath.get(c.path);
+    c.inProject = repoNames.some((name) => isProjectSession(s, name)) ||
+      repoTerms.some((terms) => terms.every((t) => (postings.get(t)?.get(c.path) || 0) >= REPO_MENTIONS)) ? 1 : 0;
+  }
+  const pool = near ? [...rerankPool(candidates, resolvedTerms, weights, distinct, postings)] : [];
+  const poolScores = near ? near.scoreMany(pool.map((i) => sessionByPath.get(candidates[i].path))) : [];
+  const nearOf = new Map(pool.map((i, k) => [i, poolScores[k]]));
+  for (let i = 0; i < candidates.length; i++) {
+    const c = candidates[i];
+    c.near = (nearOf.get(i) ?? 0) * (1 + PROJECT_BOOST * c.inProject);
+  }
+  near?.flush?.();
+  candidates.sort((a, b) => b.near - a.near || b.inProject - a.inProject || b.score - a.score);
+}
+
 /** Slice [start, end); collapse newlines only when the slice contains any. */
 function formatSnippetSlice(text, start, end) {
   const nl = text.indexOf("\n", start);
@@ -640,8 +1024,11 @@ function scanSkipLineForSource(source) {
   return isClaudeProgressFillerLine;
 }
 
-function createJsonlQueryScanState() {
+function createJsonlQueryScanState(query) {
   return {
+    textPattern: queryTextPattern(query),
+    // Lowercasing turns U+212A into "k" and U+0130 into "i" + U+0307: only such queries gain matches.
+    lowerAddsMatches: /[ik]/.test(query),
     snippets: [],
     seenCmds: new Set(),
     seenFiles: new Set(),
@@ -652,22 +1039,19 @@ function createJsonlQueryScanState() {
 
 /** Shared per-line scan step for in-memory and file-backed JSONL query walks. */
 function accumulateJsonlLineForQuery(line, query, max, filePathPattern, state) {
-  collectStructuredSnippetsFromLine(
-    line,
-    query,
-    state.snippets,
-    max,
-    state.seenCmds,
-    state.seenFiles,
-    filePathPattern,
-  );
+  return accumulateLineFieldsForQuery(createLineFields(line, filePathPattern), query, max, state);
+}
+
+/** One query's step over a line whose fields are shared with the other queries of the scan. */
+function accumulateLineFieldsForQuery(fields, query, max, state) {
+  collectStructuredSnippetsFromFields(fields, query, state.snippets, max, state.seenCmds, state.seenFiles);
 
   if (
     state.snippets.length === 0 &&
     !state.firstTextLine &&
-    (line.includes(query) || includesLower(line, query))
+    (fields.line.includes(query) || lineIncludesLower(fields, query, state))
   ) {
-    state.firstTextLine = line;
+    state.firstTextLine = fields.line;
   }
 
   if (state.snippets.length >= max) {
@@ -687,7 +1071,7 @@ function finalizeJsonlQueryScan(state, query) {
 
 /** LRU cache hit: scan JSONL line-by-line (no full-text toLowerCase). */
 function scanInMemoryJsonlLines(lines, query, max, filePathPattern = RE_FILE_PATH, skipLine) {
-  const state = createJsonlQueryScanState();
+  const state = createJsonlQueryScanState(query);
 
   forEachScanJsonlLine(lines, (line) => {
     if (skipLine?.(line)) return true;
@@ -698,7 +1082,7 @@ function scanInMemoryJsonlLines(lines, query, max, filePathPattern = RE_FILE_PAT
 }
 
 function createJsonlQueryScanStates(queries) {
-  return new Map(queries.map((query) => [query, createJsonlQueryScanState()]));
+  return new Map(queries.map((query) => [query, createJsonlQueryScanState(query)]));
 }
 
 function finalizeJsonlQueryScanStates(states) {
@@ -709,11 +1093,13 @@ function finalizeJsonlQueryScanStates(states) {
   return snippetsByQuery;
 }
 
+/** All queries test one line: its fields are extracted, decoded and lowercased once, not once per query. */
 function accumulateJsonlLineForQueries(line, queries, max, filePathPattern, states) {
+  const fields = createLineFields(line, filePathPattern);
   for (const query of queries) {
     const state = states.get(query);
     if (!state || state.stoppedEarly) continue;
-    accumulateJsonlLineForQuery(line, query, max, filePathPattern, state);
+    accumulateLineFieldsForQuery(fields, query, max, state);
   }
   return !states.get(queries[0])?.stoppedEarly;
 }
@@ -729,48 +1115,152 @@ function scanInMemoryJsonlLinesForQueries(lines, queries, max, filePathPattern =
   return finalizeJsonlQueryScanStates(states);
 }
 
-function collectStructuredSnippetsFromLine(
-  line,
-  query,
-  snippets,
-  max,
-  seenCmds,
-  seenFiles,
-  filePathPattern = RE_FILE_PATH
-) {
-  if (line.includes('"command"')) {
-    for (const m of line.matchAll(RE_COMMAND)) {
-      if (snippets.length >= max) return;
-      const cmd = parseEscapedJsonString(m[1]);
-      if (cmd && includesLower(cmd, query)) {
-        const snippet = structuredFieldSnippet(cmd, query);
-        if (!seenCmds.has(snippet)) {
-          seenCmds.add(snippet);
-          snippets.push({ type: "command", snippet });
-        }
+/**
+ * A scanned line's command, file-path and error fields plus its lowercase text, each computed
+ * on first use and shared by every query that tests the line. Queries are lowercase, and for a
+ * non-empty haystack and query `includesLower(s, q)` equals `s.toLowerCase().includes(q)`.
+ */
+function createLineFields(line, filePathPattern = RE_FILE_PATH) {
+  return { line, filePathPattern, keys: -1, lower: null, lowersToAscii: null, commands: null, files: null, errors: null };
+}
+
+const KEY_COMMAND = 1;
+const KEY_FILE = 2;
+const KEY_ERROR = 4;
+const KEY_ALL = KEY_COMMAND | KEY_FILE | KEY_ERROR;
+const RE_FIELD_KEY = /"(?:command|file_path|path|error|Error|stderr)"/g;
+
+/**
+ * Which of `"command"`, `"file_path"`/`"path"` and `"error"`/`"Error"`/`"stderr"` occur in the
+ * line, found in one regex pass instead of six `includes` scans. Each search restarts one
+ * character after the previous match start, so overlapping keys are seen as `includes` sees them.
+ */
+function lineFieldKeys(fields) {
+  if (fields.keys === -1) {
+    const { line } = fields;
+    let keys = 0;
+    RE_FIELD_KEY.lastIndex = 0;
+    let m;
+    while (keys !== KEY_ALL && (m = RE_FIELD_KEY.exec(line)) !== null) {
+      const c = line.charCodeAt(m.index + 1);
+      keys |= c === 0x63 ? KEY_COMMAND : c === 0x66 || c === 0x70 ? KEY_FILE : KEY_ERROR; // c, f/p, e/E/s
+      RE_FIELD_KEY.lastIndex = m.index + 1;
+    }
+    fields.keys = keys;
+  }
+  return fields.keys;
+}
+
+function lineFieldsLower(fields) {
+  if (fields.lower === null) fields.lower = fields.line.toLowerCase();
+  return fields.lower;
+}
+
+const RE_PLAIN_QUERY = /^[a-z0-9 _-]+$/;
+/** U+0130 and U+212A are the only characters whose lowercase contains ASCII ("i̇", "k"). */
+const RE_LOWERS_TO_ASCII = /[\u0130\u212a]/;
+
+/** Case-insensitive regex for a plain [a-z0-9 _-] query (8x faster than lowercasing each line); else null. */
+function queryTextPattern(query) {
+  return RE_PLAIN_QUERY.test(query) ? new RegExp(query, "i") : null;
+}
+
+/**
+ * `line.toLowerCase().includes(query)`. A non-unicode /i regex matches a plain query exactly
+ * where ASCII case folding does; lowercasing adds matches only through U+0130 and U+212A.
+ */
+function lineIncludesLower(fields, query, { textPattern, lowerAddsMatches }) {
+  if (textPattern === null) return lineFieldsLower(fields).includes(query);
+  if (textPattern.test(fields.line)) return true;
+  if (!lowerAddsMatches) return false;
+  if (fields.lowersToAscii === null) fields.lowersToAscii = RE_LOWERS_TO_ASCII.test(fields.line);
+  return fields.lowersToAscii && lineFieldsLower(fields).includes(query);
+}
+
+const NO_FIELD_MATCHES = { raws: [], values: [], lowers: [] };
+const UNDECODED = Symbol("undecoded");
+
+/** Capture group 1 of every match; values/lowers are filled lazily by fieldValue/fieldIncludes. */
+function fieldMatches(line, pattern, decode) {
+  const raws = [];
+  for (const m of line.matchAll(pattern)) raws.push(m[1]);
+  if (!raws.length) return NO_FIELD_MATCHES;
+  return { raws, decode, values: new Array(raws.length).fill(UNDECODED), lowers: new Array(raws.length).fill(null) };
+}
+
+function lineCommands(fields) {
+  if (fields.commands === null) {
+    fields.commands = lineFieldKeys(fields) & KEY_COMMAND
+      ? fieldMatches(fields.line, RE_COMMAND, true)
+      : NO_FIELD_MATCHES;
+  }
+  return fields.commands;
+}
+
+function lineFiles(fields) {
+  if (fields.files === null) {
+    fields.files = lineFieldKeys(fields) & KEY_FILE
+      ? fieldMatches(fields.line, fields.filePathPattern, false)
+      : NO_FIELD_MATCHES;
+  }
+  return fields.files;
+}
+
+function lineErrors(fields) {
+  if (fields.errors === null) {
+    fields.errors = lineFieldKeys(fields) & KEY_ERROR
+      ? fieldMatches(fields.line, RE_ERROR_FIELD, true)
+      : NO_FIELD_MATCHES;
+  }
+  return fields.errors;
+}
+
+/** JSON-decoded (commands, errors) or raw (file paths) field value, decoded at most once. */
+function fieldValue(matches, i) {
+  if (matches.values[i] === UNDECODED) {
+    matches.values[i] = matches.decode ? parseEscapedJsonString(matches.raws[i]) : matches.raws[i];
+  }
+  return matches.values[i];
+}
+
+/** Whether a non-empty field value contains the lowercase query, ignoring case. */
+function fieldIncludes(matches, i, query) {
+  if (matches.lowers[i] === null) matches.lowers[i] = fieldValue(matches, i).toLowerCase();
+  return matches.lowers[i].includes(query);
+}
+
+function collectStructuredSnippetsFromFields(fields, query, snippets, max, seenCmds, seenFiles) {
+  const commands = lineCommands(fields);
+  for (let i = 0; i < commands.raws.length; i++) {
+    if (snippets.length >= max) return;
+    const cmd = fieldValue(commands, i);
+    if (cmd && fieldIncludes(commands, i, query)) {
+      const snippet = structuredFieldSnippet(cmd, query);
+      if (!seenCmds.has(snippet)) {
+        seenCmds.add(snippet);
+        snippets.push({ type: "command", snippet });
       }
     }
   }
 
-  if (snippets.length < max && (line.includes('"file_path"') || line.includes('"path"'))) {
-    for (const m of line.matchAll(filePathPattern)) {
+  if (snippets.length < max) {
+    const files = lineFiles(fields);
+    for (let i = 0; i < files.raws.length; i++) {
       if (snippets.length >= max) return;
-      const fp = m[1];
-      if (includesLower(fp, query) && !seenFiles.has(fp)) {
+      const fp = files.raws[i];
+      if (fieldIncludes(files, i, query) && !seenFiles.has(fp)) {
         seenFiles.add(fp);
         snippets.push({ type: "file", snippet: fp });
       }
     }
   }
 
-  if (
-    snippets.length < max &&
-    (line.includes('"error"') || line.includes('"Error"') || line.includes('"stderr"'))
-  ) {
-    for (const m of line.matchAll(RE_ERROR_FIELD)) {
+  if (snippets.length < max) {
+    const errors = lineErrors(fields);
+    for (let i = 0; i < errors.raws.length; i++) {
       if (snippets.length >= max) return;
-      const err = parseEscapedJsonString(m[1]);
-      if (err && includesLower(err, query)) {
+      const err = fieldValue(errors, i);
+      if (err && fieldIncludes(errors, i, query)) {
         const snippet = structuredFieldSnippet(err, query);
         snippets.push({ type: "error", snippet });
       }
@@ -837,7 +1327,7 @@ export function scanJsonlFileForQuery(
   filePathPattern = RE_FILE_PATH,
   skipLine,
 ) {
-  const state = createJsonlQueryScanState();
+  const state = createJsonlQueryScanState(query);
   const cachedLines = [];
 
   forEachJsonlLineFromFile(filePath, (text, start, end) => {
@@ -920,7 +1410,7 @@ export function scanSessionForQuery(session, query, max = 3) {
   }
 }
 
-function scanSessionForQueries(session, queries, max = 3) {
+export function scanSessionForQueries(session, queries, max = 3) {
   const source = session.source || "claude";
   if (queries.length === 0) return new Map();
   try {

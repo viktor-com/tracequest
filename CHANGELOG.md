@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Rank `tracequest search` and `tracequest handoff` results by natural phrases. Sessions where the query's words sit together come before sessions that only mention one common word somewhere, and run inside a git checkout, that repository's sessions come first among equal matches. `handoff "codex stop button"` now finds the Codex Stop button fix instead of five unrelated sessions.
+
 ## [0.5.4] - 2026-10-24
 
 ### Fixed

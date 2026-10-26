@@ -44,6 +44,12 @@
 - label: tracequest's synthetic standup/handoff smoke exercises legacy search --format handoff with --sort date, proving the documented date alias stays Markdown-only on stdout and does not invoke prompt-agent detection or probes
   command: TRACEQUEST_SKIP_LR_WATCH=1 npm run smoke:standup-handoff && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-name-pattern 'standup/handoff maintainer verification script is documented and wired|handoff command discoverability appears in help and README' test/bin/tracequest.e2e.test.js
   tags: [spec, handoff, smoke, release, compatibility, implemented]
+- label: tracequest search and tracequest handoff keep what the near-words re-rank finds in each session file (how many runs of query words together count, the query words of each counted run in the order they appear, whether the session searched for the query) in a near/ folder of the cache directory, one file per set of looked-for words and byte patterns, each entry stamped with the session file's size, modification time and inode; a later search with the same words scores an unchanged session from that cache without reading the file, giving exactly (bit for bit) the score the uncached scan of 29b56c6 gives, also when the word weights differ, while a session file that changed is scanned again and scored as the uncached scan scores its new content; Claude, Codex (its injected lines still ignored) and Grok-format sessions are cached, OpenCode and dsh sessions are always scanned, and TRACEQUEST_NEAR_CACHE=0 turns the cache off
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'near-words cache scores' test/bin/near-cache.test.js
+  tags: [spec, cli-search, handoff, search-perf, implemented]
+- label: re-scoring six two-megabyte sessions for a repeated query from the near-words cache takes under a tenth of the time of scanning them
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'near-words cache is fast' test/bin/near-cache.test.js
+  tags: [spec, cli-search, search-perf, implemented]
 - label: a Codex session's function_call_output and custom_tool_call_output text is part of its search terms in both the Node indexer and the sidecar (the whole output up to 2000 chars, else its first and last 1000 chars), so tracequest search '"<phrase>"' finds a Codex session whose phrase occurs only in a tool output, and its first snippet contains the phrase
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'codex tool output phrase' test/bin/codex-tool-output-search.test.js
   tags: [spec, cli-search, codex, implemented]
@@ -53,6 +59,37 @@
 - label: a search.idx written before Codex tool output was indexed (format 3) is discarded on load, so already-indexed Codex sessions are re-tokenized and a phrase from their tool output is found without deleting the cache
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'search.idx from before codex tool output' test/bin/codex-tool-output-search.test.js
   tags: [spec, cli-search, codex, implemented]
+- label: tracequest search and tracequest handoff rank a session where the query's words appear together (each at most 24 characters from the next) above sessions that only contain the same words far apart, even when the far-apart sessions score higher on word frequency alone, including a long session that word frequency ranks below more than 150 short matches; sessions that only repeat the whole query word for word, in any case or punctuation (a recorded search for it, "Codex Stop-button"), count such copies once, so they do not outrank the session where its words sit together in their own forms, and words that sit together only in Codex's own injected instructions do not count; a session that ran a search or handoff for the query itself keeps half its score; the query's three rarest words are always looked for together, even when one of them is in most sessions; a search with a quoted phrase keeps word-frequency order so its exact matches are never crowded out
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'words together outrank scattered words' test/bin/tracequest-search-ranking.e2e.test.js
+  tags: [spec, cli-search, handoff, search-ranking, implemented]
+- label: When run inside a git repository (named by its origin remote and by its folder, so a worktree in a differently named folder still counts), tracequest search and tracequest handoff rank sessions whose project is named after that repository, or that name the repository at least 20 times (a session run in a worktree folder), above otherwise equal matches from other projects; run outside a repository, the same query keeps its original order
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'current repository project ranks first' test/bin/tracequest-search-ranking.e2e.test.js
+  tags: [spec, cli-search, handoff, search-ranking, implemented]
+- label: a tracequest search or handoff with --filter leaves index.json and search.idx holding every discovered session, so the next unfiltered search re-indexes nothing, while the filtered results are still ranked with the word statistics (session count, word document counts, average length, vocabulary) of the filtered sessions alone
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'filtered search keeps the full index' test/bin/search-startup-perf.test.js
+  tags: [cli-search, search-perf, implemented]
+- label: the sidecar scan remembers each Codex session's project in scan-meta.json in the tracequest cache dir, keyed by file path, size and mtime, so a repeat scan reads no unchanged Codex file, a file whose size or mtime changed is read again, and the scan output is the same with and without the cache
+  command: cd sidecar && cargo test -q scan_meta_cache && cd .. && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'scan meta cache' test/bin/search-startup-perf.test.js
+  tags: [cli-search, search-perf, implemented]
+- label: tracequest search and tracequest handoff without --filter load only the search command's modules: the HTML renderer, the server, share, standup, import and usage-limit modules are not loaded
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'search loads only search modules' test/bin/search-startup-perf.test.js
+  tags: [cli-search, search-perf, implemented]
+- the sidecar scan stats only directory entries whose file name marks a session file (rollout-*.jsonl, chat_history.jsonl, *.jsonl), not every file inside a Grok, vktr, Codex, Claude, Cursor or Factory session directory @search-perf @implemented
+- label: tracequest search and tracequest handoff build a result's snippets for all of its matched words in one pass over the session: each line's command, file-path and error fields are found, decoded and lowercased once and then tested against every word, and the snippets (text, type, order, per-word limit, stop when the first word has its snippets) are exactly the ones the per-word scan of 29b56c6 gives, for claude- and grok-format sessions, whether the lines come from the file or from the in-process line cache, including words that only match after lowercasing a Kelvin sign or a dotted capital I, fields decoded from \u escapes, and overlapping field keys
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'one-pass snippets match per-word scans' test/bin/snippet-scan-one-pass.test.js
+  tags: [spec, cli-search, handoff, search-perf, implemented]
+- label: scanning one multi-megabyte session for the snippets of six words takes less than three times as long as scanning it for one word (the per-word scan of 29b56c6 took more than four times as long)
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'one-pass snippet scan cost' test/bin/snippet-scan-one-pass.test.js
+  tags: [spec, cli-search, search-perf, implemented]
+- label: The combined search speed branches preserve the existing search and handoff ranking, exact result replay and cache invalidation behavior in the integration tests
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/tracequest-search-ranking.e2e.test.js test/bin/near-cache.test.js test/bin/search-result-cache.test.js
+  tags: [spec, search-speed-integration, implemented]
+- label: tracequest search and tracequest handoff without --filter remember their ranked results (with snippets) in search-results.json in the tracequest cache dir, keyed on the exact query, limit, format, sort and current repository plus a fingerprint of every discovered session (path, size, mtime, source, project), the size, mtime and inode of index.json and search.idx, the TRACEQUEST_* environment and the tracequest code files; an exact repeat with that whole key unchanged prints the remembered results without loading the index or reading session files, and its stdout and stderr are byte-identical to the run that computed them
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'result cache repeat' test/bin/search-result-cache.test.js
+  tags: [spec, cli-search, handoff, search-perf, implemented]
+- label: the search result cache only stores results from a run that left index.json and search.idx untouched, and a session whose file changed (size or mtime), a new or removed session, another query, limit, format, sort or repository, or a rewritten index misses the cache, so the next search prints what an uncached search prints; --filter searches, TRACEQUEST_VERBOSE=1 and TRACEQUEST_NO_RESULT_CACHE=1 never use it
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'result cache invalidation' test/bin/search-result-cache.test.js
+  tags: [spec, cli-search, handoff, search-perf, implemented]
 
 ## standup
 - label: tracequest standup help and CLI reference examples show prompt-agent configuration and --print-input auditing before LLM execution
@@ -294,3 +331,26 @@
 - Brand asset URLs return intact image bytes in regular and read-only hub mode, and packaged installations include every runtime brand asset @branding-integration @implemented
 - Every README product screenshot and UI example is rendered from the current TraceQuest interface with the canonical TQ mark and wordmark; screenshot refresh checks the displayed brand before capture @spec @branding-media @implemented
 - Documentation recordings use the current identity, and historical regression images show the relevant evidence without obsolete app branding @spec @branding-media @implemented
+
+# search
+- label: next to search.idx the search index is also written as search.bin, a binary copy that a later process opens without parsing the whole index and from which it decodes only the posting lists its query looks up; an index opened from search.bin gives the same words, sessions, word counts, document lengths and iteration orders as the same index loaded from search.idx, before and after it is changed, so search and handoff rank exactly as before; a search.bin that is from another format version or no longer matches search.idx (rewritten, replaced or corrupted) is ignored, the index is loaded from search.idx and search.bin is rewritten
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'binary search index' test/bin/search-index-binary.test.js
+  tags: [spec, search-perf, cli-search, implemented]
+- label: opening a 3,000-session search index from search.bin and looking up a three-word query (with prefix expansion of the last word) takes under a tenth of the time of loading the same index from search.idx
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'search.bin opens fast' test/bin/search-index-binary.test.js
+  tags: [spec, search-perf, cli-search, implemented]
+- label: a process that opened the search index from search.bin and never changed it does not rewrite search.idx or search.bin when it flushes its deferred writes
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'unchanged index opened from search.bin' test/bin/search-index-binary.test.js
+  tags: [spec, search-perf, cli-search, implemented]
+- label: when the sidecar is available, the near-words re-rank of tracequest search and tracequest handoff reads the candidate pool's session files (first 8 MB each) in one parallel sidecar near scan instead of in Node, and every session's near-words score is bit-identical to the JS scan's, including case variants, camelCase and prefix word boundaries, verbatim query copies, recorded searches, Codex injected lines, latin1 bytes and the 8 MB cap; OpenCode and dsh sessions, files the sidecar cannot read, and runs without the sidecar are scored by the JS scan with the same result
+  command: npm run build:sidecar >/dev/null 2>&1 && TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/near-sidecar-scan.test.js
+  tags: [spec, cli-search, search-perf, search-ranking, implemented]
+- label: the sidecar near subcommand reads one JSON request on stdin (needles as hex bytes, weights as f64 bit patterns, the verbatim query as UTF-16 code units) and prints per file [best run weight, counted runs, ran a search for the query] or null when the file cannot be read
+  command: cd sidecar && cargo test near_
+  tags: [spec, search-perf, sidecar, implemented]
+- label: when the sidecar indexes sessions it still writes their index.json metadata, but the search terms (words and counts) that search.idx stores for each session it re-read, in a full or a delta run, are the ones the JS indexer stores for that session without the sidecar (for example the text of a long Claude tool result, which the sidecar's own terms leave out), so search and handoff find and rank the same sessions with and without the sidecar
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'sidecar index search terms' test/bin/sidecar-index-terms.test.js
+  tags: [spec, cli-search, handoff, search-ranking, sidecar, sidecar-parity, implemented]
+- label: a search.idx of format 4, whose sessions can hold the sidecar's own search terms, is not used: the next search or handoff rebuilds it as format 5 with the JS indexer's terms, with or without the sidecar
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'search index format' test/bin/sidecar-index-terms.test.js
+  tags: [spec, cli-search, handoff, search-ranking, sidecar, sidecar-parity, implemented]

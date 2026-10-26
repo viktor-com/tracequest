@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { enableCompileCache } from "node:module";
 import { parseArgs } from "node:util";
 import {
   RENDER_OUTPUT_OPTIONS,
@@ -21,6 +22,11 @@ import { loadHubConfig, applyHubConfig, hubConfig } from "../src/hub/config.js";
 for (const stream of [process.stdout, process.stderr]) {
   stream?._handle?.setBlocking?.(true);
 }
+
+// Reuse V8's compiled code for the command modules imported below across runs
+// (node's own on-disk cache, keyed by file contents; NODE_DISABLE_COMPILE_CACHE=1
+// turns it off). Short-lived commands such as search start faster with it.
+enableCompileCache?.();
 
 const COMMAND_HELP = new Set(["render", "messages", "list", "latest", "find", "search", "handoff", "standup", "import", "limits", "serve", "presets", "preset"]);
 
@@ -51,6 +57,11 @@ function showCommandHelpIfRequested(subcommand, subArgs) {
 
 function loadCommands() {
   return import("../src/cli/cli-commands.js");
+}
+
+/** search and handoff load only their own module, not every command's (fact id4). */
+function loadSearchCommands() {
+  return import("../src/cli/cli-search.js");
 }
 
 // --- Main dispatch ---
@@ -181,8 +192,8 @@ async function dispatch() {
       },
       allowPositionals: true,
     });
-    const { cmdSearch } = await loadCommands();
-    cmdSearch(positionals, values);
+    const { cmdSearch } = await loadSearchCommands();
+    await cmdSearch(positionals, values);
     break;
   }
   case "handoff": {
@@ -196,8 +207,8 @@ async function dispatch() {
       },
       allowPositionals: true,
     });
-    const { cmdHandoff } = await loadCommands();
-    cmdHandoff(positionals, values);
+    const { cmdHandoff } = await loadSearchCommands();
+    await cmdHandoff(positionals, values);
     break;
   }
   case "standup": {

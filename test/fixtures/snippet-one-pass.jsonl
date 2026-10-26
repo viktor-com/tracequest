@@ -1,0 +1,14 @@
+{"type": "user", "message": {"role": "user", "content": "Please fix the Stop button in the Codex panel"}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": "rg -n 'STOP' src/codex/stop-button.js"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": "rg -n 'STOP' src/codex/stop-button.js"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read", "input": {"file_path": "/repo/src/Codex/StopButton.tsx"}}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "content": "boom", "is_error": true}]}, "toolUseResult": {"stderr": "Error: Stop button handler threw on click"}}
+{"type": "user", "message": {"content": "error and stderr keys with a button: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx the stop word sits past the 80 char head cap"}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"echo \u0053TOP now \"quoted\" \\ path"}}]}}
+{"type":"user","note":"weird \"error\"path\": not a key","x":{"error"path":"/tmp/panel.log"}}
+{"type": "user", "message": {"content": "The KEYWORD setting and the PROMİ flag"}}
+{"type": "assistant", "message": {"content": [{"type": "text", "text": "Panel ready; the progress stays visible"}]}}
+{"type": "progress", "data": {"message": "stop button progress filler is skipped"}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": "npm test -- --grep panel"}}]}, "error": "panel test failed: StopButton missing"}
+{"type": "user", "message": {"content": [{"type": "tool_result", "content": "ok"}]}, "toolUseResult": {"stdout": "", "stderr": "warning: panel deprecated", "path": "/repo/src/panel/index.js"}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","input":{"command":"multi one"}},{"type":"tool_use","input":{"command":"multi two"}},{"type":"tool_use","input":{"command":"multi three"}},{"type":"tool_use","input":{"file_path":"/multi/a.js"}},{"type":"tool_use","input":{"file_path":"/multi/b.js"}}]},"error":"multi error one","stderr":"multi error two"}

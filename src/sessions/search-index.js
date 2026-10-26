@@ -15,6 +15,12 @@
  *     paths: ["path0", "path1", ...],           // session paths (document IDs)
  *     docLen: [n0, n1, ...],                    // token counts per session
  *   }
+ *
+ * Every write also leaves search.bin next to it: the same index in a binary
+ * layout (see search-index-binary.js) that a later process opens in a few ms
+ * and decodes lazily, term by term (facts 82g, ohy). search.idx stays the
+ * source of truth; search.bin records the identity of the search.idx it
+ * mirrors and is ignored when that no longer matches.
  */
 
 import {
@@ -24,14 +30,22 @@ import {
   renameSync,
   mkdirSync,
   statSync,
+  openSync,
+  closeSync,
+  fstatSync,
+  unlinkSync,
 } from "node:fs";
 import { join } from "node:path";
-import { mkdir, open, rename } from "node:fs/promises";
+import { mkdir, open, rename, stat as statAsync, unlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
+import { BinaryIndexEncoder, LazyPostings, fileIdentity, openBinaryIndex } from "./search-index-binary.js";
 
-/** 4: Codex tool output is tokenized, so older indexes are rebuilt (fact qy2). */
-export const SEARCH_IDX_VERSION = 4;
+/**
+ * 4: Codex tool output is tokenized, so older indexes are rebuilt (fact qy2).
+ * 5: sessions the sidecar indexes get the JS indexer's terms, not the sidecar's own (fact r7r).
+ */
+export const SEARCH_IDX_VERSION = 5;
 
 /** Sessions whose term lists the index keeps for direct removal (fact hsi3). */
 const MAX_REMEMBERED_DOCS = 256;
@@ -102,6 +116,7 @@ export class SearchIndex {
   upsertMany(entries) {
     const byPath = new Map(entries);
     if (!byPath.size) return;
+    this._materialize();
     const scan = new Set();
     for (const path of byPath.keys()) {
       if (!this._docLen.has(path)) continue;
@@ -159,6 +174,7 @@ export class SearchIndex {
     const gone = [];
     for (const path of paths) {
       if (!this._docLen.has(path)) continue;
+      this._materialize();
       gone.push(path);
       if (!this._removeKnownPostings(path)) scan.add(path);
     }
@@ -201,6 +217,31 @@ export class SearchIndex {
   }
 
   /**
+   * True while this index is the read-only view opened from search.bin: no
+   * change since, so search.idx and search.bin on disk already hold it.
+   */
+  get isUnchangedFromBinary() {
+    return this._postings instanceof LazyPostings;
+  }
+
+  /**
+   * Before the first change to an index opened from search.bin, decode every
+   * posting list into plain Maps (same orders), so changes work as on an
+   * index loaded from search.idx.
+   */
+  _materialize() {
+    if (!(this._postings instanceof LazyPostings)) return;
+    const lazy = this._postings;
+    this._postings = lazy.toMap();
+    lazy.close();
+  }
+
+  /** Release the open search.bin of a lazily opened index (tests resetting the singleton). */
+  _close() {
+    if (this._postings instanceof LazyPostings) this._postings.close();
+  }
+
+  /**
    * Whether a path is present in the SearchIndex (has a doc-length entry).
    * @param {string} path
    * @returns {boolean}
@@ -229,6 +270,8 @@ export class SearchIndex {
     for (const path of this._docLen.keys()) {
       if (!validPaths.has(path)) gone.push(path);
     }
+    // An index opened from search.bin has no empty posting lists to drop.
+    if (!gone.length && this.isUnchangedFromBinary) return;
     if (gone.length) this.removeMany(gone);
     // Drop empty posting lists (may be left over from removes above)
     for (const [term, posting] of this._postings) {
@@ -241,6 +284,11 @@ export class SearchIndex {
    * Serialize to compact JSON string.
    */
   serialize() {
+    return JSON.stringify(this._snapshot());
+  }
+
+  /** The search.idx object: sorted vocabulary, posting entry arrays, paths, docLen. */
+  _snapshot() {
     // Build sorted vocabulary
     const vocab = [...this._postings.keys()].sort();
     // Build paths list (stable order from docLen map)
@@ -261,13 +309,23 @@ export class SearchIndex {
 
     const docLen = pathArr.map((p) => this._docLen.get(p));
 
-    return JSON.stringify({
+    return {
       _sv: SEARCH_IDX_VERSION,
       vocab,
       postings: postingsList,
       paths: pathArr,
       docLen,
-    });
+    };
+  }
+
+  /**
+   * search.bin contents for a search.idx object from _snapshot(), or null when
+   * the index cannot be written in the binary layout.
+   */
+  static encodeBinary(snapshot, identity) {
+    const enc = new BinaryIndexEncoder(snapshot.paths, snapshot.docLen);
+    for (let vi = 0; vi < snapshot.vocab.length && enc.ok; vi++) enc.addTerm(snapshot.vocab[vi], snapshot.postings[vi]);
+    return enc.finish(identity, SEARCH_IDX_VERSION);
   }
 
   /**
@@ -279,6 +337,15 @@ export class SearchIndex {
    * @returns {Promise<string[]|null>}
    */
   async serializePiecesAsync(sliceMs = 15) {
+    return (await this._serializeAsync(sliceMs, false))?.pieces ?? null;
+  }
+
+  /**
+   * serializePiecesAsync, also encoding search.bin in the same slices when
+   * `withBinary`. Resolves to { pieces, binary } (binary: a BinaryIndexEncoder
+   * or null), or null when the index changed meanwhile.
+   */
+  async _serializeAsync(sliceMs, withBinary) {
     const gen = this._generation;
     let sliceStart = Date.now();
     const pause = async () => {
@@ -293,6 +360,8 @@ export class SearchIndex {
     const pathIdx = new Map();
     for (let i = 0; i < pathArr.length; i++) pathIdx.set(pathArr[i], i);
     if (!(await pause())) return null;
+    const docLenArr = pathArr.map((p) => this._docLen.get(p));
+    const binary = withBinary ? new BinaryIndexEncoder(pathArr, docLenArr) : null;
     const pieces = [`{"_sv":${JSON.stringify(SEARCH_IDX_VERSION)},"vocab":`, JSON.stringify(vocab), ',"postings":['];
     if (!(await pause())) return null;
     let batch = [];
@@ -306,6 +375,7 @@ export class SearchIndex {
         }
       }
       batch.push(JSON.stringify(entries));
+      binary?.addTerm(vocab[vi], entries);
       if ((vi & 255) === 255) {
         pieces.push((vi > 255 ? "," : "") + batch.join(","));
         batch = [];
@@ -313,8 +383,8 @@ export class SearchIndex {
       }
     }
     if (batch.length) pieces.push((vocab.length > batch.length ? "," : "") + batch.join(","));
-    pieces.push('],"paths":', JSON.stringify(pathArr), ',"docLen":', JSON.stringify(pathArr.map((p) => this._docLen.get(p))), "}");
-    return (await pause()) ? pieces : null;
+    pieces.push('],"paths":', JSON.stringify(pathArr), ',"docLen":', JSON.stringify(docLenArr), "}");
+    return (await pause()) ? { pieces, binary } : null;
   }
 
   /**
@@ -355,6 +425,20 @@ export class SearchIndex {
     idx._generation++;
     return idx;
   }
+
+  /**
+   * A read-only index over an opened search.bin (see openBinaryIndex). Its
+   * first change decodes it into plain Maps first (_materialize).
+   * @param {{ docLen: Map<string, number>, postings: LazyPostings }} opened
+   */
+  static fromBinary(opened) {
+    const idx = new SearchIndex();
+    idx._docLen = opened.docLen;
+    idx._postings = opened.postings;
+    // New state from disk, as in deserialize() (fact 1h8).
+    idx._generation++;
+    return idx;
+  }
 }
 
 // --- Persistence (module-scope singleton) ---
@@ -373,6 +457,11 @@ export function searchIdxPath() {
   return join(searchIdxCacheDir(), "search.idx");
 }
 
+/** The binary copy of search.idx (facts 82g, ohy). */
+export function searchBinPath() {
+  return join(searchIdxCacheDir(), "search.bin");
+}
+
 /** Access (or lazily initialize) the global SearchIndex. */
 export function getSearchIndex() {
   if (!_searchIdx) _searchIdx = new SearchIndex();
@@ -380,7 +469,9 @@ export function getSearchIndex() {
 }
 
 /**
- * Load search.idx from disk into the in-memory singleton.
+ * Load search.idx from disk into the in-memory singleton: opened from
+ * search.bin when that mirrors the current search.idx, else parsed from
+ * search.idx (and search.bin rewritten for the next process).
  * Returns false when the file is absent or cannot be loaded.
  * @returns {boolean} true if loaded successfully
  */
@@ -388,7 +479,26 @@ export function loadSearchIndex() {
   const p = searchIdxPath();
   if (!existsSync(p)) return false;
   try {
-    const raw = readFileSync(p, "utf-8");
+    const opened = openBinaryIndex(searchBinPath(), fileIdentity(statSync(p, { bigint: true })), SEARCH_IDX_VERSION);
+    if (opened) {
+      _searchIdx = SearchIndex.fromBinary(opened);
+      searchIdxLog(`search.idx: opened ${_searchIdx.docCount} sessions from search.bin`);
+      return true;
+    }
+  } catch {
+    // search.idx vanished or is unreadable: the JSON load below reports it.
+  }
+  try {
+    // Identity of the exact file read, so search.bin can name it.
+    const fd = openSync(p, "r");
+    let raw;
+    let identity;
+    try {
+      identity = fileIdentity(fstatSync(fd, { bigint: true }));
+      raw = readFileSync(fd, "utf-8");
+    } finally {
+      closeSync(fd);
+    }
     const loaded = SearchIndex.deserialize(raw);
     if (!loaded) {
       searchIdxLog("search.idx: corrupt or version-mismatched, will rebuild");
@@ -396,6 +506,7 @@ export function loadSearchIndex() {
     }
     _searchIdx = loaded;
     searchIdxLog(`search.idx: loaded ${_searchIdx.docCount} sessions`);
+    writeSearchBin(loaded._snapshot(), identity);
     return true;
   } catch (err) {
     if (!isIndexDiskExpectedErr(err)) {
@@ -405,16 +516,42 @@ export function loadSearchIndex() {
   }
 }
 
+/**
+ * Write search.bin for a search.idx snapshot whose file has `identity`.
+ * Best effort: without it the next process parses search.idx instead.
+ */
+function writeSearchBin(snapshot, identity) {
+  const binPath = searchBinPath();
+  try {
+    const buffers = SearchIndex.encodeBinary(snapshot, identity);
+    if (!buffers) {
+      if (existsSync(binPath)) unlinkSync(binPath);
+      return;
+    }
+    const tmp = `${binPath}.${process.pid}.tmp`;
+    writeFileSync(tmp, Buffer.concat(buffers));
+    renameSync(tmp, binPath);
+  } catch (err) {
+    searchIdxLog("search.bin: write failed:", err.message);
+  }
+}
+
 function writeSearchIdxToDisk() {
   if (!_searchIdx) return;
+  // Opened from search.bin and unchanged: both files already hold it (fact un4).
+  if (_searchIdx.isUnchangedFromBinary) return;
   const dir = searchIdxCacheDir();
   mkdirSync(dir, { recursive: true });
   const p = searchIdxPath();
   const tmp = p + ".tmp";
   const tWrite = Date.now();
-  const serialized = _searchIdx.serialize();
+  const snapshot = _searchIdx._snapshot();
+  const serialized = JSON.stringify(snapshot);
   writeFileSync(tmp, serialized);
+  // rename keeps the inode, size and mtime that search.bin records.
+  const identity = fileIdentity(statSync(tmp, { bigint: true }));
   renameSync(tmp, p);
+  writeSearchBin(snapshot, identity);
   searchIdxLog(`search.idx: wrote ${_searchIdx.docCount} sessions in ${Date.now() - tWrite}ms (${Math.round(serialized.length / 1024)}KB)`);
 }
 
@@ -426,12 +563,14 @@ function writeSearchIdxToDisk() {
 async function writeSearchIdxToDiskAsync() {
   if (!_searchIdx) return;
   const idx = _searchIdx;
+  if (idx.isUnchangedFromBinary) return;
   const tWrite = Date.now();
-  const pieces = await idx.serializePiecesAsync();
-  if (!pieces || idx !== _searchIdx) {
+  const serialized = await idx._serializeAsync(15, true);
+  if (!serialized || idx !== _searchIdx) {
     scheduleSearchIdxWrite();
     return;
   }
+  const { pieces, binary } = serialized;
   const dir = searchIdxCacheDir();
   await mkdir(dir, { recursive: true });
   const p = searchIdxPath();
@@ -442,7 +581,26 @@ async function writeSearchIdxToDiskAsync() {
   } finally {
     await fh.close();
   }
+  const identity = fileIdentity(await statAsync(tmp, { bigint: true }));
   await rename(tmp, p);
+  const binPath = searchBinPath();
+  try {
+    const buffers = binary.finish(identity, SEARCH_IDX_VERSION);
+    if (!buffers) {
+      await unlink(binPath).catch(() => {});
+    } else {
+      const binTmp = `${binPath}.${process.pid}.tmp`;
+      const bh = await open(binTmp, "w");
+      try {
+        for (const b of buffers) await bh.write(b);
+      } finally {
+        await bh.close();
+      }
+      await rename(binTmp, binPath);
+    }
+  } catch (err) {
+    searchIdxLog("search.bin: write failed:", err.message);
+  }
   searchIdxLog(`search.idx: wrote ${idx.docCount} sessions in ${Date.now() - tWrite}ms (sliced)`);
 }
 
@@ -476,6 +634,7 @@ export function flushSearchIdxWriteForTests() {
 }
 
 export function resetSearchIndexForTests() {
+  _searchIdx?._close();
   _searchIdx = null;
   if (_searchIdxWriteTimer) {
     clearTimeout(_searchIdxWriteTimer);

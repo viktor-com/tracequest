@@ -1,0 +1,1494 @@
+[
+ {
+  "source": "claude",
+  "words": [
+   "stop",
+   "button",
+   "codex",
+   "panel"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "button": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "codex": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    }
+   ],
+   "panel": [
+    {
+     "type": "text",
+     "snippet": "...Please fix the Stop button in the Codex panel\"}}"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "stop",
+   "button",
+   "codex",
+   "panel"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "button": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "codex": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    }
+   ],
+   "panel": [
+    {
+     "type": "text",
+     "snippet": "...Please fix the Stop button in the Codex panel\"}}"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    },
+    {
+     "type": "error",
+     "snippet": "warning: panel deprecated"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    },
+    {
+     "type": "error",
+     "snippet": "warning: panel deprecated"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 2,
+  "mode": "file",
+  "r": {
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 2,
+  "mode": "cached",
+  "r": {
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 1,
+  "mode": "file",
+  "r": {
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 1,
+  "mode": "cached",
+  "r": {
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "keyword",
+   "promi",
+   "error",
+   "path"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "keyword": [
+    {
+     "type": "text",
+     "snippet": "...e\": \"user\", \"message\": {\"content\": \"The KEYWORD setting and the PROMİ flag\"}}"
+    }
+   ],
+   "promi": [
+    {
+     "type": "text",
+     "snippet": "...\"content\": \"The KEYWORD setting and the PROMİ flag\"}}"
+    }
+   ],
+   "error": [
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    },
+    {
+     "type": "error",
+     "snippet": "multi error one"
+    },
+    {
+     "type": "error",
+     "snippet": "multi error two"
+    }
+   ],
+   "path": [
+    {
+     "type": "command",
+     "snippet": "echo STOP now \"quoted\" \\ path"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "keyword",
+   "promi",
+   "error",
+   "path"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "keyword": [
+    {
+     "type": "text",
+     "snippet": "...e\": \"user\", \"message\": {\"content\": \"The KEYWORD setting and the PROMİ flag\"}}"
+    }
+   ],
+   "promi": [
+    {
+     "type": "text",
+     "snippet": "...\"content\": \"The KEYWORD setting and the PROMİ flag\"}}"
+    }
+   ],
+   "error": [
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    },
+    {
+     "type": "error",
+     "snippet": "multi error one"
+    },
+    {
+     "type": "error",
+     "snippet": "multi error two"
+    }
+   ],
+   "path": [
+    {
+     "type": "command",
+     "snippet": "echo STOP now \"quoted\" \\ path"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "zzz",
+   "stop",
+   "panel"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "zzz": [],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    },
+    {
+     "type": "error",
+     "snippet": "warning: panel deprecated"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "zzz",
+   "stop",
+   "panel"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "zzz": [],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    },
+    {
+     "type": "error",
+     "snippet": "warning: panel deprecated"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "tmp",
+   "log",
+   "quoted"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "tmp": [
+    {
+     "type": "text",
+     "snippet": "...\"path\": not a key\",\"x\":{\"error\"path\":\"/tmp/panel.log\"}}"
+    }
+   ],
+   "log": [
+    {
+     "type": "text",
+     "snippet": "...ot a key\",\"x\":{\"error\"path\":\"/tmp/panel.log\"}}"
+    }
+   ],
+   "quoted": [
+    {
+     "type": "command",
+     "snippet": "echo STOP now \"quoted\" \\ path"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "tmp",
+   "log",
+   "quoted"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "tmp": [
+    {
+     "type": "text",
+     "snippet": "...\"path\": not a key\",\"x\":{\"error\"path\":\"/tmp/panel.log\"}}"
+    }
+   ],
+   "log": [
+    {
+     "type": "text",
+     "snippet": "...ot a key\",\"x\":{\"error\"path\":\"/tmp/panel.log\"}}"
+    }
+   ],
+   "quoted": [
+    {
+     "type": "command",
+     "snippet": "echo STOP now \"quoted\" \\ path"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "stop"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+   },
+   {
+    "type": "file",
+    "snippet": "/repo/src/Codex/StopButton.tsx"
+   },
+   {
+    "type": "error",
+    "snippet": "Error: Stop button handler threw on click"
+   }
+  ]
+ },
+ {
+  "source": "claude",
+  "words": [
+   "stop"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+   },
+   {
+    "type": "file",
+    "snippet": "/repo/src/Codex/StopButton.tsx"
+   },
+   {
+    "type": "error",
+    "snippet": "Error: Stop button handler threw on click"
+   }
+  ]
+ },
+ {
+  "source": "claude",
+  "words": [
+   "button"
+  ],
+  "max": 1,
+  "mode": "file",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+   }
+  ]
+ },
+ {
+  "source": "claude",
+  "words": [
+   "button"
+  ],
+  "max": 1,
+  "mode": "cached",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+   }
+  ]
+ },
+ {
+  "source": "claude",
+  "words": [
+   "multi",
+   "panel"
+  ],
+  "max": 2,
+  "mode": "file",
+  "r": {
+   "multi": [
+    {
+     "type": "command",
+     "snippet": "multi one"
+    },
+    {
+     "type": "command",
+     "snippet": "multi two"
+    }
+   ],
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "multi",
+   "panel"
+  ],
+  "max": 2,
+  "mode": "cached",
+  "r": {
+   "multi": [
+    {
+     "type": "command",
+     "snippet": "multi one"
+    },
+    {
+     "type": "command",
+     "snippet": "multi two"
+    }
+   ],
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    }
+   ]
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "panel",
+   "multi"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    },
+    {
+     "type": "error",
+     "snippet": "warning: panel deprecated"
+    }
+   ],
+   "multi": []
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "panel",
+   "multi"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "panel": [
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    },
+    {
+     "type": "error",
+     "snippet": "warning: panel deprecated"
+    }
+   ],
+   "multi": []
+  }
+ },
+ {
+  "source": "claude",
+  "words": [
+   "multi"
+  ],
+  "max": 1,
+  "mode": "file",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "multi one"
+   }
+  ]
+ },
+ {
+  "source": "claude",
+  "words": [
+   "multi"
+  ],
+  "max": 1,
+  "mode": "cached",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "multi one"
+   }
+  ]
+ },
+ {
+  "source": "grok",
+  "words": [
+   "stop",
+   "button",
+   "codex",
+   "panel"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "button": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "codex": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    }
+   ],
+   "panel": [
+    {
+     "type": "text",
+     "snippet": "...Please fix the Stop button in the Codex panel\"}}"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "stop",
+   "button",
+   "codex",
+   "panel"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "button": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "codex": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    }
+   ],
+   "panel": [
+    {
+     "type": "text",
+     "snippet": "...Please fix the Stop button in the Codex panel\"}}"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    },
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    },
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 2,
+  "mode": "file",
+  "r": {
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    },
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 2,
+  "mode": "cached",
+  "r": {
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    },
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 1,
+  "mode": "file",
+  "r": {
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "panel",
+   "stop"
+  ],
+  "max": 1,
+  "mode": "cached",
+  "r": {
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    }
+   ],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "keyword",
+   "promi",
+   "error",
+   "path"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "keyword": [
+    {
+     "type": "text",
+     "snippet": "...e\": \"user\", \"message\": {\"content\": \"The KEYWORD setting and the PROMİ flag\"}}"
+    }
+   ],
+   "promi": [
+    {
+     "type": "text",
+     "snippet": "...\"content\": \"The KEYWORD setting and the PROMİ flag\"}}"
+    }
+   ],
+   "error": [
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    },
+    {
+     "type": "error",
+     "snippet": "multi error one"
+    },
+    {
+     "type": "error",
+     "snippet": "multi error two"
+    }
+   ],
+   "path": [
+    {
+     "type": "command",
+     "snippet": "echo STOP now \"quoted\" \\ path"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "keyword",
+   "promi",
+   "error",
+   "path"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "keyword": [
+    {
+     "type": "text",
+     "snippet": "...e\": \"user\", \"message\": {\"content\": \"The KEYWORD setting and the PROMİ flag\"}}"
+    }
+   ],
+   "promi": [
+    {
+     "type": "text",
+     "snippet": "...\"content\": \"The KEYWORD setting and the PROMİ flag\"}}"
+    }
+   ],
+   "error": [
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    },
+    {
+     "type": "error",
+     "snippet": "multi error one"
+    },
+    {
+     "type": "error",
+     "snippet": "multi error two"
+    }
+   ],
+   "path": [
+    {
+     "type": "command",
+     "snippet": "echo STOP now \"quoted\" \\ path"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "zzz",
+   "stop",
+   "panel"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "zzz": [],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    },
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "zzz",
+   "stop",
+   "panel"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "zzz": [],
+   "stop": [
+    {
+     "type": "command",
+     "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+    },
+    {
+     "type": "file",
+     "snippet": "/repo/src/Codex/StopButton.tsx"
+    },
+    {
+     "type": "error",
+     "snippet": "Error: Stop button handler threw on click"
+    }
+   ],
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    },
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "tmp",
+   "log",
+   "quoted"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "tmp": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    }
+   ],
+   "log": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    }
+   ],
+   "quoted": [
+    {
+     "type": "command",
+     "snippet": "echo STOP now \"quoted\" \\ path"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "tmp",
+   "log",
+   "quoted"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "tmp": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    }
+   ],
+   "log": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    }
+   ],
+   "quoted": [
+    {
+     "type": "command",
+     "snippet": "echo STOP now \"quoted\" \\ path"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "stop"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+   },
+   {
+    "type": "file",
+    "snippet": "/repo/src/Codex/StopButton.tsx"
+   },
+   {
+    "type": "error",
+    "snippet": "Error: Stop button handler threw on click"
+   }
+  ]
+ },
+ {
+  "source": "grok",
+  "words": [
+   "stop"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+   },
+   {
+    "type": "file",
+    "snippet": "/repo/src/Codex/StopButton.tsx"
+   },
+   {
+    "type": "error",
+    "snippet": "Error: Stop button handler threw on click"
+   }
+  ]
+ },
+ {
+  "source": "grok",
+  "words": [
+   "button"
+  ],
+  "max": 1,
+  "mode": "file",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+   }
+  ]
+ },
+ {
+  "source": "grok",
+  "words": [
+   "button"
+  ],
+  "max": 1,
+  "mode": "cached",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "rg -n 'STOP' src/codex/stop-button.js"
+   }
+  ]
+ },
+ {
+  "source": "grok",
+  "words": [
+   "multi",
+   "panel"
+  ],
+  "max": 2,
+  "mode": "file",
+  "r": {
+   "multi": [
+    {
+     "type": "command",
+     "snippet": "multi one"
+    },
+    {
+     "type": "command",
+     "snippet": "multi two"
+    }
+   ],
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    },
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "multi",
+   "panel"
+  ],
+  "max": 2,
+  "mode": "cached",
+  "r": {
+   "multi": [
+    {
+     "type": "command",
+     "snippet": "multi one"
+    },
+    {
+     "type": "command",
+     "snippet": "multi two"
+    }
+   ],
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    },
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    }
+   ]
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "panel",
+   "multi"
+  ],
+  "max": 3,
+  "mode": "file",
+  "r": {
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    },
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    }
+   ],
+   "multi": []
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "panel",
+   "multi"
+  ],
+  "max": 3,
+  "mode": "cached",
+  "r": {
+   "panel": [
+    {
+     "type": "file",
+     "snippet": "/tmp/panel.log"
+    },
+    {
+     "type": "command",
+     "snippet": "npm test -- --grep panel"
+    },
+    {
+     "type": "error",
+     "snippet": "panel test failed: StopButton missing"
+    }
+   ],
+   "multi": []
+  }
+ },
+ {
+  "source": "grok",
+  "words": [
+   "multi"
+  ],
+  "max": 1,
+  "mode": "file",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "multi one"
+   }
+  ]
+ },
+ {
+  "source": "grok",
+  "words": [
+   "multi"
+  ],
+  "max": 1,
+  "mode": "cached",
+  "r": [
+   {
+    "type": "command",
+    "snippet": "multi one"
+   }
+  ]
+ }
+]
