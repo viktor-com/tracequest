@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-10-26
+
 ### Fixed
 
 - Rank `tracequest search` and `tracequest handoff` results by natural phrases. Sessions where the query's words sit together come before sessions that only mention one common word somewhere, and run inside a git checkout, that repository's sessions come first among equal matches. `handoff "codex stop button"` now finds the Codex Stop button fix instead of five unrelated sessions.
+- Keep `search` and `handoff` fast with the new ranking. A repeated query on unchanged sessions answers in about 200 ms on a folder of 8,000 to 17,000 sessions, and the sidecar gives the same top results as the JS indexer. The search index rebuilds once on the first run after upgrading.
 
 ## [0.5.4] - 2026-10-24
 
