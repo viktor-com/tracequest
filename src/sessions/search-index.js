@@ -41,8 +41,11 @@ import { homedir } from "node:os";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
 import { BinaryIndexEncoder, LazyPostings, fileIdentity, openBinaryIndex } from "./search-index-binary.js";
 
-/** 4: Codex tool output is tokenized, so older indexes are rebuilt (fact qy2). */
-export const SEARCH_IDX_VERSION = 4;
+/**
+ * 4: Codex tool output is tokenized, so older indexes are rebuilt (fact qy2).
+ * 5: sessions the sidecar indexes get the JS indexer's terms, not the sidecar's own (fact r7r).
+ */
+export const SEARCH_IDX_VERSION = 5;
 
 /** Sessions whose term lists the index keeps for direct removal (fact hsi3). */
 const MAX_REMEMBERED_DOCS = 256;

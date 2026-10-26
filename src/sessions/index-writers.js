@@ -1023,6 +1023,28 @@ export function termFreqsFromMeta(meta) {
   return null;
 }
 
+/** More stale sessions than this are indexed in worker threads. */
+function parallelIndexThreshold() {
+  return process.env.TRACEQUEST_TEST_PARALLEL_THRESHOLD != null
+    ? Number(process.env.TRACEQUEST_TEST_PARALLEL_THRESHOLD)
+    : 100;
+}
+
+/**
+ * [path, termFreqs] of `paths` as the JS indexer reads them, for sessions the
+ * sidecar indexed: its own terms differ from the JS indexer's, and search must
+ * rank the same with and without the sidecar (fact ln2).
+ */
+function jsSearchTerms(paths, sessions) {
+  if (!paths.length) return [];
+  const wanted = new Set(paths);
+  const stale = sessions.filter((s) => wanted.has(s.path));
+  const indexed = stale.length > parallelIndexThreshold() && !workersBrokenExecArgv()
+    ? indexSessionsParallel(stale, indexWorkerCountForStale(stale.length))
+    : indexStaleChunkSerial(stale);
+  return stale.map((s) => [s.path, termFreqsFromMeta(indexed[s.path] || indexStaleChunkSerial([s])[s.path])]);
+}
+
 function stripLegacySearchText(data) {
   if (data && Object.hasOwn(data, "searchText")) delete data.searchText;
 }
@@ -1294,25 +1316,20 @@ function* buildIndexSteps(sessions, opts = {}) {
       // Merge sidecar entries into metadata cache and SearchIndex (facts 8rj, wyt).
       // The sidecar emits termFreqs (plain object) for freshly parsed/search-stale
       // entries; convert to Map and upsert via the same path as JS indexers.
-      const siBatch = [];
+      const reread = [];
       for (const [path, data] of sidecarIndex) {
         if (!Object.hasOwn(cache, path)) _indexCachePathCount++;
-        // Extract termFreqs (plain object from JSON) before stripping it from cache entry.
-        let tf = null;
-        if (data.termFreqs && typeof data.termFreqs === "object") {
-          tf = new Map(Object.entries(data.termFreqs));
-          delete data.termFreqs;
-        }
+        // termFreqs marks an entry the sidecar parsed again (fresh or search-stale).
+        // It omits them for mtime-cache-reused entries, whose SI postings stay:
+        // removal is pruneRemovedSessions' responsibility (fact 03w).
+        if (data.termFreqs && typeof data.termFreqs === "object") reread.push(path);
+        delete data.termFreqs;
         stripLegacySearchText(data);
         cache[path] = data;
         result.set(path, data);
-        // Only upsert when termFreqs are present (freshly parsed by sidecar).
-        // Sidecar omits termFreqs for mtime-cache-reused entries; calling
-        // upsert(path, null) would delete existing SI postings for those
-        // sessions. Removal is pruneRemovedSessions' responsibility (fact 03w).
-        if (tf !== null) siBatch.push([path, tf]);
       }
       // One pass over the vocabulary for every re-indexed session.
+      const siBatch = jsSearchTerms(reread, sessions);
       si.upsertMany(siBatch);
       const sidecarSearchMutated = siBatch.length > 0;
 
@@ -1343,10 +1360,6 @@ function* buildIndexSteps(sessions, opts = {}) {
     }
   }
 
-  const PARALLEL_THRESHOLD =
-    process.env.TRACEQUEST_TEST_PARALLEL_THRESHOLD != null
-      ? Number(process.env.TRACEQUEST_TEST_PARALLEL_THRESHOLD)
-      : 100;
   let validPaths;
   if (staleSessions.length > 0) {
     validPaths = new Set();
@@ -1362,7 +1375,7 @@ function* buildIndexSteps(sessions, opts = {}) {
       cache = next;
     }
   }
-  if (staleSessions.length > PARALLEL_THRESHOLD && !workersBrokenExecArgv()) {
+  if (staleSessions.length > parallelIndexThreshold() && !workersBrokenExecArgv()) {
     const workerCount = indexWorkerCountForStale(staleSessions.length);
     indexLog(`  indexing ${staleSessions.length} sessions across ${workerCount} workers...`);
     const indexed = indexSessionsParallel(staleSessions, workerCount);
