@@ -119,6 +119,7 @@ const HTML_MIDDLE = `">
     </div>
     <div class="session-flyout-actions">
       <a class="session-flyout-open" id="sessionFlyoutOpen" href="/view">Open full page</a>
+      <a class="session-flyout-open" id="sessionFlyoutOrigin" hidden></a>
       <button type="button" class="session-flyout-nav" id="sessionFlyoutPrev" aria-label="Previous run" title="Previous run (K)" data-hotkey="k,K,ArrowUp">&#8593;</button>
       <button type="button" class="session-flyout-nav" id="sessionFlyoutNext" aria-label="Next run" title="Next run (J)" data-hotkey="j,J,ArrowDown">&#8595;</button>
       <button type="button" class="session-flyout-close" id="sessionFlyoutClose" aria-label="Close run analytics">&#215;</button>

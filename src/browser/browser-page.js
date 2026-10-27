@@ -10,6 +10,7 @@ import { sessionRows, sessionRowsStats, stampRowsLive } from "../routes/session-
 import { sortSessionList } from "../filter/filter-formats.js";
 import { applyExprToApiObjects, FilterParseError } from "../filter/filter.js";
 import { computeStats } from "../server/server-helpers.js";
+import { hostAddresses } from "../hub/host-addresses.js";
 
 /** Page sizes the list's pager offers; any other ?pageSize= is the default 50. */
 const LIST_PAGE_SIZES = [25, 50, 100, 200];
@@ -94,6 +95,8 @@ export function browserPage(sessions, index, initialFilter = null, sessionsForLi
     ...(Array.isArray(runs) ? { runs, runActiveAt: runActiveAt || {} } : {}),
     // Launcher default: the client cannot know a server-side path.
     defaultCwd: homedir(),
+    // Imported machines' addresses, for "Open in Kandev" on their sessions.
+    originHosts: hostAddresses(),
   }).replace(/<\//g, "<\\/").replace(/<!--/g, "\\u003c!--");
 
   const filterVal = initialFilter ? String(initialFilter).replace(/"/g, "&quot;") : "";

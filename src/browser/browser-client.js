@@ -22,6 +22,7 @@ import { joinBundleParts } from "../render/join-bundle.js";
 import { includesLower, INDEX_OF_LOWER_JS, sumToolCounts } from "../parse/parse-utils.js";
 import { FORM_FIELD_GUARD_SRC } from "./is-form-field.js";
 import { OVERLAY_FOCUS_SRC } from "./overlay-focus.js";
+import { ORIGIN_APP_LINK_JS } from "./origin-app-link.js";
 import { LIVE_MORPH_JS } from "../render/render-live-update.js";
 import { RUN_IDLE_PINNED_MS } from "../sessions/run-generating-status.js";
 
@@ -134,6 +135,7 @@ var compareSet = new Set(); // stores session paths (stable across sort/filter)
 const BROWSER_CLIENT_REST_JS = `
 ${FORM_FIELD_GUARD_SRC}
 ${OVERLAY_FOCUS_SRC}
+${ORIGIN_APP_LINK_JS}
 
 var _peekSession = (function() {
   var params = new URLSearchParams(window.location.search);
@@ -2373,6 +2375,18 @@ function loadFlyoutFrame(frame, url) {
   frame.src = url;
 }
 
+/** The listed row (path, source, host) for the run the panel shows. */
+function peekRow(s) {
+  if (s.path) return s;
+  var lists = [ALL, _liveSessions];
+  for (var l = 0; l < lists.length; l++) {
+    for (var i = 0; i < (lists[l] || []).length; i++) {
+      if (lists[l][i].id === s.id) return lists[l][i];
+    }
+  }
+  return s;
+}
+
 function openSessionFlyout(s, opts) {
   if (!s || !s.id) return;
   opts = opts || {};
@@ -2396,6 +2410,8 @@ function openSessionFlyout(s, opts) {
   if (title) title.textContent = s.id;
   if (sub) sub.textContent = s.prompt || '';
   if (openLink) openLink.href = sessionViewUrl(_peekSession, false);
+  showOriginAppLink(document.getElementById('sessionFlyoutOrigin'),
+    originAppLink(peekRow(s), { hostname: location.hostname, hosts: _INIT_DATA.originHosts || {} }));
   if (!same) {
     if (status) {
       status.hidden = false;

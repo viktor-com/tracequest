@@ -115,6 +115,7 @@ import {
   runIdentityStatus,
 } from "./app-chrome.js";
 import { applyThreadItems } from "./chat-thread-apply.js";
+import { ORIGIN_APP_LINK_JS } from "./origin-app-link.js";
 import {
   toolKind,
   inputField,
@@ -3509,7 +3510,7 @@ ${ANALYTICS_PANEL_JS}
  * only the recording vanishing (404) flips the page to the gone state.
  *
  * @param {{ session: { hash: string, path: string, source: string,
- *   project?: string|null, live: boolean,
+ *   project?: string|null, host?: string, live: boolean,
  *   run?: { id: string, status: string }|null,
  *   continuable?: boolean, agent?: string|null } }} data
  * `continuable` (the source's mapped agent is detected with a verified
@@ -3518,9 +3519,12 @@ ${ANALYTICS_PANEL_JS}
  * submit POSTs /api/runs {resumeSession, prompt} and lands in the NEW
  * run's steerable chat with the follow-up already delivered. Absent
  * capability means absent composer: honest absence. `agent` names the
- * mapped agent on the composer chip.
+ * mapped agent on the composer chip. In read-only (hub) mode the read-only
+ * bar carries an "Open in <App>" link (originAppLink); `session.host` and
+ * `originHosts` (imported host id -> address) point a Kandev link at the
+ * machine that recorded the session.
  */
-export function liveSessionPage({ session, readOnly = false } = {}) {
+export function liveSessionPage({ session, readOnly = false, originHosts = {} } = {}) {
   const { hash, path, source, live } = session;
   const project = session.project || "";
   const run = session.run || null;
@@ -3631,7 +3635,8 @@ ${CHAT_FIND_BAR_HTML}
       </div>
       <form class="composer-card live-tail-card" id="liveTailForm" data-empty="true" data-mode="live-tail"${continuable ? ' data-continuable="true"' : ""}${liveTailAttrs}>
 ${readOnly ? `
-        <input class="run-input" id="liveTailInput" type="text" disabled placeholder="Read-only hub — steer this session in its own terminal" aria-label="Read-only hub: steer this session in its own terminal">` : `
+        <input class="run-input" id="liveTailInput" type="text" disabled placeholder="Read-only hub — steer this session in its own terminal" aria-label="Read-only hub: steer this session in its own terminal">
+        <a class="observer-btn origin-app-btn" id="originAppBar" hidden></a>` : `
         <input class="run-input" id="liveTailInput" type="text" placeholder="Send a follow-up" autocomplete="off" spellcheck="false" aria-label="Send a follow-up">
         <div class="composer-row">
           <button class="run-send-btn" id="liveTailStop" type="button" aria-label="Stop" title="Stop — this session is driven outside tracequest; interrupt it in its own terminal">
@@ -3972,7 +3977,14 @@ ${CHAT_TRANSCRIPT_JS}
   rerender();
   pollSession();
 })();
-</script>
+</script>${readOnly ? `
+<script>
+${ORIGIN_APP_LINK_JS}
+(function () {
+  var link = originAppLink(${JSON.stringify({ source, path, host: session.host || "" }).replace(/</g, "\\u003c")}, { hostname: location.hostname, hosts: ${JSON.stringify(originHosts).replace(/</g, "\\u003c")} });
+  showOriginAppLink(document.getElementById("originAppBar"), link);
+})();
+</script>` : ""}
 <script>
 ${ANALYTICS_PANEL_JS}
 </script>
