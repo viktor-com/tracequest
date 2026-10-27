@@ -110,7 +110,7 @@ const HTML_MIDDLE = `">
   <button class="compare-btn" id="compareBtn" disabled>Compare</button>
   <button class="compare-clear" id="compareClear">Clear</button>
 </div>
-<aside id="sessionFlyout" class="session-flyout" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Run analytics" tabindex="-1">
+<aside id="sessionFlyout" class="session-flyout" hidden aria-hidden="true" role="dialog" aria-label="Run analytics" tabindex="-1">
   <header class="session-flyout-head">
     <div class="session-flyout-ident">
       <span class="session-flyout-kicker">Run</span>

@@ -415,6 +415,7 @@ body.session-peek-open .runs-col-grade, body.session-peek-open .session-row .ses
 body.session-peek-open .runs-col-actions, body.session-peek-open .session-actions { grid-column: 6; }
 body.session-peek-open .session-meta .session-model, body.session-peek-open .session-meta .session-id { display: none; }
 body.session-peek-open .compare-bar { left: calc((100% - var(--session-flyout-width)) / 2); }
+body.session-peek-open .app-top { z-index: calc(var(--z-sticky) + 11); }
 
 @media (max-width: 1100px) {
   .runs-home { --runs-cols: 14px minmax(0, 1fr) 72px 70px 72px 40px 84px; }

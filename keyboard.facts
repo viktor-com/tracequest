@@ -295,21 +295,20 @@
   id: ofageinert
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "open #ageMenu inerts the page behind" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
-- label: Opening #sessionFlyout moves document.activeElement inside the flyout; Tab stays trapped; Escape dismisses and restores the previously focused element
+- label: Opening #sessionFlyout moves document.activeElement inside the flyout; Tab and Shift+Tab are not trapped and leave the panel for the Runs list; Escape (from the list, the panel, or its /view frame) and the close button dismiss it
   id: offly
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "Opening #sessionFlyout" test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "open flyout leaves the Runs list clickable" test/browser/session-flyout-nonmodal.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
-- label: while #sessionFlyout is open on the overlay stack, idle / does not focus #workspaceSearch and the flyout stays open
+- label: while #sessionFlyout is open, idle / focuses #workspaceSearch as it does with the panel closed, and the flyout stays open
   id: offlyslash
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "while #sessionFlyout is open" test/browser/overlay-focus-lifecycle.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, focus-seam, shortcut-when-idle, implemented]
-- label: When #sessionFlyout is open it is a body-level APG modal dialog on __tqOverlayStack; the page behind is inert so / does not steal to #workspaceSearch; Tab stays; Escape restores
+- label: #sessionFlyout is a non-modal side panel (no aria-modal, never on __tqOverlayStack): while it is open the Runs list is not inert, rows stay clickable, the list scrolls, and clicking or pressing Enter on another run updates the open panel
   id: offlyinert
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "open #sessionFlyout inerts the page behind" test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "open flyout leaves the Runs list clickable" test/browser/session-flyout-nonmodal.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
-- label: After a click inside #sessionFlyoutFrame, the #sessionFlyout Tab trap owns the nested /view iframe: Tab and Shift+Tab wrap inner tabbables back to flyout chrome, stay inside the dialog, and Escape still dismisses
+- label: After a click inside #sessionFlyoutFrame, Escape still dismisses #sessionFlyout
   id: offlyframe
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "click inside #sessionFlyoutFrame" test/browser/overlay-focus-lifecycle.playwright.test.js
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern "open flyout leaves the Runs list clickable" test/browser/session-flyout-nonmodal.playwright.test.js
   tags: [spec, overlay-focus-lifecycle, implemented]
 - label: Cmd+K inside #sessionFlyoutFrame opens the parent #cmdkOverlay the same way Cmd+K over launch does; #cmdkInput accepts typed /ojkg?x
   id: offlycmdk
