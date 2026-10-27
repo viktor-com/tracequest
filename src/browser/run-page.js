@@ -146,11 +146,13 @@ import {
 const APPLY_THREAD_ITEMS_SRC = applyThreadItems.toString().replace(/^export /, "");
 /** The activity slot before the first poll paints: never a blank column. */
 const CHAT_LOADING_HTML = '<div class="chat-marker chat-loading"><span class="shimmer">Loading conversation</span></div>';
-/** Find box + Expand all above the thread; hidden until the transcript has tool calls to fold. */
+/** Find box + Expand all above the thread; hidden until the transcript has items, Expand all until it has tool calls to fold. */
 const CHAT_FIND_BAR_HTML = `<div class="chat-find-bar" id="chatFindBar" hidden>
     <div class="chat-find-inner">
       <input class="chat-find-input" id="chatFind" type="search" placeholder="Find in this conversation" aria-label="Find in this conversation" autocomplete="off" spellcheck="false">
       <span class="chat-find-count" id="chatFindCount" role="status" aria-live="polite"></span>
+      <button class="chat-find-step" id="chatFindPrev" type="button" aria-label="Previous match" title="Previous match (Shift+Enter)" disabled>&#8593;</button>
+      <button class="chat-find-step" id="chatFindNext" type="button" aria-label="Next match" title="Next match (Enter)" disabled>&#8595;</button>
       <button class="chat-expand-btn" id="chatToggleAll" type="button" aria-pressed="false">Expand all</button>
     </div>
   </div>`;
@@ -753,10 +755,11 @@ ${RUN_IDENTITY_STATUS_SRC}
     setRailFiltersOpen(railFiltersOpen);
     railPoll(true);
   }
+  var RAIL_CHECK_SVG = '<svg viewBox="0 0 8 8" fill="none" aria-hidden="true"><path d="M1.5 4.2 3.2 5.8 6.5 2.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function railRowHtml(opts) {
     return '<a class="rail-row"' + (opts.current ? ' aria-current="page"' : "")
       + ' href="' + railEsc(opts.href) + '" title="' + railEsc(opts.title) + '">'
-      + '<span class="rail-glyph" data-status="' + opts.status + '">' + (opts.status === "running" ? "" : "&#10003;") + "</span>"
+      + '<span class="rail-glyph" data-status="' + opts.status + '">' + (opts.status === "running" ? "" : RAIL_CHECK_SVG) + "</span>"
       + '<span class="rail-main"><span class="rail-title">' + railEsc(opts.title) + "</span>"
       + '<span class="rail-sub">' + opts.subHtml + "</span></span>"
       + '<span class="rail-side">' + (opts.time ? '<span class="rail-time">' + opts.time + "</span>" : "")
@@ -1201,7 +1204,8 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
   var ICON_CARET = '<span class="tg-caret" aria-hidden="true"></span>';
   var ICON_CHECK = '<span class="tg-ok" role="img" aria-label="done"></span>';
   var TOOL_MODE_KEY = "tq-chat-tool-mode";
-  var FIND_HIT_BUDGET = 400;
+  var FIND_HIT_BUDGET = 10000;
+  var FIND_TYPING_MS = 40;
   var OUTPUT_PREVIEW_LINES = 12;
   var OUTPUT_FULL_CHARS = 300000;
   function readToolMode() {
@@ -1227,11 +1231,14 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     return item;
   }
   function prePart(text, cls, key) {
-    var more = !!toolState.more[key];
+    var pv = outputPreview(text, OUTPUT_PREVIEW_LINES);
+    // A find hit past the cut shows the whole output until the reader picks.
+    var more = Object.prototype.hasOwnProperty.call(toolState.more, key)
+      ? !!toolState.more[key]
+      : pv.hidden > 0 && textMatches(text.slice(pv.text.length), toolState.query);
     var shown = text;
     var hidden = 0;
     if (!more) {
-      var pv = outputPreview(text, OUTPUT_PREVIEW_LINES);
       shown = pv.text;
       hidden = pv.hidden;
     } else if (shown.length > OUTPUT_FULL_CHARS) {
@@ -1239,7 +1246,7 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     }
     return '<pre class="tg-pre' + (cls ? " " + cls : "") + '">' + escHtml(shown) + "</pre>" +
       (hidden || more && text.split("\\n").length > OUTPUT_PREVIEW_LINES
-        ? '<button class="tg-more" type="button" data-more="' + escHtml(key) + '">' + (more ? "show less" : "show more (" + hidden + " more line" + (hidden === 1 ? "" : "s") + ")") + "</button>"
+        ? '<button class="tg-more" type="button" data-more="' + escHtml(key) + '" aria-expanded="' + more + '">' + (more ? "show less" : "show more (" + hidden + " more line" + (hidden === 1 ? "" : "s") + ")") + "</button>"
         : "");
   }
   function sectionHtml(label, inner) {
@@ -2058,30 +2065,65 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     }
   }
   var currentHit = -1;
+  /* Set when the find text changes: the next marking picks the first hit from
+     the top of the view, as a browser's find does. */
+  var pickHit = false;
   function syncFindCount() {
     var el = document.getElementById("chatFindCount");
     if (!el) return;
     var n = findHitMarks().length;
-    el.textContent = toolState.query ? (n ? (currentHit >= 0 ? currentHit + 1 + " / " : "") + n + (n >= FIND_HIT_BUDGET ? "+" : "") : "no matches") : "";
+    var total = n + (n >= FIND_HIT_BUDGET ? "+" : "");
+    el.textContent = toolState.query ? (n ? (currentHit >= 0 ? currentHit + 1 + " of " + total : total + (n === 1 ? " match" : " matches")) : "no matches") : "";
+    var prevBtn = document.getElementById("chatFindPrev");
+    var nextBtn = document.getElementById("chatFindNext");
+    if (prevBtn) prevBtn.disabled = !n;
+    if (nextBtn) nextBtn.disabled = !n;
+  }
+  function showHit(mark) {
+    var r = mark.getBoundingClientRect();
+    var s = chatScroll ? chatScroll.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+    if (r.top < s.top || r.bottom > s.bottom) mark.scrollIntoView({ block: "center" });
+    followTail = false;
+  }
+  function setCurrentHit(i) {
+    var marks = findHitMarks();
+    var prev = chatThread.querySelector("mark.chat-hit.current");
+    if (prev) prev.classList.remove("current");
+    currentHit = marks.length ? Math.min(i, marks.length - 1) : -1;
+    if (currentHit >= 0) marks[currentHit].classList.add("current");
+    return currentHit >= 0 ? marks[currentHit] : null;
+  }
+  /* After marks are rebuilt: a new find text goes to the first hit at or below
+     the top of the view; otherwise the current hit keeps its place. */
+  function syncCurrentHit() {
+    var marks = findHitMarks();
+    if (pickHit && marks.length) {
+      pickHit = false;
+      var top = chatScroll ? chatScroll.getBoundingClientRect().top : 0;
+      var at = 0;
+      for (var i = 0; i < marks.length; i++) {
+        if (marks[i].getBoundingClientRect().bottom > top) { at = i; break; }
+      }
+      showHit(setCurrentHit(at));
+    } else if (currentHit >= 0) {
+      setCurrentHit(currentHit);
+    }
   }
   function stepHit(dir) {
     var marks = findHitMarks();
     if (!marks.length) return;
-    var prev = chatThread.querySelector("mark.chat-hit.current");
-    if (prev) prev.classList.remove("current");
-    currentHit = (currentHit + dir + marks.length) % marks.length;
-    marks[currentHit].classList.add("current");
-    marks[currentHit].scrollIntoView({ block: "center" });
-    followTail = false;
+    var next = currentHit < 0 ? (dir > 0 ? 0 : marks.length - 1) : (currentHit + dir + marks.length) % marks.length;
+    showHit(setCurrentHit(next));
     syncFindCount();
   }
   function syncToolbar() {
     var bar = document.getElementById("chatFindBar");
     if (!bar) return;
     var any = lastEntries.some(function (e) { return e.type === "group" || e.block.kind === "thought"; });
-    bar.hidden = !any && !toolState.query;
+    bar.hidden = !lastEntries.length && !toolState.query;
     var btn = document.getElementById("chatToggleAll");
     if (btn) {
+      btn.hidden = !any;
       btn.textContent = toolState.mode === "all" ? "Collapse all" : "Expand all";
       btn.setAttribute("aria-pressed", toolState.mode === "all" ? "true" : "false");
     }
@@ -2112,9 +2154,12 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
       lastItems = items;
       lastThreadHtml = itemsHtml(items);
       applyThreadItems(chatThread, items);
+      // Marked before the anchor is measured, so the page lays out once.
+      if (toolState.query || findHitMarks().length) applyFindMarks(chatThread);
     });
     syncOutputPane(lastItems);
-    afterThreadPatch(true);
+    syncCurrentHit();
+    afterThreadPatch(false);
   }
   /* Rebuild only the item a click touched, and keep keyboard focus on its button. */
   function patchToolItem(from) {
@@ -2131,7 +2176,10 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
       if (lastItems[i].key === item.key) { lastItems[i] = item; break; }
     }
     lastThreadHtml = itemsHtml(lastItems);
-    if (toolState.query) applyFindMarks(el);
+    if (toolState.query) {
+      applyFindMarks(el);
+      syncCurrentHit();
+    }
     var again = el.querySelectorAll("[" + attr + "]");
     for (var j = 0; j < again.length; j++) {
       if (again[j].getAttribute(attr) === focusKey) { again[j].focus(); break; }
@@ -2172,7 +2220,10 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     setTimeout(function () { target.classList.remove("flash"); }, 2400);
   }
   function afterThreadPatch(changed) {
-    if (changed && (toolState.query || findHitMarks().length)) applyFindMarks(chatThread);
+    if (changed && (toolState.query || findHitMarks().length)) {
+      applyFindMarks(chatThread);
+      syncCurrentHit();
+    }
     syncToolbar();
     applyDeepLink();
   }
@@ -2188,23 +2239,46 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     try { toolState.query = (new URLSearchParams(window.location.search).get("q") || "").trim(); } catch (e) { /* no query */ }
     input.value = toolState.query;
     var timer = null;
+    function applyQuery() {
+      clearTimeout(timer);
+      timer = null;
+      var q = input.value.trim();
+      if (q === toolState.query) return;
+      toolState.query = q;
+      currentHit = -1;
+      pickHit = !!q;
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (toolState.query) params.set("q", toolState.query); else params.delete("q");
+        var qs = params.toString();
+        history.replaceState(null, "", window.location.pathname + (qs ? "?" + qs : "") + window.location.hash);
+      } catch (e) { /* ignore */ }
+      repaintThread();
+    }
     input.addEventListener("input", function () {
       clearTimeout(timer);
-      timer = setTimeout(function () {
-        toolState.query = input.value.trim();
-        currentHit = -1;
-        try {
-          var params = new URLSearchParams(window.location.search);
-          if (toolState.query) params.set("q", toolState.query); else params.delete("q");
-          var qs = params.toString();
-          history.replaceState(null, "", window.location.pathname + (qs ? "?" + qs : "") + window.location.hash);
-        } catch (e) { /* ignore */ }
-        repaintThread();
-      }, 150);
+      timer = setTimeout(applyQuery, FIND_TYPING_MS);
     });
     input.addEventListener("keydown", function (ev) {
-      if (ev.key === "Enter") { ev.preventDefault(); stepHit(ev.shiftKey ? -1 : 1); }
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        var fresh = timer !== null && input.value.trim() !== toolState.query;
+        applyQuery();
+        if (!fresh) stepHit(ev.shiftKey ? -1 : 1);
+      }
       else if (ev.key === "Escape" && input.value) { input.value = ""; input.dispatchEvent(new Event("input")); }
+    });
+    var prevBtn = document.getElementById("chatFindPrev");
+    var nextBtn = document.getElementById("chatFindNext");
+    if (prevBtn) prevBtn.addEventListener("click", function () { applyQuery(); stepHit(-1); });
+    if (nextBtn) nextBtn.addEventListener("click", function () { applyQuery(); stepHit(1); });
+    document.addEventListener("keydown", function (ev) {
+      if (!(ev.ctrlKey || ev.metaKey) || ev.altKey || ev.shiftKey || (ev.key !== "f" && ev.key !== "F")) return;
+      var bar = document.getElementById("chatFindBar");
+      if (!bar || bar.hidden) return;
+      ev.preventDefault();
+      input.focus();
+      input.select();
     });
   })();
 
@@ -2289,7 +2363,7 @@ const CHAT_TRANSCRIPT_JS = `  /* ================= helpers ================= */
     var t = ev.target && ev.target.closest ? ev.target.closest("[data-tg], [data-more]") : null;
     if (t) {
       var moreKey = t.getAttribute("data-more");
-      if (moreKey) toolState.more[moreKey] = !toolState.more[moreKey];
+      if (moreKey) toolState.more[moreKey] = t.getAttribute("aria-expanded") !== "true";
       else toolState.overrides[t.getAttribute("data-tg")] = t.getAttribute("aria-expanded") !== "true";
       patchToolItem(t);
       return;

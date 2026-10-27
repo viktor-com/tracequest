@@ -61,3 +61,21 @@
   id: rvsc
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/bin/run-view-scroll.e2e.test.js
   tags: [spec, chat-ui, ui, tests, implemented]
+
+# run-view-find
+- label: the run view find box (/run?session=) highlights every match as you type and shows "n of N" with the exact total (no 400 cap); Enter and the ↓ button go to the next match, Shift+Enter and the ↑ button to the previous one, wrapping at either end, and each step marks that match as current and scrolls it into view inside the transcript
+  id: rvf1
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/run-view-find.playwright.test.js --test-name-pattern 'count and steps'
+  tags: [spec, chat-ui, run-view-find, ui, tests, implemented]
+- label: a find match inside a collapsed tool group, a collapsed thought, or past the first 12 lines of a tool output (behind "show more") is highlighted, counted and reachable by stepping; "show less" on such an output still collapses it
+  id: rvf2
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/run-view-find.playwright.test.js --test-name-pattern 'hidden matches'
+  tags: [spec, chat-ui, run-view-find, ui, tests, implemented]
+- label: on a recording of 600 messages the first highlight appears within 200 ms of the last keystroke in the find box, and Ctrl+F (Cmd+F on macOS) on the run view focuses the find box instead of the browser find bar
+  id: rvf3
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/run-view-find.playwright.test.js --test-name-pattern 'long transcript'
+  tags: [spec, chat-ui, run-view-find, ui, tests, implemented]
+- label: the check mark of a finished session in the run view sidebar is drawn centred inside its 14px circle (its box centre within 1px of the circle centre) in light and dark themes
+  id: rvf4
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 test/browser/run-view-find.playwright.test.js --test-name-pattern 'rail check'
+  tags: [spec, chat-ui, run-view-find, ui, tests, implemented]
