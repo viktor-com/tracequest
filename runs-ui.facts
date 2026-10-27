@@ -16,6 +16,10 @@
 - label: On /insights, idle g then r, g then c and g then i switch sections as on the other pages (not while typing in a field, and not when Character keys is turned off), so keyboard switching never dead-ends on Insights
   id: rsins
   tags: [spec, runs-ui, section-switch, implemented]
+- label: In a hub, clicking Chat, Runs or Insights in the top bar from any of those three pages, at 756, 1280, 1512 and 1728px wide, opens that section (Chat /run, Runs /sessions, Insights /insights) with its tab marked current; Chat never lands on Insights
+  id: rsnav
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test test/browser/hub-section-nav.playwright.test.js
+  tags: [spec, runs-ui, section-switch, hub, implemented]
 
 ## search box
 - label: The top-bar search box shrinks with the bar instead of overflowing it — at every width from 360 to 1440px the whole box lies inside the viewport, the page does not scroll sideways, and its placeholder is never cut to a single letter
