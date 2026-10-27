@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep the Runs list usable while a run's side panel is open. The list stays clickable, scrollable and reachable with Tab, and clicking another run shows it in the open panel; the close button and Escape still close it.
+
 ## [0.5.5] - 2026-10-26
 
 ### Fixed

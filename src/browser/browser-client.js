@@ -2413,7 +2413,6 @@ function openSessionFlyout(s, opts) {
     history.pushState(stateWithListPlace({ tqPeek: 1 }), '', window.location.href);
   }
   updatePageUrl();
-  pushOverlay(flyout);
   if (wasHidden) {
     focusOverlay(flyout, openLink || document.getElementById('sessionFlyoutClose'));
   }
@@ -2425,6 +2424,7 @@ function closeSessionFlyout(opts) {
   opts = opts || {};
   var flyout = document.getElementById('sessionFlyout');
   var wasOpen = !!(flyout && !flyout.hidden);
+  var focusInPanel = wasOpen && flyout.contains(document.activeElement);
   var popEntry = wasOpen && !opts.fromHistory && peekEntryIsCurrent();
   _peekSession = null;
   document.body.classList.remove('session-peek-open');
@@ -2451,8 +2451,8 @@ function closeSessionFlyout(opts) {
     updatePageUrl();
   }
   if (wasOpen) {
-    popOverlay(flyout);
-    restoreOverlayFocus(flyout._tqPrevFocus, flyout);
+    // A non-modal panel: focus the reader moved to the list stays there.
+    if (focusInPanel) restoreOverlayFocus(flyout._tqPrevFocus, flyout);
     flyout._tqPrevFocus = null;
   }
 }
@@ -2510,7 +2510,6 @@ function restoreSessionFlyoutFromUrl() {
     if (typeof install === 'function') install(next);
   }
   var frame = flyoutFrameEl();
-  var flyoutEl = document.getElementById('sessionFlyout');
   if (frame) {
     frame.addEventListener('load', function() {
       if (!_peekSession) return;
@@ -2520,7 +2519,6 @@ function restoreSessionFlyoutFromUrl() {
       if (status) status.hidden = true;
       frame.hidden = false;
     });
-    bindOverlayNestedFrameKeys(flyoutEl, frame, closeSessionFlyout);
   }
   window.addEventListener('message', function(e) {
     if (e.origin !== location.origin) return;
@@ -2532,20 +2530,6 @@ function restoreSessionFlyoutFromUrl() {
       window.TracequestPalette.toggle();
     }
   });
-  document.addEventListener('keydown', function(event) {
-    var flyout = document.getElementById('sessionFlyout');
-    if (!flyout || flyout.hidden || !isTopOverlay(flyout)) return;
-    if (event.key === 'Tab') {
-      trapOverlayTab(event, flyout);
-      return;
-    }
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-      closeSessionFlyout();
-    }
-  }, true);
   restoreSessionFlyoutFromUrl();
 })();
 
