@@ -319,14 +319,15 @@ const ICON_THEME = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" 
 const ICON_PLUS = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>';
 
 /**
- * Section nav, the same three names everywhere: Chat (/), Runs (/sessions),
- * Insights (/insights). `current` marks the page with aria-current.
+ * Section nav, the same three names everywhere: Chat (/run), Runs (/sessions),
+ * Insights (/insights). `current` marks the page with aria-current. Chat is
+ * /run, not /: a hub sends / to Insights.
  */
 export function appNavHtml(current) {
   const item = (key, href, label, kbd) =>
     `<a class="app-nav-item" href="${href}" data-nav="${key}" title="${label} — g then ${kbd}"` +
     (current === key ? ' aria-current="page"' : "") + `>${label}</a>`;
-  return `<nav class="app-nav" aria-label="Sections">${item("chat", "/", "Chat", "c")}${item("runs", "/sessions", "Runs", "r")}${item("insights", "/insights", "Insights", "i")}</nav>`;
+  return `<nav class="app-nav" aria-label="Sections">${item("chat", "/run", "Chat", "c")}${item("runs", "/sessions", "Runs", "r")}${item("insights", "/insights", "Insights", "i")}</nav>`;
 }
 
 /**
