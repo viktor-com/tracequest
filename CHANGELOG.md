@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-10-27
+
+### Added
+
+- Find in a run's transcript. In a run's chat view, typing in "Find in this conversation" highlights every match and shows "3 of 57". Enter and Shift+Enter, or the new up and down buttons, jump to the next or previous match, including matches inside collapsed tool calls, collapsed thoughts and long outputs cut at "show more". Ctrl+F (Cmd+F on macOS) focuses the box.
+
+### Fixed
+
+- Centre the check mark of a finished session in the chat sidebar. It sat low and to the left of its circle.
+
 ## [0.5.6] - 2026-10-27
 
 ### Fixed
