@@ -325,6 +325,10 @@
   id: rel055
   command: node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const p=JSON.parse(fs.readFileSync("package.json")), l=JSON.parse(fs.readFileSync("package-lock.json")); assert.equal(p.version,"0.5.5"); assert.equal(l.version,p.version); assert.equal(l.packages[""].version,p.version); assert.ok(fs.readFileSync("CHANGELOG.md","utf8").includes("## [0.5.5] - 2026-10-26"));'
   tags: [release-0-5-5, implemented]
+- label: tracequest Runs side panel release metadata uses version 0.5.6 consistently in the package, lockfile and dated changelog entry
+  id: rel056
+  command: node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const p=JSON.parse(fs.readFileSync("package.json")), l=JSON.parse(fs.readFileSync("package-lock.json")); assert.equal(p.version,"0.5.6"); assert.equal(l.version,p.version); assert.equal(l.packages[""].version,p.version); assert.ok(fs.readFileSync("CHANGELOG.md","utf8").includes("## [0.5.6] - 2026-10-27"));'
+  tags: [release-0-5-6, implemented]
 
 # branding
 - The TraceQuest horizontal wordmark uses expressive flared serif lettering with readable shared-stroke ligatures @logo-design @implemented
