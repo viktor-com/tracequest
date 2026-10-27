@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.8] - 2026-10-27
+
+### Fixed
+
+- In a hub, clicking Chat in the top bar opened Insights. Chat now opens the chat view (at /run); the hub's home address still opens Insights.
+
 ## [0.5.7] - 2026-10-27
 
 ### Added
