@@ -40,8 +40,9 @@ export const CHAT_SHELL_CSS = `
 .rail-row[aria-current="page"] { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-1); }
 .rail-glyph {
   flex: none; width: 14px; height: 14px; margin-top: 3px; display: inline-grid; place-items: center;
-  border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-3); color: var(--text-3); font-size: 9px;
+  border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-3); color: var(--text-3);
 }
+.rail-glyph svg { display: block; width: 8px; height: 8px; }
 .rail-glyph[data-status="running"] { box-shadow: none; }
 .rail-glyph[data-status="running"]::before {
   content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
@@ -294,7 +295,13 @@ body { overflow: hidden; }
   background: none; box-shadow: inset 0 0 0 1px var(--line-2); color: var(--text-2); font: inherit; font-size: var(--text-sm);
 }
 .chat-expand-btn:hover { color: var(--text); background: var(--surface-1); }
-@media (max-width: 520px) { .chat-find-inner { padding: 6px 14px; gap: 6px; } .chat-find-count { display: none; } }
+.chat-find-step {
+  flex: none; width: 28px; height: 28px; padding: 0; border: none; border-radius: var(--radius-sm); cursor: pointer;
+  background: none; color: var(--text-2); font: inherit; font-size: var(--text-sm);
+}
+.chat-find-step:hover:not(:disabled) { color: var(--text); background: var(--surface-1); }
+.chat-find-step:disabled { color: var(--text-3); opacity: 0.5; cursor: default; }
+@media (max-width: 520px) { .chat-find-inner { padding: 6px 14px; gap: 6px; } }
 
 .chat-tools { margin: 4px 0; font-size: var(--text-sm); }
 .chat-assistant + .chat-tools, .chat-user + .chat-tools { margin-top: 8px; }
@@ -307,6 +314,7 @@ body { overflow: hidden; }
 .tg-head .card-icon, .tg-row-head .card-icon { flex: none; color: var(--text-3); }
 .tg-sum, .tg-verb { flex: none; color: var(--text-2); white-space: nowrap; }
 .tg-detail, .tg-target { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); }
+.tg-detail:has(mark.chat-hit.current), .tg-target:has(mark.chat-hit.current) { white-space: normal; overflow-wrap: anywhere; }
 .tg-target { flex: 1; }
 .tg-detail { flex: 1; }
 .tg-target.mono { font-family: var(--font-mono); font-size: 12px; }
