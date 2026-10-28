@@ -1,0 +1,7455 @@
+{
+ "label": "base-0.5.5-same",
+ "build": "/home/everlier/tqbench/builds/5e57e8e2",
+ "corpus": "/home/everlier/tqbench/mac-home",
+ "startedAt": "2026-10-28T08:51:31.549Z",
+ "host": "fedora",
+ "sidecar": true,
+ "hubMode": true,
+ "conditions": {
+  "cliWarm": {
+   "rows": [
+    {
+     "query": "codex stop button",
+     "cmd": "search",
+     "ms": [
+      279,
+      282,
+      282,
+      290,
+      283
+     ],
+     "p50": 282.39378699999907,
+     "p90": 289.97787099999914
+    },
+    {
+     "query": "codex stop button",
+     "cmd": "handoff",
+     "ms": [
+      273,
+      271,
+      272,
+      269,
+      266
+     ],
+     "p50": 270.646979000001,
+     "p90": 273.3568869999999
+    },
+    {
+     "query": "interrupt generation with one Stop",
+     "cmd": "search",
+     "ms": [
+      285,
+      277,
+      287,
+      292,
+      294
+     ],
+     "p50": 287.26455199999873,
+     "p90": 293.8386750000009
+    },
+    {
+     "query": "interrupt generation with one Stop",
+     "cmd": "handoff",
+     "ms": [
+      290,
+      288,
+      278,
+      281,
+      285
+     ],
+     "p50": 284.75035699999717,
+     "p90": 289.56871300000057
+    },
+    {
+     "query": "cursor support",
+     "cmd": "search",
+     "ms": [
+      304,
+      304,
+      293,
+      302,
+      310
+     ],
+     "p50": 304.04043100000126,
+     "p90": 309.6149349999978
+    },
+    {
+     "query": "cursor support",
+     "cmd": "handoff",
+     "ms": [
+      305,
+      296,
+      312,
+      316,
+      318
+     ],
+     "p50": 311.807668999998,
+     "p90": 318.3872730000003
+    },
+    {
+     "query": "runs page sorting",
+     "cmd": "search",
+     "ms": [
+      289,
+      294,
+      275,
+      287,
+      286
+     ],
+     "p50": 286.66825999999855,
+     "p90": 293.74408799999946
+    },
+    {
+     "query": "runs page sorting",
+     "cmd": "handoff",
+     "ms": [
+      281,
+      283,
+      281,
+      281,
+      279
+     ],
+     "p50": 281.23298200000136,
+     "p90": 283.01149899999655
+    },
+    {
+     "query": "fix runs page sorting and search box",
+     "cmd": "search",
+     "ms": [
+      296,
+      267,
+      281,
+      270,
+      284
+     ],
+     "p50": 281.33762899999783,
+     "p90": 295.98619099999996
+    },
+    {
+     "query": "fix runs page sorting and search box",
+     "cmd": "handoff",
+     "ms": [
+      274,
+      271,
+      274,
+      275,
+      286
+     ],
+     "p50": 273.7766240000019,
+     "p90": 285.88299299999926
+    },
+    {
+     "query": "open the failed call from what went wrong",
+     "cmd": "search",
+     "ms": [
+      311,
+      323,
+      309,
+      303,
+      314
+     ],
+     "p50": 310.94173500000034,
+     "p90": 323.38811299999725
+    },
+    {
+     "query": "open the failed call from what went wrong",
+     "cmd": "handoff",
+     "ms": [
+      295,
+      301,
+      301,
+      296,
+      299
+     ],
+     "p50": 298.86911600000167,
+     "p90": 301.4742879999976
+    },
+    {
+     "query": "what went wrong failed call",
+     "cmd": "search",
+     "ms": [
+      307,
+      315,
+      320,
+      317,
+      304
+     ],
+     "p50": 314.62236499999926,
+     "p90": 320.23075699999754
+    },
+    {
+     "query": "what went wrong failed call",
+     "cmd": "handoff",
+     "ms": [
+      307,
+      339,
+      330,
+      305,
+      315
+     ],
+     "p50": 315.4716800000024,
+     "p90": 339.3366470000001
+    },
+    {
+     "query": "standup and handoff features",
+     "cmd": "search",
+     "ms": [
+      325,
+      333,
+      334,
+      343,
+      342
+     ],
+     "p50": 333.91284899999664,
+     "p90": 342.5095619999993
+    },
+    {
+     "query": "standup and handoff features",
+     "cmd": "handoff",
+     "ms": [
+      339,
+      330,
+      380,
+      326,
+      335
+     ],
+     "p50": 334.8536909999966,
+     "p90": 379.8319279999996
+    },
+    {
+     "query": "ui style design guidelines",
+     "cmd": "search",
+     "ms": [
+      293,
+      293,
+      297,
+      286,
+      287
+     ],
+     "p50": 293.1416059999974,
+     "p90": 296.8562450000027
+    },
+    {
+     "query": "ui style design guidelines",
+     "cmd": "handoff",
+     "ms": [
+      288,
+      299,
+      279,
+      284,
+      287
+     ],
+     "p50": 287.38931800000137,
+     "p90": 299.0893789999973
+    },
+    {
+     "query": "harbor wordmark on dither canvas",
+     "cmd": "search",
+     "ms": [
+      313,
+      313,
+      316,
+      325,
+      319
+     ],
+     "p50": 315.53371799999877,
+     "p90": 324.6530950000015
+    },
+    {
+     "query": "harbor wordmark on dither canvas",
+     "cmd": "handoff",
+     "ms": [
+      337,
+      326,
+      334,
+      327,
+      308
+     ],
+     "p50": 326.94859700000234,
+     "p90": 337.2497599999988
+    },
+    {
+     "query": "harness hacks slide presentation",
+     "cmd": "search",
+     "ms": [
+      277,
+      259,
+      277,
+      266,
+      277
+     ],
+     "p50": 277.0927759999977,
+     "p90": 277.465495000004
+    },
+    {
+     "query": "harness hacks slide presentation",
+     "cmd": "handoff",
+     "ms": [
+      289,
+      297,
+      269,
+      264,
+      289
+     ],
+     "p50": 289.0394090000045,
+     "p90": 296.94690300000366
+    },
+    {
+     "query": "pre-wiring explainer video",
+     "cmd": "search",
+     "ms": [
+      344,
+      339,
+      321,
+      325,
+      323
+     ],
+     "p50": 325.0548439999984,
+     "p90": 343.65869699999894
+    },
+    {
+     "query": "pre-wiring explainer video",
+     "cmd": "handoff",
+     "ms": [
+      320,
+      335,
+      342,
+      329,
+      328
+     ],
+     "p50": 328.6154569999999,
+     "p90": 342.38832600000023
+    },
+    {
+     "query": "more space between lines yes or no state",
+     "cmd": "search",
+     "ms": [
+      317,
+      307,
+      319,
+      310,
+      305
+     ],
+     "p50": 309.7221109999955,
+     "p90": 319.2842860000019
+    },
+    {
+     "query": "more space between lines yes or no state",
+     "cmd": "handoff",
+     "ms": [
+      296,
+      297,
+      295,
+      293,
+      301
+     ],
+     "p50": 295.5681640000039,
+     "p90": 301.16009699999995
+    },
+    {
+     "query": "test agent store as an end user",
+     "cmd": "search",
+     "ms": [
+      304,
+      317,
+      307,
+      327,
+      308
+     ],
+     "p50": 307.5669760000019,
+     "p90": 326.6056170000011
+    },
+    {
+     "query": "test agent store as an end user",
+     "cmd": "handoff",
+     "ms": [
+      304,
+      298,
+      305,
+      312,
+      307
+     ],
+     "p50": 304.5933339999974,
+     "p90": 312.07696099999885
+    },
+    {
+     "query": "readme diagram images redesign before after",
+     "cmd": "search",
+     "ms": [
+      274,
+      295,
+      278,
+      278,
+      287
+     ],
+     "p50": 277.91148200000316,
+     "p90": 294.71774000000005
+    },
+    {
+     "query": "readme diagram images redesign before after",
+     "cmd": "handoff",
+     "ms": [
+      277,
+      284,
+      275,
+      273,
+      279
+     ],
+     "p50": 277.3977369999993,
+     "p90": 284.40837699999975
+    },
+    {
+     "query": "draft render queued 40 minutes ago",
+     "cmd": "search",
+     "ms": [
+      269,
+      269,
+      275,
+      270,
+      265
+     ],
+     "p50": 269.47188299999834,
+     "p90": 274.99774900000193
+    },
+    {
+     "query": "draft render queued 40 minutes ago",
+     "cmd": "handoff",
+     "ms": [
+      263,
+      260,
+      272,
+      276,
+      275
+     ],
+     "p50": 272.02018800000224,
+     "p90": 275.9248699999953
+    },
+    {
+     "query": "\"cannot contain whitespace\"",
+     "cmd": "search",
+     "ms": [
+      270,
+      275,
+      278,
+      296,
+      279
+     ],
+     "p50": 278.2539809999944,
+     "p90": 295.8637449999951
+    },
+    {
+     "query": "\"cannot contain whitespace\"",
+     "cmd": "handoff",
+     "ms": [
+      273,
+      278,
+      275,
+      277,
+      283
+     ],
+     "p50": 277.07212699999945,
+     "p90": 282.9644910000061
+    },
+    {
+     "query": "parseSession",
+     "cmd": "search",
+     "ms": [
+      310,
+      308,
+      314,
+      309,
+      304
+     ],
+     "p50": 309.06762999999773,
+     "p90": 314.35064299999794
+    },
+    {
+     "query": "parseSession",
+     "cmd": "handoff",
+     "ms": [
+      311,
+      308,
+      319,
+      327,
+      350
+     ],
+     "p50": 319.1923090000055,
+     "p90": 349.954859999998
+    },
+    {
+     "query": "sidecar timeout",
+     "cmd": "search",
+     "ms": [
+      308,
+      317,
+      321,
+      282,
+      277
+     ],
+     "p50": 307.52993699999934,
+     "p90": 320.5772569999972
+    },
+    {
+     "query": "sidecar timeout",
+     "cmd": "handoff",
+     "ms": [
+      280,
+      273,
+      282,
+      304,
+      287
+     ],
+     "p50": 281.59074100000726,
+     "p90": 303.9142450000072
+    },
+    {
+     "query": "ssh import backoff",
+     "cmd": "search",
+     "ms": [
+      290,
+      270,
+      260,
+      269,
+      277
+     ],
+     "p50": 270.0097470000037,
+     "p90": 290.38284900000144
+    },
+    {
+     "query": "ssh import backoff",
+     "cmd": "handoff",
+     "ms": [
+      278,
+      268,
+      273,
+      268,
+      269
+     ],
+     "p50": 268.5227120000054,
+     "p90": 277.9880290000001
+    },
+    {
+     "query": "usage limits",
+     "cmd": "search",
+     "ms": [
+      320,
+      318,
+      320,
+      319,
+      335
+     ],
+     "p50": 319.9405160000024,
+     "p90": 334.5537699999986
+    },
+    {
+     "query": "usage limits",
+     "cmd": "handoff",
+     "ms": [
+      321,
+      326,
+      328,
+      319,
+      331
+     ],
+     "p50": 325.8539299999975,
+     "p90": 331.25051900000835
+    },
+    {
+     "query": "insights stall",
+     "cmd": "search",
+     "ms": [
+      284,
+      305,
+      306,
+      287,
+      277
+     ],
+     "p50": 286.9654600000067,
+     "p90": 305.9576439999946
+    },
+    {
+     "query": "insights stall",
+     "cmd": "handoff",
+     "ms": [
+      284,
+      282,
+      290,
+      288,
+      284
+     ],
+     "p50": 284.27524200000335,
+     "p90": 289.7102390000073
+    },
+    {
+     "query": "worktree origin remote",
+     "cmd": "search",
+     "ms": [
+      315,
+      316,
+      302,
+      321,
+      317
+     ],
+     "p50": 316.3658439999999,
+     "p90": 321.13536100000783
+    },
+    {
+     "query": "worktree origin remote",
+     "cmd": "handoff",
+     "ms": [
+      292,
+      314,
+      318,
+      326,
+      307
+     ],
+     "p50": 314.1241500000033,
+     "p90": 325.85570899999584
+    },
+    {
+     "query": "error handling",
+     "cmd": "search",
+     "ms": [
+      337,
+      329,
+      332,
+      322,
+      330
+     ],
+     "p50": 330.3120559999952,
+     "p90": 336.7044159999932
+    },
+    {
+     "query": "error handling",
+     "cmd": "handoff",
+     "ms": [
+      327,
+      333,
+      334,
+      328,
+      363
+     ],
+     "p50": 333.2539480000123,
+     "p90": 363.17484500000137
+    },
+    {
+     "query": "grok vktr",
+     "cmd": "search",
+     "ms": [
+      270,
+      259,
+      292,
+      270,
+      276
+     ],
+     "p50": 270.2282899999991,
+     "p90": 291.9018039999937
+    },
+    {
+     "query": "grok vktr",
+     "cmd": "handoff",
+     "ms": [
+      269,
+      275,
+      279,
+      269,
+      298
+     ],
+     "p50": 275.0144069999951,
+     "p90": 298.4104590000061
+    },
+    {
+     "query": "you're absolutely right",
+     "cmd": "search",
+     "ms": [
+      336,
+      336,
+      316,
+      325,
+      306
+     ],
+     "p50": 325.3009160000074,
+     "p90": 335.99336700000276
+    },
+    {
+     "query": "you're absolutely right",
+     "cmd": "handoff",
+     "ms": [
+      306,
+      310,
+      304,
+      316,
+      303
+     ],
+     "p50": 305.78737900000124,
+     "p90": 316.2510659999971
+    },
+    {
+     "query": "absolutely right",
+     "cmd": "search",
+     "ms": [
+      323,
+      317,
+      326,
+      331,
+      309
+     ],
+     "p50": 323.06479299999774,
+     "p90": 330.8542410000082
+    },
+    {
+     "query": "absolutely right",
+     "cmd": "handoff",
+     "ms": [
+      320,
+      314,
+      313,
+      318,
+      319
+     ],
+     "p50": 317.9527059999964,
+     "p90": 320.16105999999854
+    },
+    {
+     "query": "let me",
+     "cmd": "search",
+     "ms": [
+      358,
+      362,
+      361,
+      354,
+      366
+     ],
+     "p50": 361.06992799999716,
+     "p90": 365.6474520000047
+    },
+    {
+     "query": "let me",
+     "cmd": "handoff",
+     "ms": [
+      350,
+      364,
+      349,
+      351,
+      370
+     ],
+     "p50": 350.6523589999997,
+     "p90": 370.17783600000257
+    },
+    {
+     "query": "I'll",
+     "cmd": "search",
+     "ms": [
+      305,
+      294,
+      297,
+      298,
+      290
+     ],
+     "p50": 297.1242179999972,
+     "p90": 305.01206199999433
+    },
+    {
+     "query": "I'll",
+     "cmd": "handoff",
+     "ms": [
+      287,
+      292,
+      309,
+      297,
+      310
+     ],
+     "p50": 297.2980019999959,
+     "p90": 310.4594789999974
+    },
+    {
+     "query": "the",
+     "cmd": "search",
+     "ms": [
+      309,
+      308,
+      309,
+      315,
+      304
+     ],
+     "p50": 308.6461339999951,
+     "p90": 314.5572279999906
+    },
+    {
+     "query": "the",
+     "cmd": "handoff",
+     "ms": [
+      293,
+      301,
+      299,
+      297,
+      300
+     ],
+     "p50": 298.68886100000236,
+     "p90": 300.8126570000022
+    },
+    {
+     "query": "now let me check",
+     "cmd": "search",
+     "ms": [
+      347,
+      345,
+      352,
+      369,
+      344
+     ],
+     "p50": 346.89732099999674,
+     "p90": 368.6613010000001
+    },
+    {
+     "query": "now let me check",
+     "cmd": "handoff",
+     "ms": [
+      335,
+      347,
+      354,
+      339,
+      340
+     ],
+     "p50": 340.2718290000048,
+     "p90": 354.0361380000104
+    },
+    {
+     "query": "\"you're absolutely right\"",
+     "cmd": "search",
+     "ms": [
+      301,
+      306,
+      302,
+      304,
+      311
+     ],
+     "p50": 303.6091540000052,
+     "p90": 310.6843430000008
+    },
+    {
+     "query": "\"you're absolutely right\"",
+     "cmd": "handoff",
+     "ms": [
+      300,
+      311,
+      318,
+      301,
+      297
+     ],
+     "p50": 300.8979249999975,
+     "p90": 318.44163099999423
+    },
+    {
+     "query": "\"let me\"",
+     "cmd": "search",
+     "ms": [
+      313,
+      312,
+      332,
+      315,
+      319
+     ],
+     "p50": 315.460149999999,
+     "p90": 331.5628690000012
+    },
+    {
+     "query": "\"let me\"",
+     "cmd": "handoff",
+     "ms": [
+      317,
+      316,
+      320,
+      328,
+      322
+     ],
+     "p50": 319.81725999999617,
+     "p90": 328.16913999999815
+    },
+    {
+     "query": "\"absolutely right\"",
+     "cmd": "search",
+     "ms": [
+      302,
+      302,
+      309,
+      304,
+      326
+     ],
+     "p50": 304.20020599999407,
+     "p90": 325.5291690000013
+    },
+    {
+     "query": "\"absolutely right\"",
+     "cmd": "handoff",
+     "ms": [
+      321,
+      307,
+      303,
+      311,
+      311
+     ],
+     "p50": 310.69068299999344,
+     "p90": 320.6426550000033
+    },
+    {
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "cmd": "search",
+     "ms": [
+      281,
+      269,
+      276,
+      273,
+      280
+     ],
+     "p50": 276.3287479999999,
+     "p90": 280.7271080000064
+    },
+    {
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "cmd": "handoff",
+     "ms": [
+      291,
+      278,
+      276,
+      282,
+      275
+     ],
+     "p50": 278.2079129999911,
+     "p90": 291.2016450000083
+    },
+    {
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "cmd": "search",
+     "ms": [
+      277,
+      282,
+      281,
+      280,
+      274
+     ],
+     "p50": 279.73861699999543,
+     "p90": 281.696128999989
+    },
+    {
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "cmd": "handoff",
+     "ms": [
+      277,
+      287,
+      278,
+      278,
+      277
+     ],
+     "p50": 278.0696469999966,
+     "p90": 286.9967999999935
+    },
+    {
+     "query": "zstd",
+     "cmd": "search",
+     "ms": [
+      307,
+      310,
+      307,
+      309,
+      306
+     ],
+     "p50": 307.44216900000174,
+     "p90": 310.320492999992
+    },
+    {
+     "query": "zstd",
+     "cmd": "handoff",
+     "ms": [
+      318,
+      317,
+      317,
+      312,
+      321
+     ],
+     "p50": 316.8712769999984,
+     "p90": 321.156410999989
+    },
+    {
+     "query": "fsevents",
+     "cmd": "search",
+     "ms": [
+      268,
+      275,
+      275,
+      274,
+      273
+     ],
+     "p50": 274.1207960000029,
+     "p90": 274.8905720000039
+    },
+    {
+     "query": "fsevents",
+     "cmd": "handoff",
+     "ms": [
+      274,
+      269,
+      279,
+      277,
+      290
+     ],
+     "p50": 276.6672099999996,
+     "p90": 290.2182449999964
+    },
+    {
+     "query": "flock",
+     "cmd": "search",
+     "ms": [
+      261,
+      285,
+      262,
+      279,
+      274
+     ],
+     "p50": 273.98570999999356,
+     "p90": 285.2378330000065
+    },
+    {
+     "query": "flock",
+     "cmd": "handoff",
+     "ms": [
+      275,
+      271,
+      278,
+      277,
+      276
+     ],
+     "p50": 275.53720299999986,
+     "p90": 277.8359739999869
+    }
+   ],
+   "search": {
+    "n": 39,
+    "fail": 0,
+    "p50": 304.20020599999407,
+    "p90": 330.3120559999952,
+    "max": 361.06992799999716
+   },
+   "handoff": {
+    "n": 39,
+    "fail": 0,
+    "p50": 298.68886100000236,
+    "p90": 333.2539480000123,
+    "max": 350.6523589999997
+   },
+   "allRuns": {
+    "n": 390,
+    "fail": 0,
+    "p50": 302,
+    "p90": 334,
+    "max": 380
+   }
+  },
+  "cliFirst": {
+   "rows": [
+    {
+     "query": "you're absolutely right",
+     "ms": 326
+    },
+    {
+     "query": "let me",
+     "ms": 368
+    },
+    {
+     "query": "codex stop button",
+     "ms": 306
+    },
+    {
+     "query": "zstd",
+     "ms": 368
+    },
+    {
+     "query": "I'll",
+     "ms": 296
+    }
+   ],
+   "search": {
+    "n": 5,
+    "fail": 0,
+    "p50": 326,
+    "p90": 368,
+    "max": 368
+   }
+  },
+  "cliChanged": {
+   "rows": [
+    {
+     "query": "codex stop button",
+     "ms": 799
+    },
+    {
+     "query": "interrupt generation with one Stop",
+     "ms": 838
+    },
+    {
+     "query": "cursor support",
+     "ms": 832
+    },
+    {
+     "query": "runs page sorting",
+     "ms": 813
+    },
+    {
+     "query": "fix runs page sorting and search box",
+     "ms": 805
+    },
+    {
+     "query": "open the failed call from what went wrong",
+     "ms": 867
+    },
+    {
+     "query": "what went wrong failed call",
+     "ms": 860
+    },
+    {
+     "query": "standup and handoff features",
+     "ms": 830
+    },
+    {
+     "query": "ui style design guidelines",
+     "ms": 823
+    },
+    {
+     "query": "harbor wordmark on dither canvas",
+     "ms": 876
+    },
+    {
+     "query": "harness hacks slide presentation",
+     "ms": 791
+    },
+    {
+     "query": "pre-wiring explainer video",
+     "ms": 836
+    },
+    {
+     "query": "more space between lines yes or no state",
+     "ms": 848
+    },
+    {
+     "query": "test agent store as an end user",
+     "ms": 857
+    },
+    {
+     "query": "readme diagram images redesign before after",
+     "ms": 844
+    },
+    {
+     "query": "draft render queued 40 minutes ago",
+     "ms": 849
+    },
+    {
+     "query": "\"cannot contain whitespace\"",
+     "ms": 804
+    },
+    {
+     "query": "parseSession",
+     "ms": 861
+    },
+    {
+     "query": "sidecar timeout",
+     "ms": 817
+    },
+    {
+     "query": "ssh import backoff",
+     "ms": 816
+    },
+    {
+     "query": "usage limits",
+     "ms": 851
+    },
+    {
+     "query": "insights stall",
+     "ms": 837
+    },
+    {
+     "query": "worktree origin remote",
+     "ms": 859
+    },
+    {
+     "query": "error handling",
+     "ms": 904
+    },
+    {
+     "query": "grok vktr",
+     "ms": 826
+    },
+    {
+     "query": "you're absolutely right",
+     "ms": 839
+    },
+    {
+     "query": "absolutely right",
+     "ms": 863
+    },
+    {
+     "query": "let me",
+     "ms": 979
+    },
+    {
+     "query": "I'll",
+     "ms": 826
+    },
+    {
+     "query": "the",
+     "ms": 883
+    },
+    {
+     "query": "now let me check",
+     "ms": 932
+    },
+    {
+     "query": "\"you're absolutely right\"",
+     "ms": 839
+    },
+    {
+     "query": "\"let me\"",
+     "ms": 853
+    },
+    {
+     "query": "\"absolutely right\"",
+     "ms": 838
+    },
+    {
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "ms": 796
+    },
+    {
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "ms": 852
+    },
+    {
+     "query": "zstd",
+     "ms": 807
+    },
+    {
+     "query": "fsevents",
+     "ms": 815
+    },
+    {
+     "query": "flock",
+     "ms": 824
+    }
+   ],
+   "search": {
+    "n": 39,
+    "fail": 0,
+    "p50": 838,
+    "p90": 883,
+    "max": 979
+   }
+  },
+  "freshHub": {
+   "rows": [
+    {
+     "query": "you're absolutely right",
+     "readyMs": 941,
+     "pageLoadMs": 771,
+     "firstSearchMs": 148.19999998807907,
+     "serverMs": 18.400000005960464,
+     "spawnToResultsMs": 3337
+    },
+    {
+     "query": "let me",
+     "readyMs": 873,
+     "pageLoadMs": 786,
+     "firstSearchMs": 147.80000001192093,
+     "serverMs": 18.099999994039536,
+     "spawnToResultsMs": 2384
+    },
+    {
+     "query": "codex stop button",
+     "readyMs": 873,
+     "pageLoadMs": 766,
+     "firstSearchMs": 141.90000000596046,
+     "serverMs": 12.299999982118607,
+     "spawnToResultsMs": 2917
+    }
+   ],
+   "firstSearch": {
+    "n": 3,
+    "fail": 0,
+    "p50": 147.80000001192093,
+    "p90": 148.19999998807907,
+    "max": 148.19999998807907
+   }
+  },
+  "idle": {
+   "cpuPct": 0,
+   "rssMB": 444
+  },
+  "uiWarm": {
+   "rows": [
+    {
+     "round": 0,
+     "query": "codex stop button",
+     "kind": "topbar",
+     "ms": 139.59999999403954,
+     "at": 1793177804053,
+     "end": 1793177805329,
+     "lastKeyMs": 139.59999999403954,
+     "firstKeyMs": 999,
+     "serverMs": 15.300000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "interrupt generation with one Stop",
+     "kind": "topbar",
+     "ms": 151.10000002384186,
+     "at": 1793177805329,
+     "end": 1793177807799,
+     "lastKeyMs": 151.10000002384186,
+     "firstKeyMs": 1887.800000011921,
+     "serverMs": 18.19999998807907,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "cursor support",
+     "kind": "topbar",
+     "ms": 146.59999999403954,
+     "at": 1793177807799,
+     "end": 1793177809202,
+     "lastKeyMs": 146.59999999403954,
+     "firstKeyMs": 831.5,
+     "serverMs": 13.800000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "runs page sorting",
+     "kind": "topbar",
+     "ms": 138.30000001192093,
+     "at": 1793177809202,
+     "end": 1793177810758,
+     "lastKeyMs": 138.30000001192093,
+     "firstKeyMs": 983.4000000059605,
+     "serverMs": 11.199999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "fix runs page sorting and search box",
+     "kind": "topbar",
+     "ms": 140.7999999821186,
+     "at": 1793177810758,
+     "end": 1793177813218,
+     "lastKeyMs": 140.7999999821186,
+     "firstKeyMs": 1997.0999999940395,
+     "serverMs": 15.5,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "open the failed call from what went wrong",
+     "kind": "topbar",
+     "ms": 147.09999999403954,
+     "at": 1793177813218,
+     "end": 1793177816058,
+     "lastKeyMs": 147.09999999403954,
+     "firstKeyMs": 2262.300000011921,
+     "serverMs": 20,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "what went wrong failed call",
+     "kind": "topbar",
+     "ms": 143.60000002384186,
+     "at": 1793177816058,
+     "end": 1793177818164,
+     "lastKeyMs": 143.60000002384186,
+     "firstKeyMs": 1522.6000000238419,
+     "serverMs": 14.599999994039536,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "standup and handoff features",
+     "kind": "topbar",
+     "ms": 209.2999999821186,
+     "at": 1793177818164,
+     "end": 1793177820375,
+     "lastKeyMs": 209.2999999821186,
+     "firstKeyMs": 1636.0999999940395,
+     "serverMs": 79.2999999821186,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "ui style design guidelines",
+     "kind": "topbar",
+     "ms": 137.30000001192093,
+     "at": 1793177820375,
+     "end": 1793177822420,
+     "lastKeyMs": 137.30000001192093,
+     "firstKeyMs": 1465.4000000059605,
+     "serverMs": 10.800000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "harbor wordmark on dither canvas",
+     "kind": "topbar",
+     "ms": 140.80000001192093,
+     "at": 1793177822420,
+     "end": 1793177824671,
+     "lastKeyMs": 140.80000001192093,
+     "firstKeyMs": 1783.1000000238419,
+     "serverMs": 13.299999982118607,
+     "status": 200,
+     "items": 1,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "harness hacks slide presentation",
+     "kind": "topbar",
+     "ms": 140.09999999403954,
+     "at": 1793177824671,
+     "end": 1793177826912,
+     "lastKeyMs": 140.09999999403954,
+     "firstKeyMs": 1777.5,
+     "serverMs": 9.099999994039536,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "pre-wiring explainer video",
+     "kind": "topbar",
+     "ms": 134.90000000596046,
+     "at": 1793177826912,
+     "end": 1793177828940,
+     "lastKeyMs": 134.90000000596046,
+     "firstKeyMs": 1453.300000011921,
+     "serverMs": 8.199999988079071,
+     "status": 200,
+     "items": 3,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "more space between lines yes or no state",
+     "kind": "topbar",
+     "ms": 138.90000000596046,
+     "at": 1793177828940,
+     "end": 1793177831607,
+     "lastKeyMs": 138.90000000596046,
+     "firstKeyMs": 2199.5999999940395,
+     "serverMs": 11.699999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "test agent store as an end user",
+     "kind": "topbar",
+     "ms": 142.60000002384186,
+     "at": 1793177831607,
+     "end": 1793177833795,
+     "lastKeyMs": 142.60000002384186,
+     "firstKeyMs": 1725.4000000059605,
+     "serverMs": 14.699999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "readme diagram images redesign before after",
+     "kind": "topbar",
+     "ms": 138.5,
+     "at": 1793177833795,
+     "end": 1793177836732,
+     "lastKeyMs": 138.5,
+     "firstKeyMs": 2355.9000000059605,
+     "serverMs": 10.199999988079071,
+     "status": 200,
+     "items": 4,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "draft render queued 40 minutes ago",
+     "kind": "topbar",
+     "ms": 133.90000000596046,
+     "at": 1793177836732,
+     "end": 1793177839221,
+     "lastKeyMs": 133.90000000596046,
+     "firstKeyMs": 1915,
+     "serverMs": 9.699999988079071,
+     "status": 200,
+     "items": 5,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"cannot contain whitespace\"",
+     "kind": "topbar",
+     "ms": 145,
+     "at": 1793177839221,
+     "end": 1793177841240,
+     "lastKeyMs": 145,
+     "firstKeyMs": 1541.5,
+     "serverMs": 12.200000017881393,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "parseSession",
+     "kind": "topbar",
+     "ms": 148,
+     "at": 1793177841240,
+     "end": 1793177842447,
+     "lastKeyMs": 148,
+     "firstKeyMs": 744.5,
+     "serverMs": 14.900000005960464,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "sidecar timeout",
+     "kind": "topbar",
+     "ms": 136.09999999403954,
+     "at": 1793177842447,
+     "end": 1793177843907,
+     "lastKeyMs": 136.09999999403954,
+     "firstKeyMs": 881.6999999880791,
+     "serverMs": 11.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "ssh import backoff",
+     "kind": "topbar",
+     "ms": 139.7999999821186,
+     "at": 1793177843907,
+     "end": 1793177845420,
+     "lastKeyMs": 139.7999999821186,
+     "firstKeyMs": 1040,
+     "serverMs": 10.400000005960464,
+     "status": 200,
+     "items": 2,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "usage limits",
+     "kind": "topbar",
+     "ms": 136.5,
+     "at": 1793177845420,
+     "end": 1793177846624,
+     "lastKeyMs": 136.5,
+     "firstKeyMs": 727.4000000059605,
+     "serverMs": 10.800000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "insights stall",
+     "kind": "topbar",
+     "ms": 139.59999999403954,
+     "at": 1793177846624,
+     "end": 1793177847941,
+     "lastKeyMs": 139.59999999403954,
+     "firstKeyMs": 837.9000000059605,
+     "serverMs": 10.299999982118607,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "worktree origin remote",
+     "kind": "topbar",
+     "ms": 136.19999998807907,
+     "at": 1793177847941,
+     "end": 1793177849649,
+     "lastKeyMs": 136.19999998807907,
+     "firstKeyMs": 1247.699999988079,
+     "serverMs": 9.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "error handling",
+     "kind": "topbar",
+     "ms": 139.90000000596046,
+     "at": 1793177849649,
+     "end": 1793177851044,
+     "lastKeyMs": 139.90000000596046,
+     "firstKeyMs": 823.2000000178814,
+     "serverMs": 12.400000005960464,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "grok vktr",
+     "kind": "topbar",
+     "ms": 134.40000000596046,
+     "at": 1793177851044,
+     "end": 1793177852180,
+     "lastKeyMs": 134.40000000596046,
+     "firstKeyMs": 561.5,
+     "serverMs": 8.5,
+     "status": 200,
+     "items": 6,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "you're absolutely right",
+     "kind": "topbar",
+     "ms": 137.69999998807907,
+     "at": 1793177852180,
+     "end": 1793177854050,
+     "lastKeyMs": 137.69999998807907,
+     "firstKeyMs": 1300.0999999940395,
+     "serverMs": 8.699999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "absolutely right",
+     "kind": "topbar",
+     "ms": 137.59999999403954,
+     "at": 1793177854050,
+     "end": 1793177855543,
+     "lastKeyMs": 137.59999999403954,
+     "firstKeyMs": 925.5999999940395,
+     "serverMs": 9.300000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "let me",
+     "kind": "topbar",
+     "ms": 143.2999999821186,
+     "at": 1793177855543,
+     "end": 1793177856527,
+     "lastKeyMs": 143.2999999821186,
+     "firstKeyMs": 408.89999997615814,
+     "serverMs": 13.100000023841858,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "I'll",
+     "kind": "topbar",
+     "ms": 140.5,
+     "at": 1793177856527,
+     "end": 1793177857403,
+     "lastKeyMs": 140.5,
+     "firstKeyMs": 296.69999998807907,
+     "serverMs": 11,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "the",
+     "kind": "topbar",
+     "ms": 139.39999997615814,
+     "at": 1793177857403,
+     "end": 1793177858115,
+     "lastKeyMs": 139.39999997615814,
+     "firstKeyMs": 242.2999999821186,
+     "serverMs": 10.200000017881393,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "now let me check",
+     "kind": "topbar",
+     "ms": 144.69999998807907,
+     "at": 1793177858115,
+     "end": 1793177859620,
+     "lastKeyMs": 144.69999998807907,
+     "firstKeyMs": 935.5999999940395,
+     "serverMs": 13,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"you're absolutely right\"",
+     "kind": "topbar",
+     "ms": 142.2999999821186,
+     "at": 1793177859620,
+     "end": 1793177861501,
+     "lastKeyMs": 142.2999999821186,
+     "firstKeyMs": 1412.9000000059605,
+     "serverMs": 11.800000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"let me\"",
+     "kind": "topbar",
+     "ms": 136.5,
+     "at": 1793177861501,
+     "end": 1793177862473,
+     "lastKeyMs": 136.5,
+     "firstKeyMs": 502.59999999403954,
+     "serverMs": 11.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"absolutely right\"",
+     "kind": "topbar",
+     "ms": 151.90000000596046,
+     "at": 1793177862473,
+     "end": 1793177863981,
+     "lastKeyMs": 151.90000000596046,
+     "firstKeyMs": 1043.9000000059605,
+     "serverMs": 19.69999998807907,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "kind": "topbar",
+     "ms": 138.39999997615814,
+     "at": 1793177863981,
+     "end": 1793177869862,
+     "lastKeyMs": 138.39999997615814,
+     "firstKeyMs": 5306.199999988079,
+     "serverMs": 12.800000011920929,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "kind": "topbar",
+     "ms": 148.09999999403954,
+     "at": 1793177869862,
+     "end": 1793177875178,
+     "lastKeyMs": 148.09999999403954,
+     "firstKeyMs": 4741.4000000059605,
+     "serverMs": 17.299999982118607,
+     "status": 200,
+     "items": 1,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "zstd",
+     "kind": "topbar",
+     "ms": 134,
+     "at": 1793177875178,
+     "end": 1793177876039,
+     "lastKeyMs": 134,
+     "firstKeyMs": 292.40000000596046,
+     "serverMs": 7.9000000059604645,
+     "status": 200,
+     "items": 6,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "fsevents",
+     "kind": "topbar",
+     "ms": 139.5,
+     "at": 1793177876039,
+     "end": 1793177877131,
+     "lastKeyMs": 139.5,
+     "firstKeyMs": 506.89999997615814,
+     "serverMs": 9.700000017881393,
+     "status": 200,
+     "items": 2,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "flock",
+     "kind": "topbar",
+     "ms": 135.5,
+     "at": 1793177877131,
+     "end": 1793177878054,
+     "lastKeyMs": 135.5,
+     "firstKeyMs": 345.19999998807907,
+     "serverMs": 9.800000011920929,
+     "status": 200,
+     "items": 7,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "codex stop button",
+     "kind": "runsEnter",
+     "ms": 28.900000005960464,
+     "at": 1793177878271,
+     "end": 1793177879260,
+     "enterMs": 28.900000005960464,
+     "serverMs": 13.199999988079071,
+     "status": 200,
+     "rows": 8
+    },
+    {
+     "round": 0,
+     "query": "interrupt generation with one Stop",
+     "kind": "runsEnter",
+     "ms": 22.5,
+     "at": 1793177879260,
+     "end": 1793177881158,
+     "enterMs": 22.5,
+     "serverMs": 7,
+     "status": 200,
+     "rows": 24
+    },
+    {
+     "round": 0,
+     "query": "cursor support",
+     "kind": "runsEnter",
+     "ms": 26,
+     "at": 1793177881158,
+     "end": 1793177882015,
+     "enterMs": 26,
+     "serverMs": 13.300000011920929,
+     "status": 200,
+     "rows": 46
+    },
+    {
+     "round": 0,
+     "query": "runs page sorting",
+     "kind": "runsEnter",
+     "ms": 26.400000005960464,
+     "at": 1793177882015,
+     "end": 1793177883011,
+     "enterMs": 26.400000005960464,
+     "serverMs": 10.599999994039536,
+     "status": 200,
+     "rows": 10
+    },
+    {
+     "round": 0,
+     "query": "fix runs page sorting and search box",
+     "kind": "runsEnter",
+     "ms": 19,
+     "at": 1793177883011,
+     "end": 1793177885028,
+     "enterMs": 19,
+     "serverMs": 3,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 0,
+     "query": "open the failed call from what went wrong",
+     "kind": "runsEnter",
+     "ms": 25.099999994039536,
+     "at": 1793177885028,
+     "end": 1793177887308,
+     "enterMs": 25.099999994039536,
+     "serverMs": 11.400000005960464,
+     "status": 200,
+     "rows": 48
+    },
+    {
+     "round": 0,
+     "query": "what went wrong failed call",
+     "kind": "runsEnter",
+     "ms": 24.400000005960464,
+     "at": 1793177887308,
+     "end": 1793177888843,
+     "enterMs": 24.400000005960464,
+     "serverMs": 10.399999976158142,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "standup and handoff features",
+     "kind": "runsEnter",
+     "ms": 29.5,
+     "at": 1793177888843,
+     "end": 1793177890444,
+     "enterMs": 29.5,
+     "serverMs": 14.300000011920929,
+     "status": 200,
+     "rows": 11
+    },
+    {
+     "round": 0,
+     "query": "ui style design guidelines",
+     "kind": "runsEnter",
+     "ms": 22.600000023841858,
+     "at": 1793177890444,
+     "end": 1793177891925,
+     "enterMs": 22.600000023841858,
+     "serverMs": 7.9000000059604645,
+     "status": 200,
+     "rows": 33
+    },
+    {
+     "round": 0,
+     "query": "harbor wordmark on dither canvas",
+     "kind": "runsEnter",
+     "ms": 11.400000005960464,
+     "at": 1793177891925,
+     "end": 1793177893705,
+     "enterMs": 11.400000005960464,
+     "serverMs": 3.0999999940395355,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "harness hacks slide presentation",
+     "kind": "runsEnter",
+     "ms": 21.700000017881393,
+     "at": 1793177893705,
+     "end": 1793177895489,
+     "enterMs": 21.700000017881393,
+     "serverMs": 5.5,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 0,
+     "query": "pre-wiring explainer video",
+     "kind": "runsEnter",
+     "ms": 29,
+     "at": 1793177895489,
+     "end": 1793177896975,
+     "enterMs": 29,
+     "serverMs": 13,
+     "status": 200,
+     "rows": 3
+    },
+    {
+     "round": 0,
+     "query": "more space between lines yes or no state",
+     "kind": "runsEnter",
+     "ms": 26.799999982118607,
+     "at": 1793177896975,
+     "end": 1793177899212,
+     "enterMs": 26.799999982118607,
+     "serverMs": 12.699999988079071,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "test agent store as an end user",
+     "kind": "runsEnter",
+     "ms": 33.400000005960464,
+     "at": 1793177899212,
+     "end": 1793177900980,
+     "enterMs": 33.400000005960464,
+     "serverMs": 18.799999982118607,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "readme diagram images redesign before after",
+     "kind": "runsEnter",
+     "ms": 22.5,
+     "at": 1793177900980,
+     "end": 1793177903356,
+     "enterMs": 22.5,
+     "serverMs": 5.9000000059604645,
+     "status": 200,
+     "rows": 4
+    },
+    {
+     "round": 0,
+     "query": "draft render queued 40 minutes ago",
+     "kind": "runsEnter",
+     "ms": 19.799999982118607,
+     "at": 1793177903356,
+     "end": 1793177905257,
+     "enterMs": 19.799999982118607,
+     "serverMs": 4.9000000059604645,
+     "status": 200,
+     "rows": 6
+    },
+    {
+     "round": 0,
+     "query": "\"cannot contain whitespace\"",
+     "kind": "runsEnter",
+     "ms": 74.7000000178814,
+     "at": 1793177905257,
+     "end": 1793177906822,
+     "enterMs": 74.7000000178814,
+     "serverMs": 71.90000000596046,
+     "status": 200,
+     "rows": 3
+    },
+    {
+     "round": 0,
+     "query": "parseSession",
+     "kind": "runsEnter",
+     "ms": 20.900000005960464,
+     "at": 1793177906822,
+     "end": 1793177907562,
+     "enterMs": 20.900000005960464,
+     "serverMs": 6.699999988079071,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "sidecar timeout",
+     "kind": "runsEnter",
+     "ms": 28.80000001192093,
+     "at": 1793177907562,
+     "end": 1793177908462,
+     "enterMs": 28.80000001192093,
+     "serverMs": 11.400000005960464,
+     "status": 200,
+     "rows": 9
+    },
+    {
+     "round": 0,
+     "query": "ssh import backoff",
+     "kind": "runsEnter",
+     "ms": 34.599999994039536,
+     "at": 1793177908462,
+     "end": 1793177909527,
+     "enterMs": 34.599999994039536,
+     "serverMs": 17.799999982118607,
+     "status": 200,
+     "rows": 2
+    },
+    {
+     "round": 0,
+     "query": "usage limits",
+     "kind": "runsEnter",
+     "ms": 22.5,
+     "at": 1793177909527,
+     "end": 1793177910258,
+     "enterMs": 22.5,
+     "serverMs": 8.5,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "insights stall",
+     "kind": "runsEnter",
+     "ms": 33.400000005960464,
+     "at": 1793177910258,
+     "end": 1793177911111,
+     "enterMs": 33.400000005960464,
+     "serverMs": 19.80000001192093,
+     "status": 200,
+     "rows": 24
+    },
+    {
+     "round": 0,
+     "query": "worktree origin remote",
+     "kind": "runsEnter",
+     "ms": 34.599999994039536,
+     "at": 1793177911111,
+     "end": 1793177912391,
+     "enterMs": 34.599999994039536,
+     "serverMs": 17.599999994039536,
+     "status": 200,
+     "rows": 34
+    },
+    {
+     "round": 0,
+     "query": "error handling",
+     "kind": "runsEnter",
+     "ms": 27.299999982118607,
+     "at": 1793177912391,
+     "end": 1793177913245,
+     "enterMs": 27.299999982118607,
+     "serverMs": 13.900000005960464,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "grok vktr",
+     "kind": "runsEnter",
+     "ms": 32.099999994039536,
+     "at": 1793177913245,
+     "end": 1793177913826,
+     "enterMs": 32.099999994039536,
+     "serverMs": 16.400000005960464,
+     "status": 200,
+     "rows": 6
+    },
+    {
+     "round": 0,
+     "query": "you're absolutely right",
+     "kind": "runsEnter",
+     "ms": 28.399999976158142,
+     "at": 1793177913826,
+     "end": 1793177915145,
+     "enterMs": 28.399999976158142,
+     "serverMs": 14.699999988079071,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "absolutely right",
+     "kind": "runsEnter",
+     "ms": 28.900000005960464,
+     "at": 1793177915145,
+     "end": 1793177916095,
+     "enterMs": 28.900000005960464,
+     "serverMs": 15,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "let me",
+     "kind": "runsEnter",
+     "ms": 26.19999998807907,
+     "at": 1793177916095,
+     "end": 1793177916510,
+     "enterMs": 26.19999998807907,
+     "serverMs": 10.899999976158142,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "I'll",
+     "kind": "runsEnter",
+     "ms": 34.29999998211861,
+     "at": 1793177916510,
+     "end": 1793177916827,
+     "enterMs": 34.29999998211861,
+     "serverMs": 20.200000017881393,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "the",
+     "kind": "runsEnter",
+     "ms": 34.900000005960464,
+     "at": 1793177916827,
+     "end": 1793177917095,
+     "enterMs": 34.900000005960464,
+     "serverMs": 20.5,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "now let me check",
+     "kind": "runsEnter",
+     "ms": 28.19999998807907,
+     "at": 1793177917095,
+     "end": 1793177918044,
+     "enterMs": 28.19999998807907,
+     "serverMs": 14.5,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "\"you're absolutely right\"",
+     "kind": "runsEnter",
+     "ms": 1972.7000000178814,
+     "at": 1793177918045,
+     "end": 1793177921392,
+     "enterMs": 1972.7000000178814,
+     "serverMs": 1969.300000011921,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "\"let me\"",
+     "kind": "runsEnter",
+     "ms": 1157.800000011921,
+     "at": 1793177921392,
+     "end": 1793177923038,
+     "enterMs": 1157.800000011921,
+     "serverMs": 1153.9000000059605,
+     "status": 200,
+     "rows": 9
+    },
+    {
+     "round": 0,
+     "query": "\"absolutely right\"",
+     "kind": "runsEnter",
+     "ms": 55.80000001192093,
+     "at": 1793177923038,
+     "end": 1793177924127,
+     "enterMs": 55.80000001192093,
+     "serverMs": 52.20000001788139,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "kind": "runsEnter",
+     "ms": 33.20000001788139,
+     "at": 1793177924127,
+     "end": 1793177929510,
+     "enterMs": 33.20000001788139,
+     "serverMs": 17.69999998807907,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 0,
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "kind": "runsEnter",
+     "ms": 28.799999982118607,
+     "at": 1793177929510,
+     "end": 1793177934310,
+     "enterMs": 28.799999982118607,
+     "serverMs": 11.799999982118607,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "zstd",
+     "kind": "runsEnter",
+     "ms": 28.200000017881393,
+     "at": 1793177934310,
+     "end": 1793177934624,
+     "enterMs": 28.200000017881393,
+     "serverMs": 12.099999994039536,
+     "status": 200,
+     "rows": 6
+    },
+    {
+     "round": 0,
+     "query": "fsevents",
+     "kind": "runsEnter",
+     "ms": 21.599999994039536,
+     "at": 1793177934624,
+     "end": 1793177935141,
+     "enterMs": 21.599999994039536,
+     "serverMs": 4.0999999940395355,
+     "status": 200,
+     "rows": 2
+    },
+    {
+     "round": 0,
+     "query": "flock",
+     "kind": "runsEnter",
+     "ms": 31.30000001192093,
+     "at": 1793177935141,
+     "end": 1793177935509,
+     "enterMs": 31.30000001192093,
+     "serverMs": 14.800000011920929,
+     "status": 200,
+     "rows": 7
+    },
+    {
+     "round": 0,
+     "query": "codex stop button",
+     "kind": "deepLink",
+     "ms": 86.2000000178814,
+     "at": 1793177935509,
+     "end": 1793177935598,
+     "navMs": 86.2000000178814,
+     "expr": "codex stop button"
+    },
+    {
+     "round": 0,
+     "query": "interrupt generation with one Stop",
+     "kind": "deepLink",
+     "ms": 83.80000001192093,
+     "at": 1793177935598,
+     "end": 1793177935684,
+     "navMs": 83.80000001192093,
+     "expr": "interrupt generation with one Stop"
+    },
+    {
+     "round": 0,
+     "query": "cursor support",
+     "kind": "deepLink",
+     "ms": 82.5,
+     "at": 1793177935684,
+     "end": 1793177935769,
+     "navMs": 82.5,
+     "expr": "cursor support"
+    },
+    {
+     "round": 0,
+     "query": "runs page sorting",
+     "kind": "deepLink",
+     "ms": 75,
+     "at": 1793177935769,
+     "end": 1793177935846,
+     "navMs": 75,
+     "expr": "runs page sorting"
+    },
+    {
+     "round": 0,
+     "query": "fix runs page sorting and search box",
+     "kind": "deepLink",
+     "ms": 70.60000002384186,
+     "at": 1793177935846,
+     "end": 1793177935919,
+     "navMs": 70.60000002384186,
+     "expr": "fix runs page sorting and search box"
+    },
+    {
+     "round": 0,
+     "query": "open the failed call from what went wrong",
+     "kind": "deepLink",
+     "ms": 85.60000002384186,
+     "at": 1793177935919,
+     "end": 1793177936010,
+     "navMs": 85.60000002384186,
+     "expr": "open the failed call from what went wrong"
+    },
+    {
+     "round": 0,
+     "query": "what went wrong failed call",
+     "kind": "deepLink",
+     "ms": 88.2000000178814,
+     "at": 1793177936010,
+     "end": 1793177936100,
+     "navMs": 88.2000000178814,
+     "expr": "what went wrong failed call"
+    },
+    {
+     "round": 0,
+     "query": "standup and handoff features",
+     "kind": "deepLink",
+     "ms": 69.90000000596046,
+     "at": 1793177936100,
+     "end": 1793177936173,
+     "navMs": 69.90000000596046,
+     "expr": "standup and handoff features"
+    },
+    {
+     "round": 1,
+     "query": "codex stop button",
+     "kind": "topbar",
+     "ms": 139,
+     "at": 1793177936297,
+     "end": 1793177937562,
+     "lastKeyMs": 139,
+     "firstKeyMs": 997.4000000059605,
+     "serverMs": 6.199999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "interrupt generation with one Stop",
+     "kind": "topbar",
+     "ms": 136,
+     "at": 1793177937562,
+     "end": 1793177940001,
+     "lastKeyMs": 136,
+     "firstKeyMs": 1867.4000000059605,
+     "serverMs": 4.9000000059604645,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "cursor support",
+     "kind": "topbar",
+     "ms": 132,
+     "at": 1793177940001,
+     "end": 1793177941384,
+     "lastKeyMs": 132,
+     "firstKeyMs": 817.9000000059605,
+     "serverMs": 4,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "runs page sorting",
+     "kind": "topbar",
+     "ms": 133,
+     "at": 1793177941384,
+     "end": 1793177942821,
+     "lastKeyMs": 133,
+     "firstKeyMs": 974.5999999940395,
+     "serverMs": 4.0999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "fix runs page sorting and search box",
+     "kind": "topbar",
+     "ms": 127.2000000178814,
+     "at": 1793177942821,
+     "end": 1793177945381,
+     "lastKeyMs": 127.2000000178814,
+     "firstKeyMs": 1963.300000011921,
+     "serverMs": 2.7999999821186066,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "open the failed call from what went wrong",
+     "kind": "topbar",
+     "ms": 130.19999998807907,
+     "at": 1793177945381,
+     "end": 1793177948063,
+     "lastKeyMs": 130.19999998807907,
+     "firstKeyMs": 2216.199999988079,
+     "serverMs": 4.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "what went wrong failed call",
+     "kind": "topbar",
+     "ms": 137.19999998807907,
+     "at": 1793177948063,
+     "end": 1793177950131,
+     "lastKeyMs": 137.19999998807907,
+     "firstKeyMs": 1501.7999999821186,
+     "serverMs": 5.799999982118607,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "standup and handoff features",
+     "kind": "topbar",
+     "ms": 134.7999999821186,
+     "at": 1793177950131,
+     "end": 1793177952276,
+     "lastKeyMs": 134.7999999821186,
+     "firstKeyMs": 1562.2999999821186,
+     "serverMs": 4.9000000059604645,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "ui style design guidelines",
+     "kind": "topbar",
+     "ms": 127.5,
+     "at": 1793177952276,
+     "end": 1793177954308,
+     "lastKeyMs": 127.5,
+     "firstKeyMs": 1444.8999999761581,
+     "serverMs": 2.7999999821186066,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "harbor wordmark on dither canvas",
+     "kind": "topbar",
+     "ms": 129.2999999821186,
+     "at": 1793177954308,
+     "end": 1793177956672,
+     "lastKeyMs": 129.2999999821186,
+     "firstKeyMs": 1787.8999999761581,
+     "serverMs": 4.9000000059604645,
+     "status": 200,
+     "items": 1,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "harness hacks slide presentation",
+     "kind": "topbar",
+     "ms": 132.59999999403954,
+     "at": 1793177956672,
+     "end": 1793177959013,
+     "lastKeyMs": 132.59999999403954,
+     "firstKeyMs": 1764.0999999940395,
+     "serverMs": 5,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "pre-wiring explainer video",
+     "kind": "topbar",
+     "ms": 130.69999998807907,
+     "at": 1793177959013,
+     "end": 1793177961029,
+     "lastKeyMs": 130.69999998807907,
+     "firstKeyMs": 1447,
+     "serverMs": 4.300000011920929,
+     "status": 200,
+     "items": 3,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "more space between lines yes or no state",
+     "kind": "topbar",
+     "ms": 128.40000000596046,
+     "at": 1793177961029,
+     "end": 1793177963785,
+     "lastKeyMs": 128.40000000596046,
+     "firstKeyMs": 2186.2999999821186,
+     "serverMs": 3.300000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "test agent store as an end user",
+     "kind": "topbar",
+     "ms": 137.69999998807907,
+     "at": 1793177963785,
+     "end": 1793177965978,
+     "lastKeyMs": 137.69999998807907,
+     "firstKeyMs": 1729,
+     "serverMs": 6.699999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "readme diagram images redesign before after",
+     "kind": "topbar",
+     "ms": 131.80000001192093,
+     "at": 1793177965978,
+     "end": 1793177968965,
+     "lastKeyMs": 131.80000001192093,
+     "firstKeyMs": 2397.5,
+     "serverMs": 4.699999988079071,
+     "status": 200,
+     "items": 4,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "draft render queued 40 minutes ago",
+     "kind": "topbar",
+     "ms": 130.19999998807907,
+     "at": 1793177968965,
+     "end": 1793177971347,
+     "lastKeyMs": 130.19999998807907,
+     "firstKeyMs": 1911.699999988079,
+     "serverMs": 4,
+     "status": 200,
+     "items": 5,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "\"cannot contain whitespace\"",
+     "kind": "topbar",
+     "ms": 134.59999999403954,
+     "at": 1793177971347,
+     "end": 1793177973326,
+     "lastKeyMs": 134.59999999403954,
+     "firstKeyMs": 1505.0999999940395,
+     "serverMs": 4.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "parseSession",
+     "kind": "topbar",
+     "ms": 136.19999998807907,
+     "at": 1793177973326,
+     "end": 1793177974626,
+     "lastKeyMs": 136.19999998807907,
+     "firstKeyMs": 715.5,
+     "serverMs": 5.799999982118607,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "sidecar timeout",
+     "kind": "topbar",
+     "ms": 134.59999999403954,
+     "at": 1793177974626,
+     "end": 1793177976066,
+     "lastKeyMs": 134.59999999403954,
+     "firstKeyMs": 872.1999999880791,
+     "serverMs": 4.799999982118607,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "ssh import backoff",
+     "kind": "topbar",
+     "ms": 134.09999999403954,
+     "at": 1793177976066,
+     "end": 1793177977672,
+     "lastKeyMs": 134.09999999403954,
+     "firstKeyMs": 1026.0999999940395,
+     "serverMs": 6.600000023841858,
+     "status": 200,
+     "items": 2,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "usage limits",
+     "kind": "topbar",
+     "ms": 129.2000000178814,
+     "at": 1793177977672,
+     "end": 1793177978970,
+     "lastKeyMs": 129.2000000178814,
+     "firstKeyMs": 707,
+     "serverMs": 4,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "insights stall",
+     "kind": "topbar",
+     "ms": 137.7000000178814,
+     "at": 1793177978970,
+     "end": 1793177980254,
+     "lastKeyMs": 137.7000000178814,
+     "firstKeyMs": 823.8000000119209,
+     "serverMs": 6.0999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "worktree origin remote",
+     "kind": "topbar",
+     "ms": 132.40000000596046,
+     "at": 1793177980254,
+     "end": 1793177982063,
+     "lastKeyMs": 132.40000000596046,
+     "firstKeyMs": 1235.4000000059605,
+     "serverMs": 4.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "error handling",
+     "kind": "topbar",
+     "ms": 134.60000002384186,
+     "at": 1793177982063,
+     "end": 1793177983442,
+     "lastKeyMs": 134.60000002384186,
+     "firstKeyMs": 814.4000000059605,
+     "serverMs": 6.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "grok vktr",
+     "kind": "topbar",
+     "ms": 129.90000000596046,
+     "at": 1793177983442,
+     "end": 1793177984560,
+     "lastKeyMs": 129.90000000596046,
+     "firstKeyMs": 549.0999999940395,
+     "serverMs": 4.4000000059604645,
+     "status": 200,
+     "items": 6,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "you're absolutely right",
+     "kind": "topbar",
+     "ms": 130.19999998807907,
+     "at": 1793177984560,
+     "end": 1793177986438,
+     "lastKeyMs": 130.19999998807907,
+     "firstKeyMs": 1289.199999988079,
+     "serverMs": 4.699999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "absolutely right",
+     "kind": "topbar",
+     "ms": 137.09999999403954,
+     "at": 1793177986438,
+     "end": 1793177987940,
+     "lastKeyMs": 137.09999999403954,
+     "firstKeyMs": 928.7000000178814,
+     "serverMs": 5.699999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "let me",
+     "kind": "topbar",
+     "ms": 127.90000000596046,
+     "at": 1793177987940,
+     "end": 1793177988906,
+     "lastKeyMs": 127.90000000596046,
+     "firstKeyMs": 391.5,
+     "serverMs": 3.0999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "I'll",
+     "kind": "topbar",
+     "ms": 150.39999997615814,
+     "at": 1793177988906,
+     "end": 1793177989809,
+     "lastKeyMs": 150.39999997615814,
+     "firstKeyMs": 309.39999997615814,
+     "serverMs": 6.300000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "the",
+     "kind": "topbar",
+     "ms": 137.7000000178814,
+     "at": 1793177989809,
+     "end": 1793177990621,
+     "lastKeyMs": 137.7000000178814,
+     "firstKeyMs": 244.80000001192093,
+     "serverMs": 6.899999976158142,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "now let me check",
+     "kind": "topbar",
+     "ms": 130.59999999403954,
+     "at": 1793177990621,
+     "end": 1793177992129,
+     "lastKeyMs": 130.59999999403954,
+     "firstKeyMs": 918.1999999880791,
+     "serverMs": 4.5999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "\"you're absolutely right\"",
+     "kind": "topbar",
+     "ms": 131.2000000178814,
+     "at": 1793177992129,
+     "end": 1793177994099,
+     "lastKeyMs": 131.2000000178814,
+     "firstKeyMs": 1398.2000000178814,
+     "serverMs": 3.0999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "\"let me\"",
+     "kind": "topbar",
+     "ms": 132.39999997615814,
+     "at": 1793177994099,
+     "end": 1793177995058,
+     "lastKeyMs": 132.39999997615814,
+     "firstKeyMs": 496,
+     "serverMs": 5.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "\"absolutely right\"",
+     "kind": "topbar",
+     "ms": 135.39999997615814,
+     "at": 1793177995058,
+     "end": 1793177996654,
+     "lastKeyMs": 135.39999997615814,
+     "firstKeyMs": 1026.5999999940395,
+     "serverMs": 4.5999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "kind": "topbar",
+     "ms": 132.59999999403954,
+     "at": 1793177996654,
+     "end": 1793178002546,
+     "lastKeyMs": 132.59999999403954,
+     "firstKeyMs": 5300,
+     "serverMs": 3.600000023841858,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "kind": "topbar",
+     "ms": 132.59999999403954,
+     "at": 1793178002546,
+     "end": 1793178007727,
+     "lastKeyMs": 132.59999999403954,
+     "firstKeyMs": 4715.699999988079,
+     "serverMs": 3.800000011920929,
+     "status": 200,
+     "items": 1,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "zstd",
+     "kind": "topbar",
+     "ms": 133.7000000178814,
+     "at": 1793178007727,
+     "end": 1793178008603,
+     "lastKeyMs": 133.7000000178814,
+     "firstKeyMs": 289.09999999403954,
+     "serverMs": 5.200000017881393,
+     "status": 200,
+     "items": 6,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "fsevents",
+     "kind": "topbar",
+     "ms": 132.09999999403954,
+     "at": 1793178008603,
+     "end": 1793178009700,
+     "lastKeyMs": 132.09999999403954,
+     "firstKeyMs": 502.89999997615814,
+     "serverMs": 3.5999999940395355,
+     "status": 200,
+     "items": 2,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "flock",
+     "kind": "topbar",
+     "ms": 133.19999998807907,
+     "at": 1793178009700,
+     "end": 1793178010502,
+     "lastKeyMs": 133.19999998807907,
+     "firstKeyMs": 340,
+     "serverMs": 5.4000000059604645,
+     "status": 200,
+     "items": 7,
+     "requests": 1
+    },
+    {
+     "round": 1,
+     "query": "codex stop button",
+     "kind": "runsEnter",
+     "ms": 28.5,
+     "at": 1793178010724,
+     "end": 1793178011721,
+     "enterMs": 28.5,
+     "serverMs": 12.400000005960464,
+     "status": 200,
+     "rows": 8
+    },
+    {
+     "round": 1,
+     "query": "interrupt generation with one Stop",
+     "kind": "runsEnter",
+     "ms": 20.900000005960464,
+     "at": 1793178011721,
+     "end": 1793178013624,
+     "enterMs": 20.900000005960464,
+     "serverMs": 6.100000023841858,
+     "status": 200,
+     "rows": 24
+    },
+    {
+     "round": 1,
+     "query": "cursor support",
+     "kind": "runsEnter",
+     "ms": 34.20000001788139,
+     "at": 1793178013624,
+     "end": 1793178014474,
+     "enterMs": 34.20000001788139,
+     "serverMs": 20.30000001192093,
+     "status": 200,
+     "rows": 46
+    },
+    {
+     "round": 1,
+     "query": "runs page sorting",
+     "kind": "runsEnter",
+     "ms": 24.80000001192093,
+     "at": 1793178014474,
+     "end": 1793178015475,
+     "enterMs": 24.80000001192093,
+     "serverMs": 9.5,
+     "status": 200,
+     "rows": 10
+    },
+    {
+     "round": 1,
+     "query": "fix runs page sorting and search box",
+     "kind": "runsEnter",
+     "ms": 7.4000000059604645,
+     "at": 1793178015475,
+     "end": 1793178017455,
+     "enterMs": 7.4000000059604645,
+     "serverMs": 2.5999999940395355,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 1,
+     "query": "open the failed call from what went wrong",
+     "kind": "runsEnter",
+     "ms": 32.29999998211861,
+     "at": 1793178017455,
+     "end": 1793178019742,
+     "enterMs": 32.29999998211861,
+     "serverMs": 19.900000005960464,
+     "status": 200,
+     "rows": 48
+    },
+    {
+     "round": 1,
+     "query": "what went wrong failed call",
+     "kind": "runsEnter",
+     "ms": 27.69999998807907,
+     "at": 1793178019742,
+     "end": 1793178021275,
+     "enterMs": 27.69999998807907,
+     "serverMs": 14.600000023841858,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "standup and handoff features",
+     "kind": "runsEnter",
+     "ms": 27.099999994039536,
+     "at": 1793178021275,
+     "end": 1793178022856,
+     "enterMs": 27.099999994039536,
+     "serverMs": 11,
+     "status": 200,
+     "rows": 11
+    },
+    {
+     "round": 1,
+     "query": "ui style design guidelines",
+     "kind": "runsEnter",
+     "ms": 30.400000005960464,
+     "at": 1793178022856,
+     "end": 1793178024340,
+     "enterMs": 30.400000005960464,
+     "serverMs": 16.30000001192093,
+     "status": 200,
+     "rows": 33
+    },
+    {
+     "round": 1,
+     "query": "harbor wordmark on dither canvas",
+     "kind": "runsEnter",
+     "ms": 20.19999998807907,
+     "at": 1793178024340,
+     "end": 1793178026140,
+     "enterMs": 20.19999998807907,
+     "serverMs": 4.4000000059604645,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 1,
+     "query": "harness hacks slide presentation",
+     "kind": "runsEnter",
+     "ms": 22,
+     "at": 1793178026140,
+     "end": 1793178027966,
+     "enterMs": 22,
+     "serverMs": 6.299999982118607,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 1,
+     "query": "pre-wiring explainer video",
+     "kind": "runsEnter",
+     "ms": 34,
+     "at": 1793178027966,
+     "end": 1793178029471,
+     "enterMs": 34,
+     "serverMs": 17.600000023841858,
+     "status": 200,
+     "rows": 3
+    },
+    {
+     "round": 1,
+     "query": "more space between lines yes or no state",
+     "kind": "runsEnter",
+     "ms": 31.599999994039536,
+     "at": 1793178029471,
+     "end": 1793178031707,
+     "enterMs": 31.599999994039536,
+     "serverMs": 17.5,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "test agent store as an end user",
+     "kind": "runsEnter",
+     "ms": 26.900000005960464,
+     "at": 1793178031707,
+     "end": 1793178033466,
+     "enterMs": 26.900000005960464,
+     "serverMs": 12.299999982118607,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "readme diagram images redesign before after",
+     "kind": "runsEnter",
+     "ms": 21.5,
+     "at": 1793178033466,
+     "end": 1793178035850,
+     "enterMs": 21.5,
+     "serverMs": 5.4000000059604645,
+     "status": 200,
+     "rows": 4
+    },
+    {
+     "round": 1,
+     "query": "draft render queued 40 minutes ago",
+     "kind": "runsEnter",
+     "ms": 31.700000017881393,
+     "at": 1793178035850,
+     "end": 1793178037772,
+     "enterMs": 31.700000017881393,
+     "serverMs": 15.800000011920929,
+     "status": 200,
+     "rows": 6
+    },
+    {
+     "round": 1,
+     "query": "\"cannot contain whitespace\"",
+     "kind": "runsEnter",
+     "ms": 1,
+     "at": 1793178037772,
+     "end": 1793178039261,
+     "enterMs": 1,
+     "serverMs": 51.30000001192093,
+     "status": 200,
+     "rows": 3
+    },
+    {
+     "round": 1,
+     "query": "parseSession",
+     "kind": "runsEnter",
+     "ms": 25.099999994039536,
+     "at": 1793178039261,
+     "end": 1793178039987,
+     "enterMs": 25.099999994039536,
+     "serverMs": 10.900000005960464,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "sidecar timeout",
+     "kind": "runsEnter",
+     "ms": 30.700000017881393,
+     "at": 1793178039987,
+     "end": 1793178040889,
+     "enterMs": 30.700000017881393,
+     "serverMs": 15.5,
+     "status": 200,
+     "rows": 9
+    },
+    {
+     "round": 1,
+     "query": "ssh import backoff",
+     "kind": "runsEnter",
+     "ms": 9.300000011920929,
+     "at": 1793178040889,
+     "end": 1793178041934,
+     "enterMs": 9.300000011920929,
+     "serverMs": 2.9000000059604645,
+     "status": 200,
+     "rows": 2
+    },
+    {
+     "round": 1,
+     "query": "usage limits",
+     "kind": "runsEnter",
+     "ms": 34.099999994039536,
+     "at": 1793178041934,
+     "end": 1793178042691,
+     "enterMs": 34.099999994039536,
+     "serverMs": 20.600000023841858,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "insights stall",
+     "kind": "runsEnter",
+     "ms": 34.29999998211861,
+     "at": 1793178042691,
+     "end": 1793178043539,
+     "enterMs": 34.29999998211861,
+     "serverMs": 18.099999994039536,
+     "status": 200,
+     "rows": 24
+    },
+    {
+     "round": 1,
+     "query": "worktree origin remote",
+     "kind": "runsEnter",
+     "ms": 32.79999998211861,
+     "at": 1793178043539,
+     "end": 1793178044825,
+     "enterMs": 32.79999998211861,
+     "serverMs": 19.400000005960464,
+     "status": 200,
+     "rows": 34
+    },
+    {
+     "round": 1,
+     "query": "error handling",
+     "kind": "runsEnter",
+     "ms": 31.600000023841858,
+     "at": 1793178044825,
+     "end": 1793178045686,
+     "enterMs": 31.600000023841858,
+     "serverMs": 20,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "grok vktr",
+     "kind": "runsEnter",
+     "ms": 28.099999994039536,
+     "at": 1793178045686,
+     "end": 1793178046270,
+     "enterMs": 28.099999994039536,
+     "serverMs": 12,
+     "status": 200,
+     "rows": 6
+    },
+    {
+     "round": 1,
+     "query": "you're absolutely right",
+     "kind": "runsEnter",
+     "ms": 34,
+     "at": 1793178046270,
+     "end": 1793178047606,
+     "enterMs": 34,
+     "serverMs": 20.5,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "absolutely right",
+     "kind": "runsEnter",
+     "ms": 25.599999994039536,
+     "at": 1793178047606,
+     "end": 1793178048555,
+     "enterMs": 25.599999994039536,
+     "serverMs": 10.600000023841858,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "let me",
+     "kind": "runsEnter",
+     "ms": 26.899999976158142,
+     "at": 1793178048555,
+     "end": 1793178048973,
+     "enterMs": 26.899999976158142,
+     "serverMs": 12.700000017881393,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "I'll",
+     "kind": "runsEnter",
+     "ms": 33.19999998807907,
+     "at": 1793178048973,
+     "end": 1793178049290,
+     "enterMs": 33.19999998807907,
+     "serverMs": 19.400000005960464,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "the",
+     "kind": "runsEnter",
+     "ms": 20.69999998807907,
+     "at": 1793178049290,
+     "end": 1793178049539,
+     "enterMs": 20.69999998807907,
+     "serverMs": 6.200000017881393,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "now let me check",
+     "kind": "runsEnter",
+     "ms": 25.599999994039536,
+     "at": 1793178049539,
+     "end": 1793178050485,
+     "enterMs": 25.599999994039536,
+     "serverMs": 12.699999988079071,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 1,
+     "query": "\"you're absolutely right\"",
+     "kind": "runsEnter",
+     "ms": 1995,
+     "at": 1793178050485,
+     "end": 1793178053852,
+     "enterMs": 1995,
+     "serverMs": 1986.4000000059605,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 1,
+     "query": "\"let me\"",
+     "kind": "runsEnter",
+     "ms": 1273.5,
+     "at": 1793178053852,
+     "end": 1793178055622,
+     "enterMs": 1273.5,
+     "serverMs": 1269.3999999761581,
+     "status": 200,
+     "rows": 9
+    },
+    {
+     "round": 1,
+     "query": "\"absolutely right\"",
+     "kind": "runsEnter",
+     "ms": 20.200000017881393,
+     "at": 1793178055622,
+     "end": 1793178056667,
+     "enterMs": 20.200000017881393,
+     "serverMs": 10,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 1,
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "kind": "runsEnter",
+     "ms": 21.599999994039536,
+     "at": 1793178056667,
+     "end": 1793178062087,
+     "enterMs": 21.599999994039536,
+     "serverMs": 4.9000000059604645,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 1,
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "kind": "runsEnter",
+     "ms": 31.299999982118607,
+     "at": 1793178062087,
+     "end": 1793178066935,
+     "enterMs": 31.299999982118607,
+     "serverMs": 15.5,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 1,
+     "query": "zstd",
+     "kind": "runsEnter",
+     "ms": 25.099999994039536,
+     "at": 1793178066935,
+     "end": 1793178067250,
+     "enterMs": 25.099999994039536,
+     "serverMs": 8.5,
+     "status": 200,
+     "rows": 6
+    },
+    {
+     "round": 1,
+     "query": "fsevents",
+     "kind": "runsEnter",
+     "ms": 31.299999982118607,
+     "at": 1793178067250,
+     "end": 1793178067789,
+     "enterMs": 31.299999982118607,
+     "serverMs": 15.899999976158142,
+     "status": 200,
+     "rows": 2
+    },
+    {
+     "round": 1,
+     "query": "flock",
+     "kind": "runsEnter",
+     "ms": 23.200000017881393,
+     "at": 1793178067789,
+     "end": 1793178068156,
+     "enterMs": 23.200000017881393,
+     "serverMs": 7.300000011920929,
+     "status": 200,
+     "rows": 7
+    },
+    {
+     "round": 1,
+     "query": "codex stop button",
+     "kind": "deepLink",
+     "ms": 79.40000000596046,
+     "at": 1793178068156,
+     "end": 1793178068239,
+     "navMs": 79.40000000596046,
+     "expr": "codex stop button"
+    },
+    {
+     "round": 1,
+     "query": "interrupt generation with one Stop",
+     "kind": "deepLink",
+     "ms": 87.2999999821186,
+     "at": 1793178068239,
+     "end": 1793178068329,
+     "navMs": 87.2999999821186,
+     "expr": "interrupt generation with one Stop"
+    },
+    {
+     "round": 1,
+     "query": "cursor support",
+     "kind": "deepLink",
+     "ms": 94.7000000178814,
+     "at": 1793178068329,
+     "end": 1793178068426,
+     "navMs": 94.7000000178814,
+     "expr": "cursor support"
+    },
+    {
+     "round": 1,
+     "query": "runs page sorting",
+     "kind": "deepLink",
+     "ms": 76.90000000596046,
+     "at": 1793178068426,
+     "end": 1793178068505,
+     "navMs": 76.90000000596046,
+     "expr": "runs page sorting"
+    },
+    {
+     "round": 1,
+     "query": "fix runs page sorting and search box",
+     "kind": "deepLink",
+     "ms": 70.80000001192093,
+     "at": 1793178068505,
+     "end": 1793178068580,
+     "navMs": 70.80000001192093,
+     "expr": "fix runs page sorting and search box"
+    },
+    {
+     "round": 1,
+     "query": "open the failed call from what went wrong",
+     "kind": "deepLink",
+     "ms": 91.09999999403954,
+     "at": 1793178068580,
+     "end": 1793178068673,
+     "navMs": 91.09999999403954,
+     "expr": "open the failed call from what went wrong"
+    },
+    {
+     "round": 1,
+     "query": "what went wrong failed call",
+     "kind": "deepLink",
+     "ms": 86,
+     "at": 1793178068673,
+     "end": 1793178068765,
+     "navMs": 86,
+     "expr": "what went wrong failed call"
+    },
+    {
+     "round": 1,
+     "query": "standup and handoff features",
+     "kind": "deepLink",
+     "ms": 72.30000001192093,
+     "at": 1793178068765,
+     "end": 1793178068840,
+     "navMs": 72.30000001192093,
+     "expr": "standup and handoff features"
+    },
+    {
+     "round": 2,
+     "query": "codex stop button",
+     "kind": "topbar",
+     "ms": 129.2000000178814,
+     "at": 1793178068960,
+     "end": 1793178070203,
+     "lastKeyMs": 129.2000000178814,
+     "firstKeyMs": 973.2000000178814,
+     "serverMs": 5.0999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "interrupt generation with one Stop",
+     "kind": "topbar",
+     "ms": 132.5,
+     "at": 1793178070203,
+     "end": 1793178072647,
+     "lastKeyMs": 132.5,
+     "firstKeyMs": 1871.300000011921,
+     "serverMs": 4.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "cursor support",
+     "kind": "topbar",
+     "ms": 136.59999999403954,
+     "at": 1793178072647,
+     "end": 1793178074030,
+     "lastKeyMs": 136.59999999403954,
+     "firstKeyMs": 820.3000000119209,
+     "serverMs": 4.699999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "runs page sorting",
+     "kind": "topbar",
+     "ms": 135.5,
+     "at": 1793178074030,
+     "end": 1793178075559,
+     "lastKeyMs": 135.5,
+     "firstKeyMs": 969.5,
+     "serverMs": 5.200000017881393,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "fix runs page sorting and search box",
+     "kind": "topbar",
+     "ms": 130.7000000178814,
+     "at": 1793178075559,
+     "end": 1793178078102,
+     "lastKeyMs": 130.7000000178814,
+     "firstKeyMs": 1972.300000011921,
+     "serverMs": 2.800000011920929,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "open the failed call from what went wrong",
+     "kind": "topbar",
+     "ms": 143.59999999403954,
+     "at": 1793178078102,
+     "end": 1793178080932,
+     "lastKeyMs": 143.59999999403954,
+     "firstKeyMs": 2252.2999999821186,
+     "serverMs": 14.100000023841858,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "what went wrong failed call",
+     "kind": "topbar",
+     "ms": 135.5,
+     "at": 1793178080932,
+     "end": 1793178082991,
+     "lastKeyMs": 135.5,
+     "firstKeyMs": 1501.0999999940395,
+     "serverMs": 4.200000017881393,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "standup and handoff features",
+     "kind": "topbar",
+     "ms": 129.30000001192093,
+     "at": 1793178082991,
+     "end": 1793178085116,
+     "lastKeyMs": 129.30000001192093,
+     "firstKeyMs": 1554.800000011921,
+     "serverMs": 4,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "ui style design guidelines",
+     "kind": "topbar",
+     "ms": 136.59999999403954,
+     "at": 1793178085116,
+     "end": 1793178087154,
+     "lastKeyMs": 136.59999999403954,
+     "firstKeyMs": 1453.300000011921,
+     "serverMs": 6.100000023841858,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "harbor wordmark on dither canvas",
+     "kind": "topbar",
+     "ms": 128.19999998807907,
+     "at": 1793178087154,
+     "end": 1793178089490,
+     "lastKeyMs": 128.19999998807907,
+     "firstKeyMs": 1765,
+     "serverMs": 3.4000000059604645,
+     "status": 200,
+     "items": 1,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "harness hacks slide presentation",
+     "kind": "topbar",
+     "ms": 134.19999998807907,
+     "at": 1793178089490,
+     "end": 1793178091823,
+     "lastKeyMs": 134.19999998807907,
+     "firstKeyMs": 1760.0999999940395,
+     "serverMs": 4.600000023841858,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "pre-wiring explainer video",
+     "kind": "topbar",
+     "ms": 131.30000001192093,
+     "at": 1793178091823,
+     "end": 1793178093846,
+     "lastKeyMs": 131.30000001192093,
+     "firstKeyMs": 1451.5,
+     "serverMs": 3.699999988079071,
+     "status": 200,
+     "items": 3,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "more space between lines yes or no state",
+     "kind": "topbar",
+     "ms": 131.80000001192093,
+     "at": 1793178093846,
+     "end": 1793178096495,
+     "lastKeyMs": 131.80000001192093,
+     "firstKeyMs": 2187.4000000059605,
+     "serverMs": 4.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "test agent store as an end user",
+     "kind": "topbar",
+     "ms": 132.5,
+     "at": 1793178096495,
+     "end": 1793178098753,
+     "lastKeyMs": 132.5,
+     "firstKeyMs": 1694.2999999821186,
+     "serverMs": 4.4000000059604645,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "readme diagram images redesign before after",
+     "kind": "topbar",
+     "ms": 130.89999997615814,
+     "at": 1793178098753,
+     "end": 1793178101649,
+     "lastKeyMs": 130.89999997615814,
+     "firstKeyMs": 2320.5999999940395,
+     "serverMs": 4.200000017881393,
+     "status": 200,
+     "items": 4,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "draft render queued 40 minutes ago",
+     "kind": "topbar",
+     "ms": 130.69999998807907,
+     "at": 1793178101649,
+     "end": 1793178104074,
+     "lastKeyMs": 130.69999998807907,
+     "firstKeyMs": 1851.5,
+     "serverMs": 4.799999982118607,
+     "status": 200,
+     "items": 5,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "\"cannot contain whitespace\"",
+     "kind": "topbar",
+     "ms": 129.40000000596046,
+     "at": 1793178104074,
+     "end": 1793178106130,
+     "lastKeyMs": 129.40000000596046,
+     "firstKeyMs": 1486.5999999940395,
+     "serverMs": 3.800000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "parseSession",
+     "kind": "topbar",
+     "ms": 134.2000000178814,
+     "at": 1793178106130,
+     "end": 1793178107401,
+     "lastKeyMs": 134.2000000178814,
+     "firstKeyMs": 711.9000000059605,
+     "serverMs": 6.4000000059604645,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "sidecar timeout",
+     "kind": "topbar",
+     "ms": 134.09999999403954,
+     "at": 1793178107401,
+     "end": 1793178108849,
+     "lastKeyMs": 134.09999999403954,
+     "firstKeyMs": 873.5999999940395,
+     "serverMs": 4.399999976158142,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "ssh import backoff",
+     "kind": "topbar",
+     "ms": 129.80000001192093,
+     "at": 1793178108849,
+     "end": 1793178110453,
+     "lastKeyMs": 129.80000001192093,
+     "firstKeyMs": 1028.9000000059605,
+     "serverMs": 6.5,
+     "status": 200,
+     "items": 2,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "usage limits",
+     "kind": "topbar",
+     "ms": 136,
+     "at": 1793178110453,
+     "end": 1793178111753,
+     "lastKeyMs": 136,
+     "firstKeyMs": 730.2000000178814,
+     "serverMs": 5.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "insights stall",
+     "kind": "topbar",
+     "ms": 129.7000000178814,
+     "at": 1793178111753,
+     "end": 1793178113161,
+     "lastKeyMs": 129.7000000178814,
+     "firstKeyMs": 836.6000000238419,
+     "serverMs": 5.100000023841858,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "worktree origin remote",
+     "kind": "topbar",
+     "ms": 132.40000000596046,
+     "at": 1793178113161,
+     "end": 1793178114881,
+     "lastKeyMs": 132.40000000596046,
+     "firstKeyMs": 1255.4000000059605,
+     "serverMs": 6,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "error handling",
+     "kind": "topbar",
+     "ms": 136.2000000178814,
+     "at": 1793178114881,
+     "end": 1793178116273,
+     "lastKeyMs": 136.2000000178814,
+     "firstKeyMs": 820.3000000119209,
+     "serverMs": 5.199999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "grok vktr",
+     "kind": "topbar",
+     "ms": 132.40000000596046,
+     "at": 1793178116273,
+     "end": 1793178117397,
+     "lastKeyMs": 132.40000000596046,
+     "firstKeyMs": 552.1999999880791,
+     "serverMs": 4.4000000059604645,
+     "status": 200,
+     "items": 6,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "you're absolutely right",
+     "kind": "topbar",
+     "ms": 131.89999997615814,
+     "at": 1793178117397,
+     "end": 1793178119152,
+     "lastKeyMs": 131.89999997615814,
+     "firstKeyMs": 1294.2999999821186,
+     "serverMs": 4.0999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "absolutely right",
+     "kind": "topbar",
+     "ms": 136.5,
+     "at": 1793178119152,
+     "end": 1793178120653,
+     "lastKeyMs": 136.5,
+     "firstKeyMs": 929.9000000059605,
+     "serverMs": 5.0999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "let me",
+     "kind": "topbar",
+     "ms": 129.7000000178814,
+     "at": 1793178120654,
+     "end": 1793178121617,
+     "lastKeyMs": 129.7000000178814,
+     "firstKeyMs": 392.2000000178814,
+     "serverMs": 4.199999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "I'll",
+     "kind": "topbar",
+     "ms": 134.30000001192093,
+     "at": 1793178121617,
+     "end": 1793178122486,
+     "lastKeyMs": 134.30000001192093,
+     "firstKeyMs": 293.5,
+     "serverMs": 5.0999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "the",
+     "kind": "topbar",
+     "ms": 133.40000000596046,
+     "at": 1793178122486,
+     "end": 1793178123293,
+     "lastKeyMs": 133.40000000596046,
+     "firstKeyMs": 237,
+     "serverMs": 4.4000000059604645,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "now let me check",
+     "kind": "topbar",
+     "ms": 131,
+     "at": 1793178123293,
+     "end": 1793178124782,
+     "lastKeyMs": 131,
+     "firstKeyMs": 922.1999999880791,
+     "serverMs": 4.0999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "\"you're absolutely right\"",
+     "kind": "topbar",
+     "ms": 135.30000001192093,
+     "at": 1793178124782,
+     "end": 1793178126767,
+     "lastKeyMs": 135.30000001192093,
+     "firstKeyMs": 1408.9000000059605,
+     "serverMs": 5.800000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "\"let me\"",
+     "kind": "topbar",
+     "ms": 129.09999999403954,
+     "at": 1793178126767,
+     "end": 1793178127841,
+     "lastKeyMs": 129.09999999403954,
+     "firstKeyMs": 501,
+     "serverMs": 3.4000000059604645,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "\"absolutely right\"",
+     "kind": "topbar",
+     "ms": 137,
+     "at": 1793178127841,
+     "end": 1793178129352,
+     "lastKeyMs": 137,
+     "firstKeyMs": 1040.0999999940395,
+     "serverMs": 6.5999999940395355,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "kind": "topbar",
+     "ms": 134.39999997615814,
+     "at": 1793178129352,
+     "end": 1793178135287,
+     "lastKeyMs": 134.39999997615814,
+     "firstKeyMs": 5362.199999988079,
+     "serverMs": 3.800000011920929,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "kind": "topbar",
+     "ms": 128.09999999403954,
+     "at": 1793178135287,
+     "end": 1793178140576,
+     "lastKeyMs": 128.09999999403954,
+     "firstKeyMs": 4715,
+     "serverMs": 2.600000023841858,
+     "status": 200,
+     "items": 1,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "zstd",
+     "kind": "topbar",
+     "ms": 130.69999998807907,
+     "at": 1793178140576,
+     "end": 1793178141328,
+     "lastKeyMs": 130.69999998807907,
+     "firstKeyMs": 288.39999997615814,
+     "serverMs": 3.9000000059604645,
+     "status": 200,
+     "items": 6,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "fsevents",
+     "kind": "topbar",
+     "ms": 128.40000000596046,
+     "at": 1793178141328,
+     "end": 1793178142288,
+     "lastKeyMs": 128.40000000596046,
+     "firstKeyMs": 497.90000000596046,
+     "serverMs": 3,
+     "status": 200,
+     "items": 2,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "flock",
+     "kind": "topbar",
+     "ms": 138.09999999403954,
+     "at": 1793178142288,
+     "end": 1793178143203,
+     "lastKeyMs": 138.09999999403954,
+     "firstKeyMs": 347,
+     "serverMs": 7,
+     "status": 200,
+     "items": 7,
+     "requests": 1
+    },
+    {
+     "round": 2,
+     "query": "codex stop button",
+     "kind": "runsEnter",
+     "ms": 33.80000001192093,
+     "at": 1793178143433,
+     "end": 1793178144435,
+     "enterMs": 33.80000001192093,
+     "serverMs": 18.30000001192093,
+     "status": 200,
+     "rows": 8
+    },
+    {
+     "round": 2,
+     "query": "interrupt generation with one Stop",
+     "kind": "runsEnter",
+     "ms": 18.80000001192093,
+     "at": 1793178144435,
+     "end": 1793178146334,
+     "enterMs": 18.80000001192093,
+     "serverMs": 4.699999988079071,
+     "status": 200,
+     "rows": 24
+    },
+    {
+     "round": 2,
+     "query": "cursor support",
+     "kind": "runsEnter",
+     "ms": 28.400000005960464,
+     "at": 1793178146334,
+     "end": 1793178147186,
+     "enterMs": 28.400000005960464,
+     "serverMs": 14.299999982118607,
+     "status": 200,
+     "rows": 46
+    },
+    {
+     "round": 2,
+     "query": "runs page sorting",
+     "kind": "runsEnter",
+     "ms": 20.80000001192093,
+     "at": 1793178147186,
+     "end": 1793178148181,
+     "enterMs": 20.80000001192093,
+     "serverMs": 4.4000000059604645,
+     "status": 200,
+     "rows": 10
+    },
+    {
+     "round": 2,
+     "query": "fix runs page sorting and search box",
+     "kind": "runsEnter",
+     "ms": 24.100000023841858,
+     "at": 1793178148181,
+     "end": 1793178150206,
+     "enterMs": 24.100000023841858,
+     "serverMs": 7.0999999940395355,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 2,
+     "query": "open the failed call from what went wrong",
+     "kind": "runsEnter",
+     "ms": 13.299999982118607,
+     "at": 1793178150206,
+     "end": 1793178152467,
+     "enterMs": 13.299999982118607,
+     "serverMs": 6.4000000059604645,
+     "status": 200,
+     "rows": 48
+    },
+    {
+     "round": 2,
+     "query": "what went wrong failed call",
+     "kind": "runsEnter",
+     "ms": 32.30000001192093,
+     "at": 1793178152467,
+     "end": 1793178154019,
+     "enterMs": 32.30000001192093,
+     "serverMs": 18.399999976158142,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "standup and handoff features",
+     "kind": "runsEnter",
+     "ms": 22.69999998807907,
+     "at": 1793178154019,
+     "end": 1793178155615,
+     "enterMs": 22.69999998807907,
+     "serverMs": 5.100000023841858,
+     "status": 200,
+     "rows": 11
+    },
+    {
+     "round": 2,
+     "query": "ui style design guidelines",
+     "kind": "runsEnter",
+     "ms": 22.099999994039536,
+     "at": 1793178155615,
+     "end": 1793178157098,
+     "enterMs": 22.099999994039536,
+     "serverMs": 5.800000011920929,
+     "status": 200,
+     "rows": 33
+    },
+    {
+     "round": 2,
+     "query": "harbor wordmark on dither canvas",
+     "kind": "runsEnter",
+     "ms": 26.299999982118607,
+     "at": 1793178157098,
+     "end": 1793178158921,
+     "enterMs": 26.299999982118607,
+     "serverMs": 10,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 2,
+     "query": "harness hacks slide presentation",
+     "kind": "runsEnter",
+     "ms": 21.600000023841858,
+     "at": 1793178158921,
+     "end": 1793178160713,
+     "enterMs": 21.600000023841858,
+     "serverMs": 5.199999988079071,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 2,
+     "query": "pre-wiring explainer video",
+     "kind": "runsEnter",
+     "ms": 33.80000001192093,
+     "at": 1793178160713,
+     "end": 1793178162215,
+     "enterMs": 33.80000001192093,
+     "serverMs": 17,
+     "status": 200,
+     "rows": 3
+    },
+    {
+     "round": 2,
+     "query": "more space between lines yes or no state",
+     "kind": "runsEnter",
+     "ms": 29.19999998807907,
+     "at": 1793178162215,
+     "end": 1793178164468,
+     "enterMs": 29.19999998807907,
+     "serverMs": 15.300000011920929,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "test agent store as an end user",
+     "kind": "runsEnter",
+     "ms": 26,
+     "at": 1793178164468,
+     "end": 1793178166214,
+     "enterMs": 26,
+     "serverMs": 15.300000011920929,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "readme diagram images redesign before after",
+     "kind": "runsEnter",
+     "ms": 29.80000001192093,
+     "at": 1793178166214,
+     "end": 1793178168615,
+     "enterMs": 29.80000001192093,
+     "serverMs": 13.799999982118607,
+     "status": 200,
+     "rows": 4
+    },
+    {
+     "round": 2,
+     "query": "draft render queued 40 minutes ago",
+     "kind": "runsEnter",
+     "ms": 33.19999998807907,
+     "at": 1793178168615,
+     "end": 1793178170534,
+     "enterMs": 33.19999998807907,
+     "serverMs": 18.799999982118607,
+     "status": 200,
+     "rows": 6
+    },
+    {
+     "round": 2,
+     "query": "\"cannot contain whitespace\"",
+     "kind": "runsEnter",
+     "ms": 8.699999988079071,
+     "at": 1793178170534,
+     "end": 1793178172029,
+     "enterMs": 8.699999988079071,
+     "serverMs": 2.2999999821186066,
+     "status": 200,
+     "rows": 3
+    },
+    {
+     "round": 2,
+     "query": "parseSession",
+     "kind": "runsEnter",
+     "ms": 34.80000001192093,
+     "at": 1793178172029,
+     "end": 1793178172788,
+     "enterMs": 34.80000001192093,
+     "serverMs": 22.5,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "sidecar timeout",
+     "kind": "runsEnter",
+     "ms": 34.900000005960464,
+     "at": 1793178172788,
+     "end": 1793178173719,
+     "enterMs": 34.900000005960464,
+     "serverMs": 20.400000005960464,
+     "status": 200,
+     "rows": 9
+    },
+    {
+     "round": 2,
+     "query": "ssh import backoff",
+     "kind": "runsEnter",
+     "ms": 22.400000005960464,
+     "at": 1793178173719,
+     "end": 1793178174761,
+     "enterMs": 22.400000005960464,
+     "serverMs": 5.800000011920929,
+     "status": 200,
+     "rows": 2
+    },
+    {
+     "round": 2,
+     "query": "usage limits",
+     "kind": "runsEnter",
+     "ms": 24.30000001192093,
+     "at": 1793178174761,
+     "end": 1793178175499,
+     "enterMs": 24.30000001192093,
+     "serverMs": 9.800000011920929,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "insights stall",
+     "kind": "runsEnter",
+     "ms": 19.900000005960464,
+     "at": 1793178175499,
+     "end": 1793178176333,
+     "enterMs": 19.900000005960464,
+     "serverMs": 5.200000017881393,
+     "status": 200,
+     "rows": 24
+    },
+    {
+     "round": 2,
+     "query": "worktree origin remote",
+     "kind": "runsEnter",
+     "ms": 28.5,
+     "at": 1793178176333,
+     "end": 1793178177600,
+     "enterMs": 28.5,
+     "serverMs": 13.5,
+     "status": 200,
+     "rows": 34
+    },
+    {
+     "round": 2,
+     "query": "error handling",
+     "kind": "runsEnter",
+     "ms": 28.400000005960464,
+     "at": 1793178177600,
+     "end": 1793178178451,
+     "enterMs": 28.400000005960464,
+     "serverMs": 14.700000017881393,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "grok vktr",
+     "kind": "runsEnter",
+     "ms": 29.5,
+     "at": 1793178178451,
+     "end": 1793178179031,
+     "enterMs": 29.5,
+     "serverMs": 13.700000017881393,
+     "status": 200,
+     "rows": 6
+    },
+    {
+     "round": 2,
+     "query": "you're absolutely right",
+     "kind": "runsEnter",
+     "ms": 24.80000001192093,
+     "at": 1793178179031,
+     "end": 1793178180349,
+     "enterMs": 24.80000001192093,
+     "serverMs": 9.400000005960464,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "absolutely right",
+     "kind": "runsEnter",
+     "ms": 19.099999994039536,
+     "at": 1793178180349,
+     "end": 1793178181302,
+     "enterMs": 19.099999994039536,
+     "serverMs": 6.300000011920929,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "let me",
+     "kind": "runsEnter",
+     "ms": 31.5,
+     "at": 1793178181302,
+     "end": 1793178181735,
+     "enterMs": 31.5,
+     "serverMs": 18,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "I'll",
+     "kind": "runsEnter",
+     "ms": 31.600000023841858,
+     "at": 1793178181735,
+     "end": 1793178182051,
+     "enterMs": 31.600000023841858,
+     "serverMs": 18.099999994039536,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "the",
+     "kind": "runsEnter",
+     "ms": 34.79999998211861,
+     "at": 1793178182051,
+     "end": 1793178182320,
+     "enterMs": 34.79999998211861,
+     "serverMs": 21.69999998807907,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "now let me check",
+     "kind": "runsEnter",
+     "ms": 26.900000005960464,
+     "at": 1793178182320,
+     "end": 1793178183268,
+     "enterMs": 26.900000005960464,
+     "serverMs": 14,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 2,
+     "query": "\"you're absolutely right\"",
+     "kind": "runsEnter",
+     "ms": 1911.0999999940395,
+     "at": 1793178183268,
+     "end": 1793178186564,
+     "enterMs": 1911.0999999940395,
+     "serverMs": 1909,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 2,
+     "query": "\"let me\"",
+     "kind": "runsEnter",
+     "ms": 1187.0999999940395,
+     "at": 1793178186564,
+     "end": 1793178188228,
+     "enterMs": 1187.0999999940395,
+     "serverMs": 1183.0999999940395,
+     "status": 200,
+     "rows": 9
+    },
+    {
+     "round": 2,
+     "query": "\"absolutely right\"",
+     "kind": "runsEnter",
+     "ms": 56.5,
+     "at": 1793178188228,
+     "end": 1793178189315,
+     "enterMs": 56.5,
+     "serverMs": 49.80000001192093,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 2,
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "kind": "runsEnter",
+     "ms": 29.099999994039536,
+     "at": 1793178189315,
+     "end": 1793178194681,
+     "enterMs": 29.099999994039536,
+     "serverMs": 13.300000011920929,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 2,
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "kind": "runsEnter",
+     "ms": 20.5,
+     "at": 1793178194681,
+     "end": 1793178199481,
+     "enterMs": 20.5,
+     "serverMs": 3.5999999940395355,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 2,
+     "query": "zstd",
+     "kind": "runsEnter",
+     "ms": 29.900000005960464,
+     "at": 1793178199481,
+     "end": 1793178199797,
+     "enterMs": 29.900000005960464,
+     "serverMs": 13.700000017881393,
+     "status": 200,
+     "rows": 6
+    },
+    {
+     "round": 2,
+     "query": "fsevents",
+     "kind": "runsEnter",
+     "ms": 34,
+     "at": 1793178199797,
+     "end": 1793178200332,
+     "enterMs": 34,
+     "serverMs": 17.400000005960464,
+     "status": 200,
+     "rows": 2
+    },
+    {
+     "round": 2,
+     "query": "flock",
+     "kind": "runsEnter",
+     "ms": 31,
+     "at": 1793178200332,
+     "end": 1793178200698,
+     "enterMs": 31,
+     "serverMs": 13.800000011920929,
+     "status": 200,
+     "rows": 7
+    },
+    {
+     "round": 2,
+     "query": "codex stop button",
+     "kind": "deepLink",
+     "ms": 82.60000002384186,
+     "at": 1793178200698,
+     "end": 1793178200784,
+     "navMs": 82.60000002384186,
+     "expr": "codex stop button"
+    },
+    {
+     "round": 2,
+     "query": "interrupt generation with one Stop",
+     "kind": "deepLink",
+     "ms": 81.39999997615814,
+     "at": 1793178200784,
+     "end": 1793178200868,
+     "navMs": 81.39999997615814,
+     "expr": "interrupt generation with one Stop"
+    },
+    {
+     "round": 2,
+     "query": "cursor support",
+     "kind": "deepLink",
+     "ms": 85.40000000596046,
+     "at": 1793178200868,
+     "end": 1793178200955,
+     "navMs": 85.40000000596046,
+     "expr": "cursor support"
+    },
+    {
+     "round": 2,
+     "query": "runs page sorting",
+     "kind": "deepLink",
+     "ms": 73.59999999403954,
+     "at": 1793178200955,
+     "end": 1793178201031,
+     "navMs": 73.59999999403954,
+     "expr": "runs page sorting"
+    },
+    {
+     "round": 2,
+     "query": "fix runs page sorting and search box",
+     "kind": "deepLink",
+     "ms": 75.2000000178814,
+     "at": 1793178201031,
+     "end": 1793178201109,
+     "navMs": 75.2000000178814,
+     "expr": "fix runs page sorting and search box"
+    },
+    {
+     "round": 2,
+     "query": "open the failed call from what went wrong",
+     "kind": "deepLink",
+     "ms": 80.5,
+     "at": 1793178201109,
+     "end": 1793178201196,
+     "navMs": 80.5,
+     "expr": "open the failed call from what went wrong"
+    },
+    {
+     "round": 2,
+     "query": "what went wrong failed call",
+     "kind": "deepLink",
+     "ms": 86.30000001192093,
+     "at": 1793178201196,
+     "end": 1793178201286,
+     "navMs": 86.30000001192093,
+     "expr": "what went wrong failed call"
+    },
+    {
+     "round": 2,
+     "query": "standup and handoff features",
+     "kind": "deepLink",
+     "ms": 74.40000000596046,
+     "at": 1793178201286,
+     "end": 1793178201364,
+     "navMs": 74.40000000596046,
+     "expr": "standup and handoff features"
+    }
+   ],
+   "summary": {
+    "topbar.novel": {
+     "n": 39,
+     "fail": 0,
+     "p50": 139.59999999403954,
+     "p90": 148.09999999403954,
+     "max": 209.2999999821186
+    },
+    "topbar.repeat": {
+     "n": 78,
+     "fail": 0,
+     "p50": 132.5,
+     "p90": 137.19999998807907,
+     "max": 150.39999997615814
+    },
+    "runsEnter.novel": {
+     "n": 39,
+     "fail": 0,
+     "p50": 28.399999976158142,
+     "p90": 55.80000001192093,
+     "max": 1972.7000000178814
+    },
+    "runsEnter.repeat": {
+     "n": 78,
+     "fail": 0,
+     "p50": 28.400000005960464,
+     "p90": 34.79999998211861,
+     "max": 1995
+    },
+    "deepLink.novel": {
+     "n": 8,
+     "fail": 0,
+     "p50": 82.5,
+     "p90": 88.2000000178814,
+     "max": 88.2000000178814
+    },
+    "deepLink.repeat": {
+     "n": 16,
+     "fail": 0,
+     "p50": 80.5,
+     "p90": 91.09999999403954,
+     "max": 94.7000000178814
+    }
+   }
+  },
+  "uiIndexing": {
+   "rows": [
+    {
+     "round": 0,
+     "query": "codex stop button",
+     "kind": "topbar",
+     "ms": 136.90000000596046,
+     "at": 1793178211927,
+     "end": 1793178213197,
+     "lastKeyMs": 136.90000000596046,
+     "firstKeyMs": 993.1000000238419,
+     "serverMs": 10.800000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "interrupt generation with one Stop",
+     "kind": "topbar",
+     "ms": 134.90000000596046,
+     "at": 1793178213197,
+     "end": 1793178215562,
+     "lastKeyMs": 134.90000000596046,
+     "firstKeyMs": 1909.699999988079,
+     "serverMs": 9.699999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "cursor support",
+     "kind": "topbar",
+     "ms": 141.09999999403954,
+     "at": 1793178215562,
+     "end": 1793178216990,
+     "lastKeyMs": 141.09999999403954,
+     "firstKeyMs": 842,
+     "serverMs": 10.699999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "runs page sorting",
+     "kind": "topbar",
+     "ms": 138.90000000596046,
+     "at": 1793178216990,
+     "end": 1793178218427,
+     "lastKeyMs": 138.90000000596046,
+     "firstKeyMs": 977.9000000059605,
+     "serverMs": 8.399999976158142,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "fix runs page sorting and search box",
+     "kind": "topbar",
+     "ms": 134.80000001192093,
+     "at": 1793178218427,
+     "end": 1793178220987,
+     "lastKeyMs": 134.80000001192093,
+     "firstKeyMs": 1977.4000000059605,
+     "serverMs": 9.400000005960464,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "open the failed call from what went wrong",
+     "kind": "topbar",
+     "ms": 138.19999998807907,
+     "at": 1793178220987,
+     "end": 1793178223678,
+     "lastKeyMs": 138.19999998807907,
+     "firstKeyMs": 2223.699999988079,
+     "serverMs": 12.399999976158142,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "what went wrong failed call",
+     "kind": "topbar",
+     "ms": 139.7000000178814,
+     "at": 1793178223678,
+     "end": 1793178225634,
+     "lastKeyMs": 139.7000000178814,
+     "firstKeyMs": 1493.800000011921,
+     "serverMs": 12.300000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "standup and handoff features",
+     "kind": "topbar",
+     "ms": 134.90000000596046,
+     "at": 1793178225634,
+     "end": 1793178227765,
+     "lastKeyMs": 134.90000000596046,
+     "firstKeyMs": 1557.4000000059605,
+     "serverMs": 11.400000005960464,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "ui style design guidelines",
+     "kind": "topbar",
+     "ms": 142.2000000178814,
+     "at": 1793178227765,
+     "end": 1793178229793,
+     "lastKeyMs": 142.2000000178814,
+     "firstKeyMs": 1461,
+     "serverMs": 11,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "harbor wordmark on dither canvas",
+     "kind": "topbar",
+     "ms": 196,
+     "at": 1793178229793,
+     "end": 1793178232188,
+     "lastKeyMs": 196,
+     "firstKeyMs": 1818,
+     "serverMs": 67.19999998807907,
+     "status": 200,
+     "items": 2,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "harness hacks slide presentation",
+     "kind": "topbar",
+     "ms": 253.30000001192093,
+     "at": 1793178232188,
+     "end": 1793178234634,
+     "lastKeyMs": 253.30000001192093,
+     "firstKeyMs": 1880.4000000059605,
+     "serverMs": 127.7000000178814,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "pre-wiring explainer video",
+     "kind": "topbar",
+     "ms": 137.69999998807907,
+     "at": 1793178234634,
+     "end": 1793178236657,
+     "lastKeyMs": 137.69999998807907,
+     "firstKeyMs": 1448.9000000059605,
+     "serverMs": 10,
+     "status": 200,
+     "items": 4,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "more space between lines yes or no state",
+     "kind": "topbar",
+     "ms": 140.2999999821186,
+     "at": 1793178236657,
+     "end": 1793178239308,
+     "lastKeyMs": 140.2999999821186,
+     "firstKeyMs": 2189.4000000059605,
+     "serverMs": 14.300000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "test agent store as an end user",
+     "kind": "topbar",
+     "ms": 142.80000001192093,
+     "at": 1793178239308,
+     "end": 1793178241604,
+     "lastKeyMs": 142.80000001192093,
+     "firstKeyMs": 1716.4000000059605,
+     "serverMs": 13,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "readme diagram images redesign before after",
+     "kind": "topbar",
+     "ms": 138.40000000596046,
+     "at": 1793178241604,
+     "end": 1793178244529,
+     "lastKeyMs": 138.40000000596046,
+     "firstKeyMs": 2338.5999999940395,
+     "serverMs": 10.699999988079071,
+     "status": 200,
+     "items": 4,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "draft render queued 40 minutes ago",
+     "kind": "topbar",
+     "ms": 134.7999999821186,
+     "at": 1793178244529,
+     "end": 1793178246864,
+     "lastKeyMs": 134.7999999821186,
+     "firstKeyMs": 1880.7999999821186,
+     "serverMs": 8.899999976158142,
+     "status": 200,
+     "items": 7,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"cannot contain whitespace\"",
+     "kind": "topbar",
+     "ms": 137,
+     "at": 1793178246864,
+     "end": 1793178248940,
+     "lastKeyMs": 137,
+     "firstKeyMs": 1506.300000011921,
+     "serverMs": 8.599999994039536,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "parseSession",
+     "kind": "topbar",
+     "ms": 138,
+     "at": 1793178248940,
+     "end": 1793178250251,
+     "lastKeyMs": 138,
+     "firstKeyMs": 718.5999999940395,
+     "serverMs": 9,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "sidecar timeout",
+     "kind": "topbar",
+     "ms": 132.59999999403954,
+     "at": 1793178250251,
+     "end": 1793178251680,
+     "lastKeyMs": 132.59999999403954,
+     "firstKeyMs": 864.6999999880791,
+     "serverMs": 7.800000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "ssh import backoff",
+     "kind": "topbar",
+     "ms": 142,
+     "at": 1793178251680,
+     "end": 1793178253308,
+     "lastKeyMs": 142,
+     "firstKeyMs": 1035.1000000238419,
+     "serverMs": 12,
+     "status": 200,
+     "items": 2,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "usage limits",
+     "kind": "topbar",
+     "ms": 134.09999999403954,
+     "at": 1793178253308,
+     "end": 1793178254471,
+     "lastKeyMs": 134.09999999403954,
+     "firstKeyMs": 706.7999999821186,
+     "serverMs": 8.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "insights stall",
+     "kind": "topbar",
+     "ms": 137.7000000178814,
+     "at": 1793178254471,
+     "end": 1793178255852,
+     "lastKeyMs": 137.7000000178814,
+     "firstKeyMs": 820.7000000178814,
+     "serverMs": 8.099999994039536,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "worktree origin remote",
+     "kind": "topbar",
+     "ms": 134,
+     "at": 1793178255852,
+     "end": 1793178257659,
+     "lastKeyMs": 134,
+     "firstKeyMs": 1228.5,
+     "serverMs": 8,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "error handling",
+     "kind": "topbar",
+     "ms": 142.7999999821186,
+     "at": 1793178257659,
+     "end": 1793178259066,
+     "lastKeyMs": 142.7999999821186,
+     "firstKeyMs": 826.9000000059605,
+     "serverMs": 12.700000017881393,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "grok vktr",
+     "kind": "topbar",
+     "ms": 136.59999999403954,
+     "at": 1793178259066,
+     "end": 1793178260202,
+     "lastKeyMs": 136.59999999403954,
+     "firstKeyMs": 552.3000000119209,
+     "serverMs": 8.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "you're absolutely right",
+     "kind": "topbar",
+     "ms": 139.09999999403954,
+     "at": 1793178260202,
+     "end": 1793178262065,
+     "lastKeyMs": 139.09999999403954,
+     "firstKeyMs": 1295.2000000178814,
+     "serverMs": 11,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "absolutely right",
+     "kind": "topbar",
+     "ms": 309.19999998807907,
+     "at": 1793178262066,
+     "end": 1793178263736,
+     "lastKeyMs": 309.19999998807907,
+     "firstKeyMs": 1097.199999988079,
+     "serverMs": 182.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "let me",
+     "kind": "topbar",
+     "ms": 138.30000001192093,
+     "at": 1793178263736,
+     "end": 1793178264605,
+     "lastKeyMs": 138.30000001192093,
+     "firstKeyMs": 401.40000000596046,
+     "serverMs": 11.599999994039536,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "I'll",
+     "kind": "topbar",
+     "ms": 143.5,
+     "at": 1793178264605,
+     "end": 1793178265369,
+     "lastKeyMs": 143.5,
+     "firstKeyMs": 302.10000002384186,
+     "serverMs": 13.900000005960464,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "the",
+     "kind": "topbar",
+     "ms": 135.69999998807907,
+     "at": 1793178265369,
+     "end": 1793178266079,
+     "lastKeyMs": 135.69999998807907,
+     "firstKeyMs": 239.90000000596046,
+     "serverMs": 11.100000023841858,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "now let me check",
+     "kind": "topbar",
+     "ms": 140.09999999403954,
+     "at": 1793178266079,
+     "end": 1793178267573,
+     "lastKeyMs": 140.09999999403954,
+     "firstKeyMs": 918,
+     "serverMs": 11.099999994039536,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"you're absolutely right\"",
+     "kind": "topbar",
+     "ms": 142.09999999403954,
+     "at": 1793178267573,
+     "end": 1793178269439,
+     "lastKeyMs": 142.09999999403954,
+     "firstKeyMs": 1398.2999999821186,
+     "serverMs": 10.300000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"let me\"",
+     "kind": "topbar",
+     "ms": 132.2000000178814,
+     "at": 1793178269439,
+     "end": 1793178270392,
+     "lastKeyMs": 132.2000000178814,
+     "firstKeyMs": 493.7000000178814,
+     "serverMs": 7.299999982118607,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"absolutely right\"",
+     "kind": "topbar",
+     "ms": 170.40000000596046,
+     "at": 1793178270392,
+     "end": 1793178272049,
+     "lastKeyMs": 170.40000000596046,
+     "firstKeyMs": 1061.5,
+     "serverMs": 41.599999994039536,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "kind": "topbar",
+     "ms": 136,
+     "at": 1793178272049,
+     "end": 1793178277949,
+     "lastKeyMs": 136,
+     "firstKeyMs": 5324.299999982119,
+     "serverMs": 9.800000011920929,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "kind": "topbar",
+     "ms": 198.09999999403954,
+     "at": 1793178277949,
+     "end": 1793178283289,
+     "lastKeyMs": 198.09999999403954,
+     "firstKeyMs": 4765.9000000059605,
+     "serverMs": 72.5,
+     "status": 200,
+     "items": 1,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "zstd",
+     "kind": "topbar",
+     "ms": 137.30000001192093,
+     "at": 1793178283289,
+     "end": 1793178284042,
+     "lastKeyMs": 137.30000001192093,
+     "firstKeyMs": 294.2000000178814,
+     "serverMs": 8,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "fsevents",
+     "kind": "topbar",
+     "ms": 134.40000000596046,
+     "at": 1793178284042,
+     "end": 1793178285115,
+     "lastKeyMs": 134.40000000596046,
+     "firstKeyMs": 498.90000000596046,
+     "serverMs": 7.5,
+     "status": 200,
+     "items": 2,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "flock",
+     "kind": "topbar",
+     "ms": 134.7000000178814,
+     "at": 1793178285115,
+     "end": 1793178286024,
+     "lastKeyMs": 134.7000000178814,
+     "firstKeyMs": 345.40000000596046,
+     "serverMs": 7.700000017881393,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "codex stop button",
+     "kind": "runsEnter",
+     "ms": 24.900000005960464,
+     "at": 1793178286217,
+     "end": 1793178287199,
+     "enterMs": 24.900000005960464,
+     "serverMs": 8.599999994039536,
+     "status": 200,
+     "rows": 13
+    },
+    {
+     "round": 0,
+     "query": "interrupt generation with one Stop",
+     "kind": "runsEnter",
+     "ms": 34,
+     "at": 1793178287199,
+     "end": 1793178289114,
+     "enterMs": 34,
+     "serverMs": 18.900000005960464,
+     "status": 200,
+     "rows": 26
+    },
+    {
+     "round": 0,
+     "query": "cursor support",
+     "kind": "runsEnter",
+     "ms": 80,
+     "at": 1793178289114,
+     "end": 1793178289997,
+     "enterMs": 80,
+     "serverMs": 70.80000001192093,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "runs page sorting",
+     "kind": "runsEnter",
+     "ms": 20.799999982118607,
+     "at": 1793178289997,
+     "end": 1793178290991,
+     "enterMs": 20.799999982118607,
+     "serverMs": 5.300000011920929,
+     "status": 200,
+     "rows": 11
+    },
+    {
+     "round": 0,
+     "query": "fix runs page sorting and search box",
+     "kind": "runsEnter",
+     "ms": 28.900000005960464,
+     "at": 1793178290991,
+     "end": 1793178293012,
+     "enterMs": 28.900000005960464,
+     "serverMs": 11.699999988079071,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "open the failed call from what went wrong",
+     "kind": "runsEnter",
+     "ms": 31.799999982118607,
+     "at": 1793178293012,
+     "end": 1793178295630,
+     "enterMs": 31.799999982118607,
+     "serverMs": 18.5,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "what went wrong failed call",
+     "kind": "runsEnter",
+     "ms": 30.900000005960464,
+     "at": 1793178295630,
+     "end": 1793178297163,
+     "enterMs": 30.900000005960464,
+     "serverMs": 17.200000017881393,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "standup and handoff features",
+     "kind": "runsEnter",
+     "ms": 29.099999994039536,
+     "at": 1793178297163,
+     "end": 1793178298761,
+     "enterMs": 29.099999994039536,
+     "serverMs": 12.900000005960464,
+     "status": 200,
+     "rows": 3
+    },
+    {
+     "round": 0,
+     "query": "ui style design guidelines",
+     "kind": "runsEnter",
+     "ms": 19.5,
+     "at": 1793178298761,
+     "end": 1793178300246,
+     "enterMs": 19.5,
+     "serverMs": 5.200000017881393,
+     "status": 200,
+     "rows": 33
+    },
+    {
+     "round": 0,
+     "query": "harbor wordmark on dither canvas",
+     "kind": "runsEnter",
+     "ms": 20.799999982118607,
+     "at": 1793178300246,
+     "end": 1793178302040,
+     "enterMs": 20.799999982118607,
+     "serverMs": 4.0999999940395355,
+     "status": 200,
+     "rows": 2
+    },
+    {
+     "round": 0,
+     "query": "harness hacks slide presentation",
+     "kind": "runsEnter",
+     "ms": 23.30000001192093,
+     "at": 1793178302040,
+     "end": 1793178304163,
+     "enterMs": 23.30000001192093,
+     "serverMs": 7.0999999940395355,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 0,
+     "query": "pre-wiring explainer video",
+     "kind": "runsEnter",
+     "ms": 33.5,
+     "at": 1793178304163,
+     "end": 1793178305642,
+     "enterMs": 33.5,
+     "serverMs": 17.599999994039536,
+     "status": 200,
+     "rows": 5
+    },
+    {
+     "round": 0,
+     "query": "more space between lines yes or no state",
+     "kind": "runsEnter",
+     "ms": 33.599999994039536,
+     "at": 1793178305642,
+     "end": 1793178307879,
+     "enterMs": 33.599999994039536,
+     "serverMs": 19.69999998807907,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "test agent store as an end user",
+     "kind": "runsEnter",
+     "ms": 24.5,
+     "at": 1793178307879,
+     "end": 1793178309625,
+     "enterMs": 24.5,
+     "serverMs": 10.5,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "readme diagram images redesign before after",
+     "kind": "runsEnter",
+     "ms": 55.599999994039536,
+     "at": 1793178309625,
+     "end": 1793178312046,
+     "enterMs": 55.599999994039536,
+     "serverMs": 51.5,
+     "status": 200,
+     "rows": 4
+    },
+    {
+     "round": 0,
+     "query": "draft render queued 40 minutes ago",
+     "kind": "runsEnter",
+     "ms": 17.5,
+     "at": 1793178312046,
+     "end": 1793178313944,
+     "enterMs": 17.5,
+     "serverMs": 3.4000000059604645,
+     "status": 200,
+     "rows": 8
+    },
+    {
+     "round": 0,
+     "query": "\"cannot contain whitespace\"",
+     "kind": "runsEnter",
+     "ms": 732,
+     "at": 1793178313944,
+     "end": 1793178316159,
+     "enterMs": 732,
+     "serverMs": 728.5999999940395,
+     "status": 200,
+     "rows": 4
+    },
+    {
+     "round": 0,
+     "query": "parseSession",
+     "kind": "runsEnter",
+     "ms": 35.099999994039536,
+     "at": 1793178316159,
+     "end": 1793178316914,
+     "enterMs": 35.099999994039536,
+     "serverMs": 19.69999998807907,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "sidecar timeout",
+     "kind": "runsEnter",
+     "ms": 28.30000001192093,
+     "at": 1793178316914,
+     "end": 1793178317814,
+     "enterMs": 28.30000001192093,
+     "serverMs": 11.900000005960464,
+     "status": 200,
+     "rows": 11
+    },
+    {
+     "round": 0,
+     "query": "ssh import backoff",
+     "kind": "runsEnter",
+     "ms": 28.30000001192093,
+     "at": 1793178317814,
+     "end": 1793178318892,
+     "enterMs": 28.30000001192093,
+     "serverMs": 12.699999988079071,
+     "status": 200,
+     "rows": 2
+    },
+    {
+     "round": 0,
+     "query": "usage limits",
+     "kind": "runsEnter",
+     "ms": 14.400000005960464,
+     "at": 1793178318892,
+     "end": 1793178319626,
+     "enterMs": 14.400000005960464,
+     "serverMs": 6.300000011920929,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "insights stall",
+     "kind": "runsEnter",
+     "ms": 21.099999994039536,
+     "at": 1793178319626,
+     "end": 1793178320461,
+     "enterMs": 21.099999994039536,
+     "serverMs": 5,
+     "status": 200,
+     "rows": 25
+    },
+    {
+     "round": 0,
+     "query": "worktree origin remote",
+     "kind": "runsEnter",
+     "ms": 328.09999999403954,
+     "at": 1793178320461,
+     "end": 1793178322023,
+     "enterMs": 328.09999999403954,
+     "serverMs": 310.09999999403954,
+     "status": 200,
+     "rows": 39
+    },
+    {
+     "round": 0,
+     "query": "error handling",
+     "kind": "runsEnter",
+     "ms": 31.100000023841858,
+     "at": 1793178322023,
+     "end": 1793178322880,
+     "enterMs": 31.100000023841858,
+     "serverMs": 15.800000011920929,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "grok vktr",
+     "kind": "runsEnter",
+     "ms": 28.599999994039536,
+     "at": 1793178322880,
+     "end": 1793178323460,
+     "enterMs": 28.599999994039536,
+     "serverMs": 12.5,
+     "status": 200,
+     "rows": 8
+    },
+    {
+     "round": 0,
+     "query": "you're absolutely right",
+     "kind": "runsEnter",
+     "ms": 22.700000017881393,
+     "at": 1793178323460,
+     "end": 1793178324775,
+     "enterMs": 22.700000017881393,
+     "serverMs": 8.300000011920929,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "absolutely right",
+     "kind": "runsEnter",
+     "ms": 29.099999994039536,
+     "at": 1793178324775,
+     "end": 1793178325728,
+     "enterMs": 29.099999994039536,
+     "serverMs": 15,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "let me",
+     "kind": "runsEnter",
+     "ms": 22.19999998807907,
+     "at": 1793178325728,
+     "end": 1793178326142,
+     "enterMs": 22.19999998807907,
+     "serverMs": 6.5999999940395355,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "I'll",
+     "kind": "runsEnter",
+     "ms": 34.400000005960464,
+     "at": 1793178326142,
+     "end": 1793178326462,
+     "enterMs": 34.400000005960464,
+     "serverMs": 19.5,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "the",
+     "kind": "runsEnter",
+     "ms": 33.80000001192093,
+     "at": 1793178326462,
+     "end": 1793178326730,
+     "enterMs": 33.80000001192093,
+     "serverMs": 21.799999982118607,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "now let me check",
+     "kind": "runsEnter",
+     "ms": 20.700000017881393,
+     "at": 1793178326730,
+     "end": 1793178327678,
+     "enterMs": 20.700000017881393,
+     "serverMs": 6.9000000059604645,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "\"you're absolutely right\"",
+     "kind": "runsEnter",
+     "ms": 2966.399999976158,
+     "at": 1793178327678,
+     "end": 1793178332029,
+     "enterMs": 2966.399999976158,
+     "serverMs": 1418.5,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "\"let me\"",
+     "kind": "runsEnter",
+     "ms": 1270.2000000178814,
+     "at": 1793178332029,
+     "end": 1793178333794,
+     "enterMs": 1270.2000000178814,
+     "serverMs": 37.400000005960464,
+     "status": 200,
+     "rows": 11
+    },
+    {
+     "round": 0,
+     "query": "\"absolutely right\"",
+     "kind": "runsEnter",
+     "ms": 24.5,
+     "at": 1793178333794,
+     "end": 1793178334863,
+     "enterMs": 24.5,
+     "serverMs": 11,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "kind": "runsEnter",
+     "ms": 29.19999998807907,
+     "at": 1793178334863,
+     "end": 1793178340210,
+     "enterMs": 29.19999998807907,
+     "serverMs": 11.5,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 0,
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "kind": "runsEnter",
+     "ms": 181,
+     "at": 1793178340210,
+     "end": 1793178345136,
+     "enterMs": 181,
+     "serverMs": 178.19999998807907,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "zstd",
+     "kind": "runsEnter",
+     "ms": 9.5,
+     "at": 1793178345136,
+     "end": 1793178345425,
+     "enterMs": 9.5,
+     "serverMs": 3.5,
+     "status": 200,
+     "rows": 8
+    },
+    {
+     "round": 0,
+     "query": "fsevents",
+     "kind": "runsEnter",
+     "ms": 22.19999998807907,
+     "at": 1793178345425,
+     "end": 1793178345941,
+     "enterMs": 22.19999998807907,
+     "serverMs": 3.699999988079071,
+     "status": 200,
+     "rows": 2
+    },
+    {
+     "round": 0,
+     "query": "flock",
+     "kind": "runsEnter",
+     "ms": 26.600000023841858,
+     "at": 1793178345941,
+     "end": 1793178346310,
+     "enterMs": 26.600000023841858,
+     "serverMs": 11.099999994039536,
+     "status": 200,
+     "rows": 8
+    },
+    {
+     "round": 0,
+     "query": "codex stop button",
+     "kind": "deepLink",
+     "ms": 67.19999998807907,
+     "at": 1793178346310,
+     "end": 1793178346380,
+     "navMs": 67.19999998807907,
+     "expr": "codex stop button"
+    },
+    {
+     "round": 0,
+     "query": "interrupt generation with one Stop",
+     "kind": "deepLink",
+     "ms": 125.39999997615814,
+     "at": 1793178346380,
+     "end": 1793178346508,
+     "navMs": 125.39999997615814,
+     "expr": "interrupt generation with one Stop"
+    },
+    {
+     "round": 0,
+     "query": "cursor support",
+     "kind": "deepLink",
+     "ms": 94.09999999403954,
+     "at": 1793178346508,
+     "end": 1793178346606,
+     "navMs": 94.09999999403954,
+     "expr": "cursor support"
+    },
+    {
+     "round": 0,
+     "query": "runs page sorting",
+     "kind": "deepLink",
+     "ms": 73.19999998807907,
+     "at": 1793178346606,
+     "end": 1793178346684,
+     "navMs": 73.19999998807907,
+     "expr": "runs page sorting"
+    },
+    {
+     "round": 0,
+     "query": "fix runs page sorting and search box",
+     "kind": "deepLink",
+     "ms": 73.7999999821186,
+     "at": 1793178346684,
+     "end": 1793178346760,
+     "navMs": 73.7999999821186,
+     "expr": "fix runs page sorting and search box"
+    },
+    {
+     "round": 0,
+     "query": "open the failed call from what went wrong",
+     "kind": "deepLink",
+     "ms": 91,
+     "at": 1793178346760,
+     "end": 1793178346858,
+     "navMs": 91,
+     "expr": "open the failed call from what went wrong"
+    },
+    {
+     "round": 0,
+     "query": "what went wrong failed call",
+     "kind": "deepLink",
+     "ms": 94.40000000596046,
+     "at": 1793178346858,
+     "end": 1793178346956,
+     "navMs": 94.40000000596046,
+     "expr": "what went wrong failed call"
+    },
+    {
+     "round": 0,
+     "query": "standup and handoff features",
+     "kind": "deepLink",
+     "ms": 72.7000000178814,
+     "at": 1793178346956,
+     "end": 1793178347031,
+     "navMs": 72.7000000178814,
+     "expr": "standup and handoff features"
+    }
+   ],
+   "summary": {
+    "topbar.novel": {
+     "n": 39,
+     "fail": 0,
+     "p50": 138.19999998807907,
+     "p90": 196,
+     "max": 309.19999998807907
+    },
+    "runsEnter.novel": {
+     "n": 39,
+     "fail": 0,
+     "p50": 28.900000005960464,
+     "p90": 328.09999999403954,
+     "max": 2966.399999976158
+    },
+    "deepLink.novel": {
+     "n": 8,
+     "fail": 0,
+     "p50": 73.7999999821186,
+     "p90": 125.39999997615814,
+     "max": 125.39999997615814
+    }
+   },
+   "hubCpuDuring": {
+    "cpuPct": 24.6,
+    "rssMB": 679
+   },
+   "cli": {
+    "rows": [
+     {
+      "query": "codex stop button",
+      "ms": 1087,
+      "at": 1793178347034,
+      "end": 1793178348121
+     },
+     {
+      "query": "interrupt generation with one Stop",
+      "ms": 880,
+      "at": 1793178348121,
+      "end": 1793178349001
+     },
+     {
+      "query": "cursor support",
+      "ms": 854,
+      "at": 1793178349001,
+      "end": 1793178349855
+     },
+     {
+      "query": "runs page sorting",
+      "ms": 836,
+      "at": 1793178349855,
+      "end": 1793178350691
+     },
+     {
+      "query": "fix runs page sorting and search box",
+      "ms": 859,
+      "at": 1793178350691,
+      "end": 1793178351549
+     },
+     {
+      "query": "open the failed call from what went wrong",
+      "ms": 895,
+      "at": 1793178351549,
+      "end": 1793178352444
+     },
+     {
+      "query": "what went wrong failed call",
+      "ms": 943,
+      "at": 1793178352444,
+      "end": 1793178353387
+     },
+     {
+      "query": "standup and handoff features",
+      "ms": 817,
+      "at": 1793178353387,
+      "end": 1793178354204
+     },
+     {
+      "query": "ui style design guidelines",
+      "ms": 842,
+      "at": 1793178354204,
+      "end": 1793178355046
+     },
+     {
+      "query": "harbor wordmark on dither canvas",
+      "ms": 900,
+      "at": 1793178355046,
+      "end": 1793178355947
+     },
+     {
+      "query": "harness hacks slide presentation",
+      "ms": 801,
+      "at": 1793178355947,
+      "end": 1793178356748
+     },
+     {
+      "query": "pre-wiring explainer video",
+      "ms": 864,
+      "at": 1793178356748,
+      "end": 1793178357611
+     },
+     {
+      "query": "more space between lines yes or no state",
+      "ms": 860,
+      "at": 1793178357611,
+      "end": 1793178358472
+     },
+     {
+      "query": "test agent store as an end user",
+      "ms": 883,
+      "at": 1793178358472,
+      "end": 1793178359354
+     },
+     {
+      "query": "readme diagram images redesign before after",
+      "ms": 836,
+      "at": 1793178359354,
+      "end": 1793178360190
+     },
+     {
+      "query": "draft render queued 40 minutes ago",
+      "ms": 850,
+      "at": 1793178360190,
+      "end": 1793178361040
+     },
+     {
+      "query": "\"cannot contain whitespace\"",
+      "ms": 834,
+      "at": 1793178361040,
+      "end": 1793178361875
+     },
+     {
+      "query": "parseSession",
+      "ms": 914,
+      "at": 1793178361875,
+      "end": 1793178362788
+     },
+     {
+      "query": "sidecar timeout",
+      "ms": 853,
+      "at": 1793178362788,
+      "end": 1793178363641
+     },
+     {
+      "query": "ssh import backoff",
+      "ms": 829,
+      "at": 1793178363641,
+      "end": 1793178364470
+     },
+     {
+      "query": "usage limits",
+      "ms": 907,
+      "at": 1793178364470,
+      "end": 1793178365377
+     },
+     {
+      "query": "insights stall",
+      "ms": 876,
+      "at": 1793178365377,
+      "end": 1793178366253
+     },
+     {
+      "query": "worktree origin remote",
+      "ms": 859,
+      "at": 1793178366253,
+      "end": 1793178367112
+     },
+     {
+      "query": "error handling",
+      "ms": 922,
+      "at": 1793178367112,
+      "end": 1793178368034
+     },
+     {
+      "query": "grok vktr",
+      "ms": 853,
+      "at": 1793178368034,
+      "end": 1793178368887
+     },
+     {
+      "query": "you're absolutely right",
+      "ms": 905,
+      "at": 1793178368887,
+      "end": 1793178369792
+     },
+     {
+      "query": "absolutely right",
+      "ms": 885,
+      "at": 1793178369792,
+      "end": 1793178370677
+     },
+     {
+      "query": "let me",
+      "ms": 996,
+      "at": 1793178370677,
+      "end": 1793178371673
+     },
+     {
+      "query": "I'll",
+      "ms": 872,
+      "at": 1793178371673,
+      "end": 1793178372545
+     },
+     {
+      "query": "the",
+      "ms": 875,
+      "at": 1793178372545,
+      "end": 1793178373419
+     },
+     {
+      "query": "now let me check",
+      "ms": 979,
+      "at": 1793178373419,
+      "end": 1793178374398
+     },
+     {
+      "query": "\"you're absolutely right\"",
+      "ms": 924,
+      "at": 1793178374398,
+      "end": 1793178375322
+     },
+     {
+      "query": "\"let me\"",
+      "ms": 868,
+      "at": 1793178375322,
+      "end": 1793178376190
+     },
+     {
+      "query": "\"absolutely right\"",
+      "ms": 867,
+      "at": 1793178376190,
+      "end": 1793178377057
+     },
+     {
+      "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+      "ms": 829,
+      "at": 1793178377057,
+      "end": 1793178377886
+     },
+     {
+      "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+      "ms": 878,
+      "at": 1793178377886,
+      "end": 1793178378764
+     },
+     {
+      "query": "zstd",
+      "ms": 843,
+      "at": 1793178378764,
+      "end": 1793178379607
+     },
+     {
+      "query": "fsevents",
+      "ms": 821,
+      "at": 1793178379607,
+      "end": 1793178380429
+     },
+     {
+      "query": "flock",
+      "ms": 834,
+      "at": 1793178380429,
+      "end": 1793178381263
+     }
+    ],
+    "search": {
+     "n": 39,
+     "fail": 0,
+     "p50": 867,
+     "p90": 943,
+     "max": 1087
+    }
+   },
+   "resident": [],
+   "writer": "{\"appended\":2872,\"newSessions\":30}",
+   "overlap": {
+    "ui": {
+     "rows": 86,
+     "inside": 86,
+     "from": 1793178201711,
+     "to": 1793178381740
+    },
+    "cli": {
+     "rows": 39,
+     "inside": 39,
+     "from": 1793178201711,
+     "to": 1793178381740
+    }
+   }
+  },
+  "uiPull": {
+   "rows": [
+    {
+     "round": 0,
+     "query": "codex stop button",
+     "kind": "topbar",
+     "ms": 140.09999999403954,
+     "at": 1793178449927,
+     "end": 1793178451163,
+     "lastKeyMs": 140.09999999403954,
+     "firstKeyMs": 980.1999999880791,
+     "serverMs": 9.600000023841858,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "interrupt generation with one Stop",
+     "kind": "topbar",
+     "ms": 145,
+     "at": 1793178451163,
+     "end": 1793178453519,
+     "lastKeyMs": 145,
+     "firstKeyMs": 1891.800000011921,
+     "serverMs": 14.199999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "cursor support",
+     "kind": "topbar",
+     "ms": 139.09999999403954,
+     "at": 1793178453519,
+     "end": 1793178454932,
+     "lastKeyMs": 139.09999999403954,
+     "firstKeyMs": 836.8000000119209,
+     "serverMs": 9.300000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "runs page sorting",
+     "kind": "topbar",
+     "ms": 133.39999997615814,
+     "at": 1793178454932,
+     "end": 1793178456491,
+     "lastKeyMs": 133.39999997615814,
+     "firstKeyMs": 980.5999999940395,
+     "serverMs": 7.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "fix runs page sorting and search box",
+     "kind": "topbar",
+     "ms": 134.09999999403954,
+     "at": 1793178456491,
+     "end": 1793178459032,
+     "lastKeyMs": 134.09999999403954,
+     "firstKeyMs": 1973,
+     "serverMs": 9.099999994039536,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "open the failed call from what went wrong",
+     "kind": "topbar",
+     "ms": 138.19999998807907,
+     "at": 1793178459032,
+     "end": 1793178461871,
+     "lastKeyMs": 138.19999998807907,
+     "firstKeyMs": 2253.5999999940395,
+     "serverMs": 10.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "what went wrong failed call",
+     "kind": "topbar",
+     "ms": 138,
+     "at": 1793178461871,
+     "end": 1793178463835,
+     "lastKeyMs": 138,
+     "firstKeyMs": 1511.2999999821186,
+     "serverMs": 9.600000023841858,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "standup and handoff features",
+     "kind": "topbar",
+     "ms": 189.69999998807907,
+     "at": 1793178463835,
+     "end": 1793178466032,
+     "lastKeyMs": 189.69999998807907,
+     "firstKeyMs": 1618.0999999940395,
+     "serverMs": 63.599999994039536,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "ui style design guidelines",
+     "kind": "topbar",
+     "ms": 138.09999999403954,
+     "at": 1793178466032,
+     "end": 1793178467945,
+     "lastKeyMs": 138.09999999403954,
+     "firstKeyMs": 1448.5,
+     "serverMs": 10.599999994039536,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "harbor wordmark on dither canvas",
+     "kind": "topbar",
+     "ms": 136,
+     "at": 1793178467945,
+     "end": 1793178470179,
+     "lastKeyMs": 136,
+     "firstKeyMs": 1768.800000011921,
+     "serverMs": 8.600000023841858,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "harness hacks slide presentation",
+     "kind": "topbar",
+     "ms": 136.5,
+     "at": 1793178470179,
+     "end": 1793178472509,
+     "lastKeyMs": 136.5,
+     "firstKeyMs": 1766.4000000059605,
+     "serverMs": 8.700000017881393,
+     "status": 200,
+     "items": 1,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "pre-wiring explainer video",
+     "kind": "topbar",
+     "ms": 136.90000000596046,
+     "at": 1793178472509,
+     "end": 1793178474535,
+     "lastKeyMs": 136.90000000596046,
+     "firstKeyMs": 1460,
+     "serverMs": 10,
+     "status": 200,
+     "items": 3,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "more space between lines yes or no state",
+     "kind": "topbar",
+     "ms": 139.19999998807907,
+     "at": 1793178474535,
+     "end": 1793178477300,
+     "lastKeyMs": 139.19999998807907,
+     "firstKeyMs": 2186.9000000059605,
+     "serverMs": 13,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "test agent store as an end user",
+     "kind": "topbar",
+     "ms": 137.5,
+     "at": 1793178477300,
+     "end": 1793178479456,
+     "lastKeyMs": 137.5,
+     "firstKeyMs": 1693.800000011921,
+     "serverMs": 11.599999994039536,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "readme diagram images redesign before after",
+     "kind": "topbar",
+     "ms": 134.89999997615814,
+     "at": 1793178479456,
+     "end": 1793178482365,
+     "lastKeyMs": 134.89999997615814,
+     "firstKeyMs": 2342.199999988079,
+     "serverMs": 9.199999988079071,
+     "status": 200,
+     "items": 4,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "draft render queued 40 minutes ago",
+     "kind": "topbar",
+     "ms": 135.40000000596046,
+     "at": 1793178482365,
+     "end": 1793178484828,
+     "lastKeyMs": 135.40000000596046,
+     "firstKeyMs": 1890.1000000238419,
+     "serverMs": 8.699999988079071,
+     "status": 200,
+     "items": 5,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"cannot contain whitespace\"",
+     "kind": "topbar",
+     "ms": 136.30000001192093,
+     "at": 1793178484828,
+     "end": 1793178486898,
+     "lastKeyMs": 136.30000001192093,
+     "firstKeyMs": 1505.2000000178814,
+     "serverMs": 9.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "parseSession",
+     "kind": "topbar",
+     "ms": 140.80000001192093,
+     "at": 1793178486898,
+     "end": 1793178488194,
+     "lastKeyMs": 140.80000001192093,
+     "firstKeyMs": 712.9000000059605,
+     "serverMs": 10.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "sidecar timeout",
+     "kind": "topbar",
+     "ms": 133.2999999821186,
+     "at": 1793178488194,
+     "end": 1793178489549,
+     "lastKeyMs": 133.2999999821186,
+     "firstKeyMs": 880,
+     "serverMs": 9.299999982118607,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "ssh import backoff",
+     "kind": "topbar",
+     "ms": 138.80000001192093,
+     "at": 1793178489549,
+     "end": 1793178491058,
+     "lastKeyMs": 138.80000001192093,
+     "firstKeyMs": 1050.5,
+     "serverMs": 9,
+     "status": 200,
+     "items": 2,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "usage limits",
+     "kind": "topbar",
+     "ms": 139.59999999403954,
+     "at": 1793178491058,
+     "end": 1793178492341,
+     "lastKeyMs": 139.59999999403954,
+     "firstKeyMs": 716.7999999821186,
+     "serverMs": 9.699999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "insights stall",
+     "kind": "topbar",
+     "ms": 134.40000000596046,
+     "at": 1793178492341,
+     "end": 1793178493725,
+     "lastKeyMs": 134.40000000596046,
+     "firstKeyMs": 816.5999999940395,
+     "serverMs": 9,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "worktree origin remote",
+     "kind": "topbar",
+     "ms": 131.90000000596046,
+     "at": 1793178493725,
+     "end": 1793178495519,
+     "lastKeyMs": 131.90000000596046,
+     "firstKeyMs": 1227.199999988079,
+     "serverMs": 6.600000023841858,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "error handling",
+     "kind": "topbar",
+     "ms": 137.89999997615814,
+     "at": 1793178495519,
+     "end": 1793178496915,
+     "lastKeyMs": 137.89999997615814,
+     "firstKeyMs": 818.8999999761581,
+     "serverMs": 9.699999988079071,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "grok vktr",
+     "kind": "topbar",
+     "ms": 140,
+     "at": 1793178496915,
+     "end": 1793178497942,
+     "lastKeyMs": 140,
+     "firstKeyMs": 563.8000000119209,
+     "serverMs": 12.5,
+     "status": 200,
+     "items": 6,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "you're absolutely right",
+     "kind": "topbar",
+     "ms": 142.69999998807907,
+     "at": 1793178497942,
+     "end": 1793178499714,
+     "lastKeyMs": 142.69999998807907,
+     "firstKeyMs": 1302.2999999821186,
+     "serverMs": 12.099999994039536,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "absolutely right",
+     "kind": "topbar",
+     "ms": 136.09999999403954,
+     "at": 1793178499714,
+     "end": 1793178501094,
+     "lastKeyMs": 136.09999999403954,
+     "firstKeyMs": 922.5,
+     "serverMs": 8.900000005960464,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "let me",
+     "kind": "topbar",
+     "ms": 143.40000000596046,
+     "at": 1793178501095,
+     "end": 1793178502062,
+     "lastKeyMs": 143.40000000596046,
+     "firstKeyMs": 403.2999999821186,
+     "serverMs": 15.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "I'll",
+     "kind": "topbar",
+     "ms": 136.19999998807907,
+     "at": 1793178502062,
+     "end": 1793178502910,
+     "lastKeyMs": 136.19999998807907,
+     "firstKeyMs": 289.69999998807907,
+     "serverMs": 9.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "the",
+     "kind": "topbar",
+     "ms": 137.09999999403954,
+     "at": 1793178502910,
+     "end": 1793178503721,
+     "lastKeyMs": 137.09999999403954,
+     "firstKeyMs": 241.30000001192093,
+     "serverMs": 11.900000005960464,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "now let me check",
+     "kind": "topbar",
+     "ms": 139.59999999403954,
+     "at": 1793178503721,
+     "end": 1793178505227,
+     "lastKeyMs": 139.59999999403954,
+     "firstKeyMs": 925.8000000119209,
+     "serverMs": 10.099999994039536,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"you're absolutely right\"",
+     "kind": "topbar",
+     "ms": 138.7999999821186,
+     "at": 1793178505227,
+     "end": 1793178507085,
+     "lastKeyMs": 138.7999999821186,
+     "firstKeyMs": 1397.3999999761581,
+     "serverMs": 9.5,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"let me\"",
+     "kind": "topbar",
+     "ms": 140.7000000178814,
+     "at": 1793178507085,
+     "end": 1793178508176,
+     "lastKeyMs": 140.7000000178814,
+     "firstKeyMs": 513.5999999940395,
+     "serverMs": 10.800000011920929,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "\"absolutely right\"",
+     "kind": "topbar",
+     "ms": 140.40000000596046,
+     "at": 1793178508176,
+     "end": 1793178509678,
+     "lastKeyMs": 140.40000000596046,
+     "firstKeyMs": 1039.0999999940395,
+     "serverMs": 8.900000005960464,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "kind": "topbar",
+     "ms": 137.59999999403954,
+     "at": 1793178509678,
+     "end": 1793178515559,
+     "lastKeyMs": 137.59999999403954,
+     "firstKeyMs": 5312.0999999940395,
+     "serverMs": 12.200000017881393,
+     "status": 200,
+     "items": 0,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "kind": "topbar",
+     "ms": 142.80000001192093,
+     "at": 1793178515559,
+     "end": 1793178520765,
+     "lastKeyMs": 142.80000001192093,
+     "firstKeyMs": 4740.700000017881,
+     "serverMs": 17,
+     "status": 200,
+     "items": 1,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "zstd",
+     "kind": "topbar",
+     "ms": 133.30000001192093,
+     "at": 1793178520765,
+     "end": 1793178521648,
+     "lastKeyMs": 133.30000001192093,
+     "firstKeyMs": 297.7000000178814,
+     "serverMs": 9.400000005960464,
+     "status": 200,
+     "items": 7,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "fsevents",
+     "kind": "topbar",
+     "ms": 135.40000000596046,
+     "at": 1793178521648,
+     "end": 1793178522617,
+     "lastKeyMs": 135.40000000596046,
+     "firstKeyMs": 512.0999999940395,
+     "serverMs": 8.900000005960464,
+     "status": 200,
+     "items": 2,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "flock",
+     "kind": "topbar",
+     "ms": 133.10000002384186,
+     "at": 1793178522617,
+     "end": 1793178523557,
+     "lastKeyMs": 133.10000002384186,
+     "firstKeyMs": 348.30000001192093,
+     "serverMs": 9.200000017881393,
+     "status": 200,
+     "items": 8,
+     "requests": 1
+    },
+    {
+     "round": 0,
+     "query": "codex stop button",
+     "kind": "runsEnter",
+     "ms": 30.5,
+     "at": 1793178523736,
+     "end": 1793178524704,
+     "enterMs": 30.5,
+     "serverMs": 15.199999988079071,
+     "status": 200,
+     "rows": 12
+    },
+    {
+     "round": 0,
+     "query": "interrupt generation with one Stop",
+     "kind": "runsEnter",
+     "ms": 31.400000005960464,
+     "at": 1793178524704,
+     "end": 1793178526621,
+     "enterMs": 31.400000005960464,
+     "serverMs": 17.700000017881393,
+     "status": 200,
+     "rows": 27
+    },
+    {
+     "round": 0,
+     "query": "cursor support",
+     "kind": "runsEnter",
+     "ms": 31.099999994039536,
+     "at": 1793178526621,
+     "end": 1793178527486,
+     "enterMs": 31.099999994039536,
+     "serverMs": 17.200000017881393,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "runs page sorting",
+     "kind": "runsEnter",
+     "ms": 22.599999994039536,
+     "at": 1793178527486,
+     "end": 1793178528482,
+     "enterMs": 22.599999994039536,
+     "serverMs": 6,
+     "status": 200,
+     "rows": 10
+    },
+    {
+     "round": 0,
+     "query": "fix runs page sorting and search box",
+     "kind": "runsEnter",
+     "ms": 26.299999982118607,
+     "at": 1793178528482,
+     "end": 1793178530504,
+     "enterMs": 26.299999982118607,
+     "serverMs": 12,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 0,
+     "query": "open the failed call from what went wrong",
+     "kind": "runsEnter",
+     "ms": 18.69999998807907,
+     "at": 1793178530504,
+     "end": 1793178532755,
+     "enterMs": 18.69999998807907,
+     "serverMs": 6.5999999940395355,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "what went wrong failed call",
+     "kind": "runsEnter",
+     "ms": 26.400000005960464,
+     "at": 1793178532755,
+     "end": 1793178534287,
+     "enterMs": 26.400000005960464,
+     "serverMs": 13.099999994039536,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "standup and handoff features",
+     "kind": "runsEnter",
+     "ms": 17.5,
+     "at": 1793178534287,
+     "end": 1793178535851,
+     "enterMs": 17.5,
+     "serverMs": 3,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "ui style design guidelines",
+     "kind": "runsEnter",
+     "ms": 28.80000001192093,
+     "at": 1793178535851,
+     "end": 1793178537337,
+     "enterMs": 28.80000001192093,
+     "serverMs": 15.199999988079071,
+     "status": 200,
+     "rows": 34
+    },
+    {
+     "round": 0,
+     "query": "harbor wordmark on dither canvas",
+     "kind": "runsEnter",
+     "ms": 26.099999994039536,
+     "at": 1793178537337,
+     "end": 1793178539137,
+     "enterMs": 26.099999994039536,
+     "serverMs": 9.5,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 0,
+     "query": "harness hacks slide presentation",
+     "kind": "runsEnter",
+     "ms": 33.5,
+     "at": 1793178539137,
+     "end": 1793178540936,
+     "enterMs": 33.5,
+     "serverMs": 16.5,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "pre-wiring explainer video",
+     "kind": "runsEnter",
+     "ms": 25.799999982118607,
+     "at": 1793178540936,
+     "end": 1793178542420,
+     "enterMs": 25.799999982118607,
+     "serverMs": 10.300000011920929,
+     "status": 200,
+     "rows": 4
+    },
+    {
+     "round": 0,
+     "query": "more space between lines yes or no state",
+     "kind": "runsEnter",
+     "ms": 28.599999994039536,
+     "at": 1793178542420,
+     "end": 1793178544653,
+     "enterMs": 28.599999994039536,
+     "serverMs": 14.600000023841858,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "test agent store as an end user",
+     "kind": "runsEnter",
+     "ms": 27.400000005960464,
+     "at": 1793178544653,
+     "end": 1793178546369,
+     "enterMs": 27.400000005960464,
+     "serverMs": 12.699999988079071,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "readme diagram images redesign before after",
+     "kind": "runsEnter",
+     "ms": 31.69999998807907,
+     "at": 1793178546369,
+     "end": 1793178548750,
+     "enterMs": 31.69999998807907,
+     "serverMs": 14.199999988079071,
+     "status": 200,
+     "rows": 5
+    },
+    {
+     "round": 0,
+     "query": "draft render queued 40 minutes ago",
+     "kind": "runsEnter",
+     "ms": 20.599999994039536,
+     "at": 1793178548750,
+     "end": 1793178550647,
+     "enterMs": 20.599999994039536,
+     "serverMs": 4.699999988079071,
+     "status": 200,
+     "rows": 7
+    },
+    {
+     "round": 0,
+     "query": "\"cannot contain whitespace\"",
+     "kind": "runsEnter",
+     "ms": 7.200000017881393,
+     "at": 1793178550647,
+     "end": 1793178552350,
+     "enterMs": 7.200000017881393,
+     "serverMs": 3.300000011920929,
+     "status": 200,
+     "rows": 3
+    },
+    {
+     "round": 0,
+     "query": "parseSession",
+     "kind": "runsEnter",
+     "ms": 19.19999998807907,
+     "at": 1793178552350,
+     "end": 1793178553087,
+     "enterMs": 19.19999998807907,
+     "serverMs": 6.5,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "sidecar timeout",
+     "kind": "runsEnter",
+     "ms": 26.30000001192093,
+     "at": 1793178553087,
+     "end": 1793178553987,
+     "enterMs": 26.30000001192093,
+     "serverMs": 12,
+     "status": 200,
+     "rows": 10
+    },
+    {
+     "round": 0,
+     "query": "ssh import backoff",
+     "kind": "runsEnter",
+     "ms": 32.89999997615814,
+     "at": 1793178553987,
+     "end": 1793178555052,
+     "enterMs": 32.89999997615814,
+     "serverMs": 16.5,
+     "status": 200,
+     "rows": 3
+    },
+    {
+     "round": 0,
+     "query": "usage limits",
+     "kind": "runsEnter",
+     "ms": 37.29999998211861,
+     "at": 1793178555052,
+     "end": 1793178555805,
+     "enterMs": 37.29999998211861,
+     "serverMs": 20.400000005960464,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "insights stall",
+     "kind": "runsEnter",
+     "ms": 21.299999982118607,
+     "at": 1793178555805,
+     "end": 1793178556630,
+     "enterMs": 21.299999982118607,
+     "serverMs": 6.4000000059604645,
+     "status": 200,
+     "rows": 25
+    },
+    {
+     "round": 0,
+     "query": "worktree origin remote",
+     "kind": "runsEnter",
+     "ms": 27.900000005960464,
+     "at": 1793178556630,
+     "end": 1793178557918,
+     "enterMs": 27.900000005960464,
+     "serverMs": 12.600000023841858,
+     "status": 200,
+     "rows": 40
+    },
+    {
+     "round": 0,
+     "query": "error handling",
+     "kind": "runsEnter",
+     "ms": 184.7999999821186,
+     "at": 1793178557918,
+     "end": 1793178558916,
+     "enterMs": 184.7999999821186,
+     "serverMs": 169.7000000178814,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "grok vktr",
+     "kind": "runsEnter",
+     "ms": 31.69999998807907,
+     "at": 1793178558916,
+     "end": 1793178559501,
+     "enterMs": 31.69999998807907,
+     "serverMs": 15.5,
+     "status": 200,
+     "rows": 6
+    },
+    {
+     "round": 0,
+     "query": "you're absolutely right",
+     "kind": "runsEnter",
+     "ms": 21,
+     "at": 1793178559501,
+     "end": 1793178560819,
+     "enterMs": 21,
+     "serverMs": 7,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "absolutely right",
+     "kind": "runsEnter",
+     "ms": 30.299999982118607,
+     "at": 1793178560819,
+     "end": 1793178561769,
+     "enterMs": 30.299999982118607,
+     "serverMs": 16.899999976158142,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "let me",
+     "kind": "runsEnter",
+     "ms": 26.30000001192093,
+     "at": 1793178561769,
+     "end": 1793178562186,
+     "enterMs": 26.30000001192093,
+     "serverMs": 13.199999988079071,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "I'll",
+     "kind": "runsEnter",
+     "ms": 29,
+     "at": 1793178562186,
+     "end": 1793178562502,
+     "enterMs": 29,
+     "serverMs": 14.599999994039536,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "the",
+     "kind": "runsEnter",
+     "ms": 220.59999999403954,
+     "at": 1793178562502,
+     "end": 1793178562950,
+     "enterMs": 220.59999999403954,
+     "serverMs": 201.39999997615814,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "now let me check",
+     "kind": "runsEnter",
+     "ms": 27.200000017881393,
+     "at": 1793178562950,
+     "end": 1793178563903,
+     "enterMs": 27.200000017881393,
+     "serverMs": 14.400000005960464,
+     "status": 200,
+     "rows": 50
+    },
+    {
+     "round": 0,
+     "query": "\"you're absolutely right\"",
+     "kind": "runsEnter",
+     "ms": 2817.699999988079,
+     "at": 1793178563903,
+     "end": 1793178568104,
+     "enterMs": 2817.699999988079,
+     "serverMs": 2815.300000011921,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "\"let me\"",
+     "kind": "runsEnter",
+     "ms": 1680.800000011921,
+     "at": 1793178568104,
+     "end": 1793178570272,
+     "enterMs": 1680.800000011921,
+     "serverMs": 1563.5,
+     "status": 200,
+     "rows": 14
+    },
+    {
+     "round": 0,
+     "query": "\"absolutely right\"",
+     "kind": "runsEnter",
+     "ms": 41.69999998807907,
+     "at": 1793178570272,
+     "end": 1793178571330,
+     "enterMs": 41.69999998807907,
+     "serverMs": 25.599999994039536,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+     "kind": "runsEnter",
+     "ms": 23.80000001192093,
+     "at": 1793178571330,
+     "end": 1793178576703,
+     "enterMs": 23.80000001192093,
+     "serverMs": 7.5,
+     "status": 200,
+     "rows": 0
+    },
+    {
+     "round": 0,
+     "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+     "kind": "runsEnter",
+     "ms": 29.19999998807907,
+     "at": 1793178576703,
+     "end": 1793178581482,
+     "enterMs": 29.19999998807907,
+     "serverMs": 13.200000017881393,
+     "status": 200,
+     "rows": 1
+    },
+    {
+     "round": 0,
+     "query": "zstd",
+     "kind": "runsEnter",
+     "ms": 25.900000005960464,
+     "at": 1793178581482,
+     "end": 1793178581836,
+     "enterMs": 25.900000005960464,
+     "serverMs": 9.300000011920929,
+     "status": 200,
+     "rows": 7
+    },
+    {
+     "round": 0,
+     "query": "fsevents",
+     "kind": "runsEnter",
+     "ms": 19.100000023841858,
+     "at": 1793178581836,
+     "end": 1793178582349,
+     "enterMs": 19.100000023841858,
+     "serverMs": 3.7999999821186066,
+     "status": 200,
+     "rows": 2
+    },
+    {
+     "round": 0,
+     "query": "flock",
+     "kind": "runsEnter",
+     "ms": 23,
+     "at": 1793178582349,
+     "end": 1793178582720,
+     "enterMs": 23,
+     "serverMs": 7.5,
+     "status": 200,
+     "rows": 8
+    },
+    {
+     "round": 0,
+     "query": "codex stop button",
+     "kind": "deepLink",
+     "ms": 263,
+     "at": 1793178582720,
+     "end": 1793178582984,
+     "navMs": 263,
+     "expr": "codex stop button"
+    },
+    {
+     "round": 0,
+     "query": "interrupt generation with one Stop",
+     "kind": "deepLink",
+     "ms": 101.69999998807907,
+     "at": 1793178582984,
+     "end": 1793178583088,
+     "navMs": 101.69999998807907,
+     "expr": "interrupt generation with one Stop"
+    },
+    {
+     "round": 0,
+     "query": "cursor support",
+     "kind": "deepLink",
+     "ms": 91.69999998807907,
+     "at": 1793178583088,
+     "end": 1793178583183,
+     "navMs": 91.69999998807907,
+     "expr": "cursor support"
+    },
+    {
+     "round": 0,
+     "query": "runs page sorting",
+     "kind": "deepLink",
+     "ms": 75.2000000178814,
+     "at": 1793178583183,
+     "end": 1793178583260,
+     "navMs": 75.2000000178814,
+     "expr": "runs page sorting"
+    },
+    {
+     "round": 0,
+     "query": "fix runs page sorting and search box",
+     "kind": "deepLink",
+     "ms": 72,
+     "at": 1793178583260,
+     "end": 1793178583334,
+     "navMs": 72,
+     "expr": "fix runs page sorting and search box"
+    },
+    {
+     "round": 0,
+     "query": "open the failed call from what went wrong",
+     "kind": "deepLink",
+     "ms": 71.7000000178814,
+     "at": 1793178583334,
+     "end": 1793178583425,
+     "navMs": 71.7000000178814,
+     "expr": "open the failed call from what went wrong"
+    },
+    {
+     "round": 0,
+     "query": "what went wrong failed call",
+     "kind": "deepLink",
+     "ms": 92.09999999403954,
+     "at": 1793178583425,
+     "end": 1793178583520,
+     "navMs": 92.09999999403954,
+     "expr": "what went wrong failed call"
+    },
+    {
+     "round": 0,
+     "query": "standup and handoff features",
+     "kind": "deepLink",
+     "ms": 75.2000000178814,
+     "at": 1793178583520,
+     "end": 1793178583598,
+     "navMs": 75.2000000178814,
+     "expr": "standup and handoff features"
+    }
+   ],
+   "summary": {
+    "topbar.novel": {
+     "n": 39,
+     "fail": 0,
+     "p50": 137.89999997615814,
+     "p90": 142.80000001192093,
+     "max": 189.69999998807907
+    },
+    "runsEnter.novel": {
+     "n": 39,
+     "fail": 0,
+     "p50": 27.400000005960464,
+     "p90": 184.7999999821186,
+     "max": 2817.699999988079
+    },
+    "deepLink.novel": {
+     "n": 8,
+     "fail": 0,
+     "p50": 75.2000000178814,
+     "p90": 263,
+     "max": 263
+    }
+   },
+   "cli": {
+    "rows": [
+     {
+      "query": "codex stop button",
+      "ms": 1015,
+      "at": 1793178583600,
+      "end": 1793178584616
+     },
+     {
+      "query": "interrupt generation with one Stop",
+      "ms": 703,
+      "at": 1793178584616,
+      "end": 1793178585318
+     },
+     {
+      "query": "cursor support",
+      "ms": 324,
+      "at": 1793178585318,
+      "end": 1793178585643
+     },
+     {
+      "query": "runs page sorting",
+      "ms": 282,
+      "at": 1793178585643,
+      "end": 1793178585925
+     },
+     {
+      "query": "fix runs page sorting and search box",
+      "ms": 281,
+      "at": 1793178585925,
+      "end": 1793178586206
+     },
+     {
+      "query": "open the failed call from what went wrong",
+      "ms": 336,
+      "at": 1793178586206,
+      "end": 1793178586542
+     },
+     {
+      "query": "what went wrong failed call",
+      "ms": 360,
+      "at": 1793178586542,
+      "end": 1793178586902
+     },
+     {
+      "query": "standup and handoff features",
+      "ms": 284,
+      "at": 1793178586902,
+      "end": 1793178587186
+     },
+     {
+      "query": "ui style design guidelines",
+      "ms": 319,
+      "at": 1793178587186,
+      "end": 1793178587505
+     },
+     {
+      "query": "harbor wordmark on dither canvas",
+      "ms": 277,
+      "at": 1793178587505,
+      "end": 1793178587781
+     },
+     {
+      "query": "harness hacks slide presentation",
+      "ms": 666,
+      "at": 1793178587781,
+      "end": 1793178588447
+     },
+     {
+      "query": "pre-wiring explainer video",
+      "ms": 304,
+      "at": 1793178588447,
+      "end": 1793178588751
+     },
+     {
+      "query": "more space between lines yes or no state",
+      "ms": 318,
+      "at": 1793178588751,
+      "end": 1793178589070
+     },
+     {
+      "query": "test agent store as an end user",
+      "ms": 335,
+      "at": 1793178589070,
+      "end": 1793178589405
+     },
+     {
+      "query": "readme diagram images redesign before after",
+      "ms": 299,
+      "at": 1793178589405,
+      "end": 1793178589704
+     },
+     {
+      "query": "draft render queued 40 minutes ago",
+      "ms": 300,
+      "at": 1793178589704,
+      "end": 1793178590003
+     },
+     {
+      "query": "\"cannot contain whitespace\"",
+      "ms": 307,
+      "at": 1793178590003,
+      "end": 1793178590310
+     },
+     {
+      "query": "parseSession",
+      "ms": 343,
+      "at": 1793178590310,
+      "end": 1793178590653
+     },
+     {
+      "query": "sidecar timeout",
+      "ms": 299,
+      "at": 1793178590653,
+      "end": 1793178590952
+     },
+     {
+      "query": "ssh import backoff",
+      "ms": 295,
+      "at": 1793178590952,
+      "end": 1793178591247
+     },
+     {
+      "query": "usage limits",
+      "ms": 358,
+      "at": 1793178591247,
+      "end": 1793178591605
+     },
+     {
+      "query": "insights stall",
+      "ms": 721,
+      "at": 1793178591605,
+      "end": 1793178592325
+     },
+     {
+      "query": "worktree origin remote",
+      "ms": 326,
+      "at": 1793178592325,
+      "end": 1793178592651
+     },
+     {
+      "query": "error handling",
+      "ms": 362,
+      "at": 1793178592651,
+      "end": 1793178593013
+     },
+     {
+      "query": "grok vktr",
+      "ms": 302,
+      "at": 1793178593013,
+      "end": 1793178593315
+     },
+     {
+      "query": "you're absolutely right",
+      "ms": 370,
+      "at": 1793178593315,
+      "end": 1793178593685
+     },
+     {
+      "query": "absolutely right",
+      "ms": 340,
+      "at": 1793178593685,
+      "end": 1793178594025
+     },
+     {
+      "query": "let me",
+      "ms": 470,
+      "at": 1793178594025,
+      "end": 1793178594495
+     },
+     {
+      "query": "I'll",
+      "ms": 322,
+      "at": 1793178594495,
+      "end": 1793178594817
+     },
+     {
+      "query": "the",
+      "ms": 322,
+      "at": 1793178594817,
+      "end": 1793178595139
+     },
+     {
+      "query": "now let me check",
+      "ms": 389,
+      "at": 1793178595139,
+      "end": 1793178595528
+     },
+     {
+      "query": "\"you're absolutely right\"",
+      "ms": 328,
+      "at": 1793178595528,
+      "end": 1793178595856
+     },
+     {
+      "query": "\"let me\"",
+      "ms": 718,
+      "at": 1793178595856,
+      "end": 1793178596574
+     },
+     {
+      "query": "\"absolutely right\"",
+      "ms": 325,
+      "at": 1793178596574,
+      "end": 1793178596899
+     },
+     {
+      "query": "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+      "ms": 305,
+      "at": 1793178596899,
+      "end": 1793178597204
+     },
+     {
+      "query": "make the runs page side panel stop blocking clicks on the list behind it when it is open",
+      "ms": 299,
+      "at": 1793178597204,
+      "end": 1793178597504
+     },
+     {
+      "query": "zstd",
+      "ms": 301,
+      "at": 1793178597504,
+      "end": 1793178597804
+     },
+     {
+      "query": "fsevents",
+      "ms": 278,
+      "at": 1793178597804,
+      "end": 1793178598082
+     },
+     {
+      "query": "flock",
+      "ms": 280,
+      "at": 1793178598082,
+      "end": 1793178598362
+     }
+    ],
+    "search": {
+     "n": 39,
+     "fail": 0,
+     "p50": 322,
+     "p90": 703,
+     "max": 1015
+    }
+   },
+   "writer": "{\"pulled\":150}",
+   "overlap": {
+    "ui": {
+     "rows": 86,
+     "inside": 86,
+     "from": 1793178447434,
+     "to": 1793179048288
+    },
+    "cli": {
+     "rows": 39,
+     "inside": 39,
+     "from": 1793178447434,
+     "to": 1793179048288
+    },
+    "lastQuery": 1793178598363,
+    "pullEnd": 1793179048288,
+    "queriesInsidePull": true
+   }
+  },
+  "idleAfter": {
+   "cpuPct": 0,
+   "rssMB": 854
+  }
+ },
+ "head": null,
+ "coldIndexBuildMs": 6083,
+ "corpusBySource": {
+  "codex": 276,
+  "claude@fedora": 2133,
+  "claude@av": 1089,
+  "codex@av": 493,
+  "grok@fedora": 348,
+  "cursor@av": 11,
+  "fx@fedora": 6,
+  "dsh@fedora": 7,
+  "cursor": 1051,
+  "codex@fedora": 1785,
+  "grok": 565,
+  "claude": 1027,
+  "grok@av": 23,
+  "cursor@fedora": 44,
+  "vktr@fedora": 553,
+  "vktr": 40,
+  "dsh@av": 5,
+  "fx@av": 4,
+  "dsh@hetzner": 5,
+  "fx@hetzner": 4,
+  "grok@hetzner": 471,
+  "dsh": 11,
+  "fx": 15,
+  "vktr@av": 45,
+  "claude@hetzner": 942,
+  "factory": 2,
+  "codex@hetzner": 758,
+  "opencode@av": 14,
+  "cursor-cloud": 448,
+  "factory@fedora": 396,
+  "opencode": 53,
+  "opencode@hetzner": 127,
+  "opencode@fedora": 4026
+ },
+ "corpusIdentity": {
+  "copied": {
+   "sessions": 16957,
+   "unique": 16845
+  },
+  "heldOut": {
+   "new": 30,
+   "pull": 150,
+   "active": 8
+  },
+  "timed": {
+   "sessions": 16777,
+   "unique": 16665
+  }
+ },
+ "corpusSessions": 16777,
+ "plan": {
+  "active": 8,
+  "newSessions": 30,
+  "pull": 150
+ },
+ "residentSearch": false,
+ "residentAtStart": [],
+ "residentAfterCli": [],
+ "hubReadyMs": 872,
+ "hubSettleMs": 65224,
+ "finishedAt": "2026-10-28T09:19:34.101Z"
+}

@@ -1,0 +1,19 @@
+cb9ec834 Filter ?expr= page loads off-thread, never scan on a worker failure, stop searches whose client left; harness times embedded page rows
+0abeaa73 Drop abandoned filter requests early and build filter word sets in slices; stop idle phrase workers
+d109a3b6 Send each session's search work to the same worker so its line cache serves repeats
+3f7e0f76 Harness: never measure a leftover hub; free the port between hubs
+70e02b16 Release tracequest 0.5.9
+2788e25e Score sessions the sidecar cannot read while it scans; keep no line cache in search workers
+c71d3f3a Cancel replaced queries and check quoted phrases off the event loop; accurate resident-search status
+b900fef0 Recording script reopens search.bin after copying the cache
+4b71d18d Keep the Runs filter request in flight when Enter asks for the same rows
+80ac0a3c Build an index that covers fewer sessions than changed in place; tests for the deferred answer
+9cd9f4ed Finish a started trigram build instead of restarting it, and read changed sessions' terms in a worker
+b87bd33c Let concurrent OpenCode readers wait for each other instead of failing as locked
+fd1bb9ac Serve the first hub list from the saved index and index what changed right after; resident search never waits for a refresh
+9781b773 Answer from the saved index while a just-started resident search indexes what changed
+2df74931 Keep a rejected Runs filter flagged across background refreshes
+1990d2e9 Rank filtered searches through a narrowed view of the index
+8110f162 Keep search fast and the hub responsive while it runs
+bb281754 WIP: non-blocking filter and index refresh, immediate search box, resident CLI search
+df6af073 Add a search latency harness for the CLI and the hub UI
