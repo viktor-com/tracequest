@@ -1,3 +1,13 @@
+2f52deee Retry a failed search worker batch once, then fail the search instead of scanning on the hub
+8c64677b Check a quoted search's candidates in the search workers, not on the event loop
+c2ada00a Answer review findings: no cross-request phrase memo, abortable byte tests, offsets only for the file tested, CLI disconnect seen
+6399ea27 Changelog and facts for the search speed changes; date 0.5.9 for today
+1d4c12b6 Bound the scan-line cache by characters as well as sessions
+440eb177 Run the hub's top-bar search file work in the search worker threads
+aa886cc2 Catch the sliced fuzzy-match index build up on session changes instead of restarting it
+452efa28 Start a quoted phrase's line scan at the first line that can hold it
+e1afad5b Harness: record when a Runs filter's complete answer paints after its first page
+dfa7a7ce Show a quoted Runs filter's first page as soon as it is known; rule out files in the sidecar; resolve short prefixes in linear time
 cb9ec834 Filter ?expr= page loads off-thread, never scan on a worker failure, stop searches whose client left; harness times embedded page rows
 0abeaa73 Drop abandoned filter requests early and build filter word sets in slices; stop idle phrase workers
 d109a3b6 Send each session's search work to the same worker so its line cache serves repeats

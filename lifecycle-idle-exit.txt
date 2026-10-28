@@ -1,0 +1,7 @@
+Resident search idle exit, observed on fedora with the real 30-minute IDLE_MS (no test override).
+Build: frozen worktree of 1d4c12b6 (same daemon code as c2ada00a apart from the sd3 socket protocol), corpus copy runs/final5 (16,785 sessions), private cache dir.
+16:37:18  first `tracequest search` (starts the resident process, pid 907996)
+16:37:28  second `tracequest search` answered by it ("index up to date (16785 sessions, 16785 cached)")
+16:37:28  ps: pid 907996, RSS 4,258,896 kB, 15 threads; socket search-bfa364c5c5ede70d.sock mode srw------- (0600)
+17:07:24  pid 907996 gone (polled every 2 s); socket file removed; cache dir keeps index.json, scan-meta.json, search.bin, search.idx
+=> exits 30 min after its last search and removes its socket.

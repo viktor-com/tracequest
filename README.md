@@ -1,91 +1,114 @@
-# Search latency evidence for PR #64, head `cb9ec834`
+# Search latency evidence for PR #64, head `2f52deee`
 
-Verdict: **BLOCKED**. The head is not independently approved: the required fresh GPT-6.1 Sol and Grok 4.7 reviews of `cb9ec834` are outstanding. Several latency and memory targets are unmet. Nothing is merged or released.
+Verdict: **FAILED against the Acceptance block.** Several per-query latency targets, the unique-session count and memory are unmet. Nothing is merged or released. The final reviews are listed in the PR.
 
-All timings are from fedora, on real sessions copied from Ivan's Mac hub. They are not Mac numbers.
+All timings are from fedora, on real sessions copied from Ivan's Mac hub. They are not Mac numbers. Control's held-out Mac query set was not opened.
 
 ## Files
 
 | File | What it is |
 |---|---|
-| `final-cb9ec834-per-query.md` | Every query × every condition at head `cb9ec834`, clean tree. Over-limit values are marked ✗. Also has the overlap check and corpus identities. |
-| `final-cb9ec834-results.json` | Raw results behind that table: head, overlap timestamps, resident-process resources, corpus identities. |
-| `before-0.5.5-full-index-per-query.md`, `before-0.5.5-full-index-results.json` | The 0.5.5 baseline used as "before": full JS index, 16,497 sessions, the older 460-session hold-out. This is the closest valid before; it is not the same session set. |
-| `top10-cb9ec834-on.txt`, `top10-cb9ec834-off.txt` | The 26 original queries' top-10 lists against 29b56c6, sidecar on and off: 52/52 identical each. |
-| `search-ui-cb9ec834-redacted.webm` | The real hub UI recording, 28 s. The repo is public, so session titles, rows, the search dropdown and the timing overlay are blurred; typed queries and both loading spinners stay visible. Exact timings are in the per-query table. |
-| `diff-stat.txt`, `commits.txt` | Own-diff review inputs: 33 files and 19 commits against main `1b4fc646`. |
-| `invalid/` | Measurements that do not count; kept for transparency. See below. |
+| `final-8c64677b-per-query.md` | Every query × every condition at `8c64677b`, clean tree, 3 UI rounds. Over-limit values are marked ✗. Includes the overlap check and corpus identities. |
+| `final-8c64677b-results.json` | The raw results behind that table. |
+| `top10-8c64677b-on.txt`, `top10-8c64677b-off.txt` | The 26 original queries' top-10 lists against 29b56c6, sidecar on and off: 52/52 identical each. |
+| `api-search-equality.txt` | Every harness query's `/api/search` body at `8c64677b` against `cb9ec834`, each hub alone on the same corpus and cache copy: 39/39 byte-identical. |
+| `phrase-offset-differential.txt` | The sidecar byte test and first-line offset against the JS check, on every JSONL corpus session: 10,492 files × 5 phrases, 0 differences. Run at `c2ada00a`; the offset code is the same at the final head. |
+| `lifecycle-idle-exit.txt` | The resident CLI search exiting 30 minutes after its last search and removing its socket, on the real timer. |
+| `search-ui-8c64677b-redacted.webm` | The real hub UI recording, 27 s. The repo is public, so rows and result lists are blurred. Typed queries, the run count ("50+ runs" while counting) and the spinners stay visible. |
+| `diff-stat.txt`, `commits.txt` | Own-diff review inputs against main `1b4fc646`: 39 files, +4,384 / −321, 29 commits. |
+| `history/` | Earlier heads: `cb9ec834` (the previous evidence) and `c2ada00a` (the run before the last two fixes). |
+| `before-0.5.5-*` | The 0.5.5 "before". It ran on the older 460-session hold-out, so it is not the same session set. |
+| `invalid/` | Measurements that do not count, unchanged from the previous evidence. |
 
-The harness that produced these is in the PR at `bench/search-latency/`.
+**Measured head versus final head.** The final head `2f52deee` differs from the measured `8c64677b` in two ways:
+- A search-worker batch that fails is retried and then fails the request, instead of being scanned on the hub.
+- The report judges the per-query complete-count p50 at 100 ms instead of 200 ms.
 
-## Invalid measurements
+Neither changes a measured path. The harness is in the PR at `bench/search-latency/`.
 
-- `invalid/INVALID-*base-0.5.5-same*`: a 0.5.5 baseline on the same held-out set. Its cold build went through 0.5.5's sidecar and wrote an 18 MB `search.idx`, against 195 MB from the JS indexer. It therefore searched a much smaller index, which explains its low memory and fast numbers.
-- `invalid/INVALID-deep-link-column-final-0abeaa73-per-query.md`: the deep-link column and the earlier 16 deep-link "timeouts". The page embeds its rows and makes no fetch, while the old harness waited for a fetch. These are invalid measurements, not user hangs. The harness now times rows on screen: 176 / 208 ms p50 / p90 at `cb9ec834`.
+## Headline at `8c64677b` (ms, p50 / p90)
 
-## Corpus reconciliation (unique session identities)
-
-Identity is source plus session file name (or OpenCode id), so a session imported from two machines counts once.
-
-| | Sessions | Unique |
+| Condition | Target | Measured |
 |---|---|---|
-| Copied from Ivan's Mac hub | 16,957 | 16,845 |
-| Held out for the live tests (30 written as new, 150 pulled, 8 appended to) | 180 moved out | — |
-| Timed corpus | 16,777 | 16,665 |
-| Mac reference from Control | 16,938 | not given |
+| Top bar, last key → results, warm | <100 / <200 | 31 / 51 (1/39 queries over at p50) |
+| Runs filter, Enter → rows, warm | <100 / <200 | 46 / 136 (6/39 over at p50, 1 at p90) |
+| Runs filter, Enter → complete count, warm | <100 / <200 | 46 / 138 (6/39 over at p50) |
+| `/sessions?expr=` deep link, rows on screen | — | 160 / 182 |
+| While agents write: top bar / Runs rows / Runs complete | <100 / <200 | 40 / 155, 67 / 235, 67 / 411 |
+| During a host pull: top bar / Runs rows / Runs complete | <100 / <200 | 37 / 120, 57 / 237, 57 / 245 |
+| CLI warm search / handoff (p50 of per-query p50) | <150 | 152 / 149 (21/39 and 17/39 queries over) |
+| CLI after sessions changed / while writing | <150 | 161 / 163 |
+| CLI first search, fresh start | <1000 | 431 / 514 |
+| Hub fresh start, first search (3 starts) | <1000 | 1,640, 277, 151 |
+| Hub idle CPU, settled / after live load | <5% | 0% / 0% |
+| Hub RSS idle / after live load | bounded | 1,754 / 2,306 MB (2.75 GB at `cb9ec834`) |
+| Resident CLI process RSS: start / after CLI / under writes | bounded | 2,462 / 3,792 / 3,265 MB, 15 threads |
 
-The copy covers the 16,938 reference by raw count. By unique identity it is 93 short. The timed corpus is 273 unique sessions short of 16,938.
+## What changed since `cb9ec834`
 
-## Acceptance at `cb9ec834`
+**Runs filter, quoted phrases.**
+- The first page arrives as soon as its rows are decided, with an "N+" count while the spinner stays on. The complete answer follows.
+- The sidecar rules out files that cannot hold the phrase.
+- Workers start each line scan at the first line that can hold it.
+
+Effect: `"let me"` rows went from 1,670 to 161 ms; its complete answer takes 1,188 ms.
+
+**Prefix resolution.** The last word's prefix matches were collected in quadratic time. `re` took 109 ms, now 0.5 ms; `t` took 320 ms, now 20 ms.
+
+Effect: `you're absolutely right` in Runs went from 350 to 89 ms, and in the top bar from 155 to 103 ms.
+
+**Top bar.** `/api/search` reads files for snippets and quoted phrases in the search workers, not on the hub's thread. Results are byte-identical.
+
+**Fuzzy-match index.** A session change no longer restarts its sliced build.
+
+**Line caches** are capped by characters as well as session count.
+
+**Review fixes:**
+- no cross-request memo;
+- the sidecar byte test is aborted with its request;
+- offsets are used only for the file version tested;
+- the CLI's resident search sees a client that leaves;
+- failed worker batches fail the request instead of scanning on the hub.
+
+## Acceptance at the final head
 
 | Line | Status |
 |---|---|
-| Quoted `/sessions?expr=` and worker errors never scan on the hub event loop | **Met.** A test serves a quoted page over a 60 MB file and keeps the hub under 100 ms; the old head measured 161–171 ms. A failed phrase worker is retried once in a fresh worker, then the request fails; the hub-side checker has no file scanner. |
-| Cancellation and lifecycle | **Met in code and tests** for the browser (abort and send newest), the server (drops gone clients, cancels running phrase jobs) and the resident CLI process (stops when its client leaves; that last one is source only). Resident: 2.45 GB at start, 3.75 GB after 78 searches, 3.46 GB under writes, 15 threads. Not verified: the 30-minute idle exit, and combined Mac memory. |
-| UI under 100 ms p50 / 200 ms p90 per query, warm | **Unmet.** Top bar: 1 of 39 over p50, 0 over p90. Runs Enter: 7 over p50, 4 over p90. |
-| Same while agents write and during a pull | **Unmet.** Write: top bar 4 of 39, Runs 8 of 39. Pull: top bar 1 of 39, Runs 8 of 39, `"let me"` 2.4 s. Overlap verified: 86/86 UI and 39/39 CLI rows inside each window. |
-| CLI under 150 ms p50 per query | **Unmet.** Warm: 20 of 39 search, 15 of 39 handoff. Write: 26 of 39. Pull: 28 of 39. |
-| First search after a fresh start under 1 s | **CLI met** (426 / 556 ms). **Hub unmet**: 1 of 3 starts took 2,868 ms. |
-| Idle CPU under 5% | **Met:** 0% settled, and 0% after live load. |
-| Memory | **Unmet**, no ceiling met: hub 1.52 GB idle and 2.75 GB after live load (0.5.5: 1.45 / 2.02). Resident figures as above. |
-| 52/52 vs 29b56c6, sidecar on and off | **Met.** |
-| Recording | **Met**, redacted copy here. |
-| Fresh Sol and Grok reviews | **Outstanding.** |
-| Merge, release `v0.5.9`, both tarballs | **Not done.** |
-
-## Exact remaining work per unmet line
-
-**Correctness limit: quoted phrases** (`"let me"` 1.7–2.4 s, `"cannot contain whitespace"` 0.5–0.9 s, `"you're absolutely right"` up to 0.5 s)
-- Exact quoted matching must read every candidate session's text until it finds the phrase. For `"let me"` that is about 12,000 files, 3,507 of which match. Without positions in the index, no exact speedup can skip that.
-- To make it fast without changing results, either:
-  - add a positional or n-gram index of session text, built and kept current by the indexer, used as a sound prefilter; or
-  - stream the Runs list: answer the first page once the newest matches are verified and fill in the total afterwards, which changes the `/api/sessions` response protocol.
-- Anything else trims at most a constant factor; parallel workers already cut it about 5×.
-
-**Optimization, no correctness limit**
-- **CLI per-query p50 over 150 ms.** In the resident process, the sidecar near-words scan of about 400 files is 37–55 ms per query, a sidecar process per query. Snippet scans add 10–40 ms, and Node start-up about 75 ms on fedora. Remaining work:
-  - a persistent sidecar near-scan mode, so there is no spawn per query and scans run in parallel with BM25;
-  - snippet scans pipelined while the near scores arrive;
-  - re-measure on the Mac.
-- **UI misses while writing or pulling** (top bar 147–350 ms, Runs 230–629 ms on unquoted queries): the hub's refresh still does synchronous work between slices over 17k sessions (index metadata merge and key hashing). Moving that bookkeeping into slices or a worker is the work.
-- **Fresh-hub first search 2.9 s**: a half-typed word needs the typo index. Its sliced background build restarts when the first refresh changes the index, and the first typo query then builds it synchronously. The work: keep a change log so an in-progress build can catch up instead of restarting, preserving the order a full rebuild gives.
-- **Memory** (hub 2.75 GB after live load, resident 2.5–3.75 GB):
-  - The decoded index and phrase workers are the bulk. Phrase workers already stop after 30 s idle.
-  - Remaining: keep the index lazily decoded with a small change overlay instead of fully decoding it on the first change, and cap per-worker caches by bytes.
+| Accelerate exact quoted filtering without changing results | **Partly met.** The first page is 145–161 ms for the four quoted queries. The complete answer is 145 ms to 1.19 s. Results are unchanged (52/52, 39/39, 0 differences). Not under 100 ms. |
+| Remove per-query CLI startup and serial snippet costs | **Not met.** A sidecar start is 2.5 ms of a 26 ms near scan, so removing it saves little. One 36 MB session's snippet scan is 122 ms by itself. With Node at about 70–85 ms of a CLI call on fedora, the resident process must answer in under about 65 ms. |
+| Slice synchronous refresh bookkeeping during writes and pulls | **Partly.** A profile under writes showed `/api/search` file work as the main event-loop load, now moved to workers. The top bar while writing is 40 / 155 (was 56 / 227). Runs complete p90 while writing is 411 ms. |
+| Prevent cold-start typo-index rebuild restarts | **Met** (sidx5, with a test). |
+| Bound index and background-process memory | **Partly.** Line caches have byte ceilings (mem1) and hub RSS after load fell to 2.31 GB. The resident CLI process is still about 3.8 GB after the CLI run. |
+| Lifecycle proof | **Met.** Idle exit with socket removal is logged. Client disconnect has a test (sd3). The sidecar abort has a test. |
+| Per-query warm UI under 100 / 200 | **Unmet** for 1 top-bar query (103 ms) and 6 Runs queries (four quoted phrases and two long multi-word queries). |
+| Warm CLI under 150 p50 | **Unmet**: 21 of 39 searches, 17 of 39 handoffs. |
+| First search after a fresh start under 1 s | **CLI met** (431 / 514). **Hub unmet** on 1 of 3 starts (1,640 ms). That start is always the first after the corpus copy. The page cache is probably cold then; this is inferred, not proven. |
+| Same limits during indexing and pulls | **Unmet** for the queries marked ✗ in the per-query table. |
+| Idle CPU under 5% | **Met** (0%). |
+| At least 16,938 unique sessions | **Unmet**: 16,845 copied, 16,665 timed. Fedora has no further unique sessions: its grok and vktr sessions are already in the Mac snapshot through pulled hosts. The rest exist only on the Mac. |
+| 52/52 vs 29b56c6, sidecar on and off | **Met** at `8c64677b`. The final commit touches only the hub's failure path. |
+| Recording | **Met**, redacted. |
+| Reviews, merge, release | See the PR. Not merged or released while Acceptance is unmet. |
 
 ## Own diff review
 
-- **Changed in `src/`:**
-  - Hub UI: `browser-client.js`, `command-palette.js`, `runs-page-css.js`, `browser-page.js`.
-  - CLI: `cli-search.js`, and new `search-daemon.js`, `search-daemon-main.js`, `search-request.js`.
-  - Filter: `filter.js`.
-  - Hub server: `route-cache.js`, `route-handlers-api.js`, `route-handlers-pages.js`, `worker-pool.js`, new `phrase-check.js`.
-  - Search and index: `index-writers.js`, `scan-queries.js`, `search-index.js`, `session-changes.js`, `session-discovery-paths.js`, new `search-worker.js`.
-- **Also changed:** `bin/tracequest.js`; `.facts`; `CHANGELOG.md`; package and lockfile (0.5.9); `bench/search-latency/` (harness); new `test/bin/search-latency.test.js` and `test/browser/search-loading.playwright.test.js`.
-- **Reverted during the work:**
-  - the one-request-at-a-time queue in both search boxes;
-  - the main-thread fallback for failed phrase checks;
-  - turning the worker line cache off;
-  - an earlier 0.5.8 release commit.
-- **Existing tests, fixtures and CI:** untouched.
-- **New dependencies:** none.
+- **New files:**
+  - `src/server/search-steps.js` (the hub's worker step runner);
+  - `src/sessions/phrase-bytes.js` (which sessions get the byte test);
+  - `sidecar/src/phrase.rs` (the native byte test and offsets).
+- **This session also changed:**
+  - `filter.js` (first page in list order);
+  - `route-handlers-api.js` (`first=1`, async top bar);
+  - `phrase-check.js` (sidecar stream, abort);
+  - `scan-queries.js` (prefix fix, phrase step, line-cache bound);
+  - `search-index.js` (trigram change log);
+  - `jsonl-read.js` (`start`, `startIf`);
+  - `index-writers.js` (sidecar abort);
+  - `search-daemon.js` (socket protocol, phrase steps);
+  - `search-worker.js`;
+  - `browser-client.js` (partial page);
+  - `sidecar/src/cli.rs`, `main.rs`;
+  - the harness; `.facts`; `CHANGELOG.md`.
+- **Removed again within the session:** the 30 s phrase memo (flt6), which was stale-prone.
+- **Existing tests, fixtures and CI:** untouched. Only `test/bin/search-latency.test.js` and `test/browser/search-loading.playwright.test.js` are new.
+- **New dependencies:** none. The Rust code uses `regex`, `rayon`, `memmap2` and `memchr`, which the sidecar already depends on.

@@ -1,0 +1,5 @@
+{"phrase":"now let me","files":10492,"mayFiles":1028,"hits":1022,"diff":0,"mayVsJs":0,"fromMs":775,"fullMs":1906}
+{"phrase":"let me","files":10492,"mayFiles":4823,"hits":4823,"diff":0,"mayVsJs":0,"fromMs":1358,"fullMs":8430}
+{"phrase":"you're absolutely right","files":10492,"mayFiles":100,"hits":53,"diff":0,"mayVsJs":0,"fromMs":2184,"fullMs":2598}
+{"phrase":"cannot contain whitespace","files":10492,"mayFiles":367,"hits":337,"diff":0,"mayVsJs":0,"fromMs":1047,"fullMs":1636}
+{"phrase":"the","files":10492,"mayFiles":10391,"hits":10389,"diff":0,"mayVsJs":0,"fromMs":1017,"fullMs":1934}
