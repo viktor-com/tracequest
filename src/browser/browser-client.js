@@ -2411,7 +2411,7 @@ function openSessionFlyout(s, opts) {
   if (sub) sub.textContent = s.prompt || '';
   if (openLink) openLink.href = sessionViewUrl(_peekSession, false);
   showOriginAppLink(document.getElementById('sessionFlyoutOrigin'),
-    originAppLink(peekRow(s), { hostname: location.hostname, hosts: _INIT_DATA.originHosts || {} }));
+    originAppLink(peekRow(s)));
   if (!same) {
     if (status) {
       status.hidden = false;

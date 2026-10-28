@@ -1,32 +1,28 @@
 
 # links
-- label: originAppLink gives a session run in a Kandev task folder (.kandev/tasks/<workspace id>/<task id>, read from the raw, dashed-slug or percent-encoded cwd in its recording path) the link Open in Kandev to http://<machine>:38429/t/<task id>, where <machine> is the page's own hostname for a session recorded on the hub's machine and the imported host's address otherwise; an imported host with no known address, or a task folder without a task id, gets no link
-  id: oalkan
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Kandev' test/browser/origin-app-link.test.js
-  tags: [spec, origin-app-links, implemented]
-- label: originAppLink gives a Codex session recorded on the hub's machine Open in Codex to codex://threads/<thread id> (the uuid in its rollout file name); an imported Codex session gets none, since the Codex app opens threads on the clicking machine
+- label: originAppLink gives a Codex session recorded on this machine (no host) Open in Codex to codex://threads/<thread id>, the uuid at the end of its rollout file name, whether or not the session is running
   id: oalcdx
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Codex' test/browser/origin-app-link.test.js
   tags: [spec, origin-app-links, implemented]
-- label: originAppLink gives a Cursor Cloud Agent session Open in Cursor to https://cursor.com/agents/<agent id>
-  id: oalcur
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Cursor Cloud' test/browser/origin-app-link.test.js
+- label: originAppLink gives a Claude Code session recorded on this machine that is not running Open in Claude to claude://resume?session=<session id>, the uuid file name of its transcript under .claude/projects/<project>/ (the link `claude --desktop --resume <id>` opens in Claude Desktop); a running session or a subagent transcript gets none
+  id: oalcld
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Claude Code' test/browser/origin-app-link.test.js
   tags: [spec, origin-app-links, implemented]
-- label: originAppLink returns null for Claude Code, Cursor, Factory, Grok, vktr, fx, DeepSeek Harness and OpenCode sessions outside a Kandev task folder: none of those apps has a link that opens one existing session
+- label: originAppLink returns null for any session with a host (imported from another machine), since a native app opens sessions on the machine where they were recorded
+  id: oalloc
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'only sessions recorded on this machine' test/browser/origin-app-link.test.js
+  tags: [spec, origin-app-links, implemented]
+- label: originAppLink returns null for Cursor, Cursor Cloud, Factory, Grok, vktr, fx, DeepSeek Harness and OpenCode sessions, including ones run in a Kandev task folder; none of those apps (nor Kandev) registers a native link to one existing session
   id: oalnone
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'no per-session link' test/browser/origin-app-link.test.js
   tags: [spec, origin-app-links, implemented]
-- label: hostAddresses maps each import host id to the address ssh -G resolves for its spec, once per process, leaving out hosts SSH cannot resolve
-  id: oalhost
-  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'hostAddresses' test/browser/origin-app-link.test.js
-  tags: [spec, origin-app-links, implemented]
 
 # ui
-- label: in hub mode the read-only bar of a running session (#liveTailForm) shows #originAppBar, Open in <App> with the session's originAppLink href (web links open in a new tab), and no button when the session has no link
+- label: in hub mode the read-only bar of a running session (#liveTailForm) shows #originAppBar, Open in <App> with the session's originAppLink href (a running local Codex session gets codex://threads/<id>), and no button when the session has no link (a running Grok session in a Kandev task folder)
   id: oalbar
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'read-only bar' test/browser/origin-app-link.playwright.test.js
   tags: [spec, origin-app-links, implemented]
-- label: the Runs side panel header shows #sessionFlyoutOrigin, Open in <App> with the open run's originAppLink href next to Open full page, and hides it for a run with no link
+- label: the Runs side panel header shows #sessionFlyoutOrigin, Open in <App> with the open run's originAppLink href next to Open full page (local Codex, local finished Claude Code), and hides it for an imported Codex session and a Grok session in a Kandev task folder
   id: oalfly
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'Runs side panel' test/browser/origin-app-link.playwright.test.js
   tags: [spec, origin-app-links, implemented]

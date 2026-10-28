@@ -1,45 +1,32 @@
 /**
- * "Open in <App>": the per-session deep link of the app a session came from,
- * or null when that app has no link to one session. Inlined into page
- * scripts with toString(), so it stays self-contained.
+ * "Open in <App>": a link that opens a session in its native app on this
+ * machine, or null. Only sessions recorded on the machine the hub runs on
+ * (no host) qualify, and only for apps that register a per-session link.
+ * Inlined into page scripts with toString(), so it stays self-contained.
  *
- * - Kandev: a session run in a Kandev task folder
- *   (.kandev/tasks/<workspace id>/<task id>) opens /t/<task id> on the Kandev
- *   of the machine that recorded it, on Kandev's default port 38429.
- * - Codex: the desktop app's codex://threads/<thread id>. The app opens the
- *   thread on the clicking machine, so only sessions recorded on this
- *   machine (no host) get it.
- * - Cursor Cloud Agents: https://cursor.com/agents/<agent id>.
- * Claude Code, Cursor, Factory, Grok, vktr, fx, DeepSeek Harness and OpenCode
- * offer no link to an existing session.
+ * - Codex: codex://threads/<thread id>, the id at the end of the rollout
+ *   file name (the Codex desktop app).
+ * - Claude Code: claude://resume?session=<session id>, the transcript's
+ *   file name, which is what `claude --desktop --resume <id>` opens in
+ *   Claude Desktop. Desktop does not take over a session that is still
+ *   running, so a live one gets no link.
+ * Cursor, Factory, Grok, vktr, fx, DeepSeek Harness, OpenCode and Kandev
+ * register no link to an existing session.
  *
- * @param {{ source?: string, path?: string, host?: string }} s session row
- * @param {{ hostname?: string, hosts?: Record<string, string> }} [where]
- *   hostname: the address this page was served from (sessions recorded
- *   here); hosts: imported host id -> that machine's address.
+ * @param {{ source?: string, path?: string, host?: string, live?: boolean }} s session row
  * @returns {{ app: string, href: string } | null}
  */
-export function originAppLink(s, where) {
-  var path = (s && s.path) || "";
-  var source = (s && s.source) || "";
-  var host = (s && s.host) || "";
-  var at = where || {};
+export function originAppLink(s) {
+  if (!s || s.host) return null;
+  var path = s.path || "";
   var uuid = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
-  var sep = "(?:/|-|%2F)";
-  // Raw cwd, Claude's dashed slug or Grok's percent-encoded cwd.
-  var kandev = new RegExp("kandev" + sep + "tasks" + sep + uuid + sep + "(" + uuid + ")(?![0-9a-f])", "i").exec(path);
-  var addr = host ? (at.hosts && at.hosts[host]) || "" : at.hostname || "";
-  if (kandev && addr) {
-    if (addr.indexOf(":") !== -1 && addr.charAt(0) !== "[") addr = "[" + addr + "]";
-    return { app: "Kandev", href: "http://" + addr + ":38429/t/" + kandev[1].toLowerCase() };
-  }
-  if (source === "codex" && !host) {
-    var thread = new RegExp("rollout-[^/]*?(" + uuid + ")\\.jsonl$", "i").exec(path);
+  if (s.source === "codex") {
+    var thread = new RegExp("/rollout-[^/]*?(" + uuid + ")\\.jsonl$", "i").exec(path);
     if (thread) return { app: "Codex", href: "codex://threads/" + thread[1].toLowerCase() };
   }
-  if (source === "cursor-cloud") {
-    var agent = /(?:^|\/)(bc-[A-Za-z0-9-]+)\.jsonl$/.exec(path);
-    if (agent) return { app: "Cursor", href: "https://cursor.com/agents/" + agent[1] };
+  if (s.source === "claude" && !s.live) {
+    var session = new RegExp("/\\.claude/projects/[^/]+/(" + uuid + ")\\.jsonl$", "i").exec(path);
+    if (session) return { app: "Claude", href: "claude://resume?session=" + session[1].toLowerCase() };
   }
   return null;
 }
@@ -54,15 +41,7 @@ export function showOriginAppLink(a, link) {
   }
   a.href = link.href;
   a.textContent = "Open in " + link.app;
-  a.title = "Open this session in " + link.app;
-  // App schemes hand off to the OS; web apps open beside the hub.
-  if (/^https?:/.test(link.href)) {
-    a.target = "_blank";
-    a.rel = "noopener";
-  } else {
-    a.removeAttribute("target");
-    a.removeAttribute("rel");
-  }
+  a.title = "Open this session in the " + link.app + " app on this machine";
 }
 
 /** Both helpers, for inlining into a page script. */

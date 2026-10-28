@@ -32,7 +32,6 @@ import { buildSearchCatalog, getSearchCatalogAsync } from "./route-handlers-api.
 import { launchedRuns, readRunTable, runsActiveAt } from "./route-handlers-launch.js";
 import { usageLimitsForPage as _usageLimitsForPage } from "./route-handlers-usage.js";
 import { fillUsageStrip } from "../browser/app-chrome.js";
-import { hostAddresses } from "../hub/host-addresses.js";
 
 // Applied with the session page in the session worker now; still exported here.
 /** The flyout's /view stylesheet: the flyout header is the session's identity (fact f22). */
@@ -711,7 +710,6 @@ async function handleRunLiveSession(res, url, mods, handle) {
     },
     // Hub mode is read-only (fact hubwt): the live tail offers no follow-up or Stop.
     readOnly: isHubMode(),
-    originHosts: isHubMode() ? hostAddresses() : {},
   });
   // Like /view, a session's watch page embeds no palette catalog: the palette
   // fetches it when it is opened.

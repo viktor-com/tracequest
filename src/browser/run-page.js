@@ -3520,11 +3520,10 @@ ${ANALYTICS_PANEL_JS}
  * run's steerable chat with the follow-up already delivered. Absent
  * capability means absent composer: honest absence. `agent` names the
  * mapped agent on the composer chip. In read-only (hub) mode the read-only
- * bar carries an "Open in <App>" link (originAppLink); `session.host` and
- * `originHosts` (imported host id -> address) point a Kandev link at the
- * machine that recorded the session.
+ * bar carries an "Open in <App>" link (originAppLink) when the session was
+ * recorded on this machine (no `session.host`) and its app has one.
  */
-export function liveSessionPage({ session, readOnly = false, originHosts = {} } = {}) {
+export function liveSessionPage({ session, readOnly = false } = {}) {
   const { hash, path, source, live } = session;
   const project = session.project || "";
   const run = session.run || null;
@@ -3981,7 +3980,8 @@ ${CHAT_TRANSCRIPT_JS}
 <script>
 ${ORIGIN_APP_LINK_JS}
 (function () {
-  var link = originAppLink(${JSON.stringify({ source, path, host: session.host || "" }).replace(/</g, "\\u003c")}, { hostname: location.hostname, hosts: ${JSON.stringify(originHosts).replace(/</g, "\\u003c")} });
+  // The bar only shows while the session runs.
+  var link = originAppLink(${JSON.stringify({ source, path, host: session.host || "", live: true }).replace(/</g, "\\u003c")});
   showOriginAppLink(document.getElementById("originAppBar"), link);
 })();
 </script>` : ""}
