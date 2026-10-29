@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.9] - 2026-10-29
+
+### Added
+
+- Open local sessions in their native app from the hub: Open in Codex for Codex threads and Open in Claude for finished Claude Code sessions. Imported sessions and unsupported apps have no button.
+
 ## [0.5.8] - 2026-10-27
 
 ### Fixed
