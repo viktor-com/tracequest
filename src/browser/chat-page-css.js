@@ -608,6 +608,7 @@ body[data-watch="session"][data-run-state="idle"] #continueForm .run-input,
 .live-tail-card .run-input { flex: 1; min-width: 0; padding: 4px 4px 4px 0; }
 body[data-watch="session"][data-run-state="idle"] #continueForm .composer-row,
 .live-tail-card .composer-row { flex: none; }
+.live-tail-card .origin-app-btn { flex: none; }
 .live-tail-card .run-send-btn { background: var(--ink); color: var(--paper); }
 .live-tail-card .run-send-btn .icon-send { display: none; }
 .live-tail-card .run-send-btn .icon-stop { display: block; }

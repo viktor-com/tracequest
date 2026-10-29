@@ -700,6 +700,7 @@ async function handleRunLiveSession(res, url, mods, handle) {
       path,
       source: s?.source || "claude",
       project: s?.project ?? null,
+      host: s?.host || "",
       live,
       run: runWin ? { id: runWin.id, status: runGeneratingStatus(runWin.dead, path, live) } : null,
       continuable: sessionContinuable(s?.source || "claude", mods),
