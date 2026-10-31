@@ -55,6 +55,11 @@ export function noteDataChange(root, filename) {
   }
 }
 
+/** Whether a change was seen since the last takeDataChanges (search-daemon facts). */
+export function hasPendingDataChanges() {
+  return _unknown || _paths.size > 0;
+}
+
 /** Every change so far, emptied: `{ paths, unknown }`. */
 export function takeDataChanges() {
   const out = { paths: _paths, unknown: _unknown };

@@ -1,13 +1,12 @@
 import { includesLower } from "../parse/parse-utils.js";
-import { computeGrade, sortSessionList } from "./filter-formats.js";
+import { computeGrade, normalizeSortKey, sortSessionList } from "./filter-formats.js";
 import { tokenize } from "../sessions/search-tokenizer.js";
 import { getSearchIndex } from "../sessions/search-index.js";
 import { isSessionHash, sessionHashFor } from "../sessions/session-hash.js";
 import {
   intersectSets,
-  pathsFromPostingMatches,
   resolveQueryToken,
-  scanSessionForQuery,
+  sessionHasPhrase,
 } from "../sessions/scan-queries.js";
 
 const FILTER_KEYS = ['project', 'source', 'host', 'tool', 'model', 'grade', 'errors', 'size', 'age', 'live'];
@@ -280,9 +279,7 @@ function matchTerm(session, term, now, ctx) {
           if (!inBm25) { result = false; break; }
           // Quoted phrase: verify exact substring via on-demand scan (fact yd3)
           if (term.quoted && ctx.quotedPhraseValues && ctx.quotedPhraseValues.has(term.value)) {
-            const phraseRaw = term.value.toLowerCase();
-            const snippets = scanSessionForQuery(session, phraseRaw, 1);
-            result = snippets.length > 0;
+            result = ctx.phraseCheck ? ctx.phraseCheck(session, term.value) : sessionHasPhrase(session, term.value.toLowerCase());
           } else {
             result = true;
           }
@@ -357,6 +354,14 @@ export function collectTextTermValues(node) {
  * @returns {{ textMatchSets: Map<string, Set<string>>, quotedPhraseValues: Set<string> }}
  */
 export function buildBm25FilterContext(ast) {
+  const steps = bm25FilterContextSteps(ast);
+  let step = steps.next();
+  while (!step.done) step = steps.next();
+  return step.value;
+}
+
+/** buildBm25FilterContext as steps: it yields after each token resolved and each posting read (fact flt1). */
+function* bm25FilterContextSteps(ast) {
   const si = getSearchIndex();
   const postings = si.postings;
   const textMatchSets = new Map();
@@ -397,9 +402,18 @@ export function buildBm25FilterContext(ast) {
       const matches = isQuoted
         ? [{ term: token, weight: 1.0 }]
         : resolveQueryToken(token, i === tokens.length - 1, si);
-      tokenSets.push(pathsFromPostingMatches(matches, postings));
+      yield;
+      // pathsFromPostingMatches, one posting at a time.
+      const paths = new Set();
+      for (const { term } of matches) {
+        const posting = postings.get(term);
+        if (posting) for (const path of posting.keys()) paths.add(path);
+        yield;
+      }
+      tokenSets.push(paths);
     }
     textMatchSets.set(termValue, intersectSets(tokenSets));
+    yield;
   }
 
   return { textMatchSets, quotedPhraseValues };
@@ -416,23 +430,303 @@ export function buildBm25FilterContext(ast) {
  * @returns {object[]}
  */
 export function applyExprToApiObjects(apiObjects, expr, sort) {
+  const exprTrimmed = expr && String(expr).trim();
+  const ast = exprTrimmed ? parseFilterExpr(exprTrimmed) : null;
+  const run = ast ? filterExprRun(apiObjects, ast, false, buildBm25FilterContext(ast)) : null;
+  if (run) while (run.step(Infinity));
+  return finishExprFilter(run, apiObjects, sort);
+}
+
+/**
+ * applyExprToApiObjects for request handlers (fact flt1): the same answer,
+ * evaluated in slices of at most ~`sliceMs` that yield the event loop, and
+ * resolving to null, unfinished, once `signal` is aborted (the client went
+ * away or typed on). With `verifyPhrase(phrase, sessions, signal)` (resolving
+ * to the Set of paths of `sessions` holding the lowercase phrase, as
+ * sessionHasPhrase decides, or null when aborted), no session file is read
+ * here: a first pass leaves undecided only the sessions whose answer needs a
+ * quoted phrase, and those are checked through verifyPhrase.
+ */
+export async function applyExprToApiObjectsAsync(apiObjects, expr, sort, { signal, sliceMs = 8, verifyPhrase = null } = {}) {
+  const answer = await applyExprFirstResultsAsync(apiObjects, expr, sort, { signal, sliceMs, verifyPhrase });
+  return answer && answer.objects;
+}
+
+/** Sorts whose order is a total preorder on finite numbers: the order of a subset is the subset of the order. */
+const FIRST_RESULTS_SORTS = new Set(['recent', 'duration', 'tokens', 'errors', 'files', 'commits', 'chapters']);
+
+/**
+ * applyExprToApiObjectsAsync that, with `firstResults` > 0 (fact flt5), may
+ * stop once the first `firstResults` sessions of the sorted answer are
+ * known: the sessions waiting for a quoted phrase are checked in list order,
+ * and `{ objects, partial: true }` holds exactly the first `firstResults`
+ * sessions of the complete answer. Otherwise, or when every session got
+ * decided anyway, `{ objects, partial: false }` is the complete answer.
+ * Null once `signal` is aborted.
+ */
+export async function applyExprFirstResultsAsync(apiObjects, expr, sort, { signal, sliceMs = 8, verifyPhrase = null, firstResults = 0 } = {}) {
+  if (signal?.aborted) return null;
+  const exprTrimmed = expr && String(expr).trim();
+  const ast = exprTrimmed ? parseFilterExpr(exprTrimmed) : null;
+  let bm25Ctx = null;
+  if (ast) {
+    // The expression's word sets, built in slices, so a request typed over stops within one.
+    const steps = bm25FilterContextSteps(ast);
+    let deadline = Date.now() + sliceMs;
+    let step = steps.next();
+    while (!step.done) {
+      if (Date.now() >= deadline) {
+        await new Promise((resolve) => setImmediate(resolve));
+        if (signal?.aborted) return null;
+        deadline = Date.now() + sliceMs;
+      }
+      step = steps.next();
+    }
+    bm25Ctx = step.value;
+  }
+  const run = ast ? filterExprRun(apiObjects, ast, Boolean(verifyPhrase), bm25Ctx) : null;
+  if (run) {
+    while (run.step(Date.now() + sliceMs)) {
+      await new Promise((resolve) => setImmediate(resolve));
+      if (signal?.aborted) return null;
+    }
+    const sortKey = normalizeSortKey(sort || 'recent');
+    const ordered = firstResults > 0 && run.pending.size && !exprIdValues(ast).length
+      && FIRST_RESULTS_SORTS.has(sortKey.endsWith('-asc') ? sortKey.slice(0, -4) : sortKey);
+    if (ordered) {
+      const first = await firstResultsInOrder(run, apiObjects, sort, firstResults, verifyPhrase, signal);
+      if (!first) return null;
+      if (first.partial) return first;
+    } else {
+      for (const [value, sessions] of run.pending) {
+        const found = await verifyPhrase(value.toLowerCase(), sessions, signal);
+        if (!found || signal?.aborted) return null;
+        run.verified.set(value, found);
+      }
+      run.resolvePending();
+    }
+  }
+  return { objects: finishExprFilter(run, apiObjects, sort), partial: false };
+}
+
+/**
+ * Decide the sessions of `run` in sorted list order until the first `want`
+ * matches are known, checking the undecided ones' phrases a growing batch at
+ * a time. `{ partial: true, objects }` with those matches, or
+ * `{ partial: false }` once every session is decided.
+ */
+async function firstResultsInOrder(run, apiObjects, sort, want, verifyPhrase, signal) {
+  const position = new Map(apiObjects.map((obj, k) => [obj, k]));
+  // Stable sort: filtering the sorted list keeps the order finishExprFilter gives the filtered list.
+  const order = sortSessionList(apiObjects.slice(), sort || 'recent').map((obj) => position.get(obj));
+  if (run.pending.size === 1) return firstResultsStreamed(run, apiObjects, order, want, verifyPhrase, signal);
+  const found = [];
+  let batchSize = Math.max(32, 2 * want);
+  let k = 0;
+  while (k < order.length) {
+    const state = run.decided[order[k]];
+    if (state === TRUE) {
+      found.push(apiObjects[order[k]]);
+      if (found.length >= want) break;
+    }
+    if (state !== UNDECIDED) { k++; continue; }
+    const batch = [];
+    for (let j = k; j < order.length && batch.length < batchSize; j++) {
+      if (run.decided[order[j]] === UNDECIDED) batch.push(order[j]);
+    }
+    const byValue = new Map();
+    for (const idx of batch) {
+      for (const value of run.askedBy.get(idx)) {
+        if (!byValue.has(value)) byValue.set(value, []);
+        byValue.get(value).push(apiObjects[idx]);
+      }
+    }
+    for (const [value, sessions] of byValue) {
+      const hits = await verifyPhrase(value.toLowerCase(), sessions, signal);
+      if (!hits || signal?.aborted) return null;
+      if (!run.verified.has(value)) run.verified.set(value, new Set());
+      const known = run.verified.get(value);
+      for (const path of hits) known.add(path);
+    }
+    run.resolve(batch);
+    batchSize *= 2;
+  }
+  if (k >= order.length) {
+    run.resolve(run.undecided.filter((idx) => run.decided[idx] === UNDECIDED));
+    return { partial: false };
+  }
+  return { partial: true, objects: found };
+}
+
+/**
+ * firstResultsInOrder for one quoted phrase: the undecided sessions are
+ * checked in list order as one stream (verifyPhrase's onAnswer), and the
+ * stream is stopped once the first `want` matches are decided.
+ */
+async function firstResultsStreamed(run, apiObjects, order, want, verifyPhrase, signal) {
+  const [value] = run.pending.keys();
+  const answered = new Set();
+  const hits = new Set();
+  run.verified.set(value, hits);
+  const found = [];
+  let k = 0;
+  let done = false;
+  const stop = new AbortController();
+  // Decide the sessions in list order up to the first one still unanswered.
+  const advance = () => {
+    for (; k < order.length && !done; k++) {
+      const idx = order[k];
+      if (run.decided[idx] === UNDECIDED) {
+        if (!answered.has(apiObjects[idx].path)) return;
+        run.resolve([idx]);
+      }
+      if (run.decided[idx] === TRUE) {
+        found.push(apiObjects[idx]);
+        if (found.length >= want) {
+          done = true;
+          stop.abort();
+        }
+      }
+    }
+  };
+  advance();
+  if (done) return { partial: true, objects: found };
+  const abort = () => stop.abort();
+  signal?.addEventListener('abort', abort, { once: true });
+  if (signal?.aborted) stop.abort();
+  try {
+    const sessions = order.filter((idx) => run.decided[idx] === UNDECIDED).map((idx) => apiObjects[idx]);
+    await verifyPhrase(value.toLowerCase(), sessions, stop.signal, (session, hit) => {
+      answered.add(session.path);
+      if (hit) hits.add(session.path);
+      advance();
+    });
+  } finally {
+    signal?.removeEventListener('abort', abort);
+  }
+  if (signal?.aborted) return null;
+  if (done) return { partial: true, objects: found };
+  run.resolve(run.undecided.filter((idx) => run.decided[idx] === UNDECIDED));
+  return { partial: false };
+}
+
+const NEEDS_PHRASE = Symbol("needs a quoted phrase check");
+const FALSE = 0;
+const TRUE = 1;
+const UNDECIDED = 2;
+
+/** evalFilterExpr with quoted phrases unknown: TRUE, FALSE, or UNDECIDED when the answer depends on one. */
+function evalFilterExprDeferred(session, node, now, ctx) {
+  switch (node.type) {
+    case 'and': {
+      const left = evalFilterExprDeferred(session, node.left, now, ctx);
+      if (left === FALSE) return FALSE;
+      const right = evalFilterExprDeferred(session, node.right, now, ctx);
+      if (right === FALSE) return FALSE;
+      return left === TRUE && right === TRUE ? TRUE : UNDECIDED;
+    }
+    case 'or': {
+      const left = evalFilterExprDeferred(session, node.left, now, ctx);
+      if (left === TRUE) return TRUE;
+      const right = evalFilterExprDeferred(session, node.right, now, ctx);
+      if (right === TRUE) return TRUE;
+      return left === FALSE && right === FALSE ? FALSE : UNDECIDED;
+    }
+    case 'not': {
+      const child = evalFilterExprDeferred(session, node.child, now, ctx);
+      return child === UNDECIDED ? UNDECIDED : child === TRUE ? FALSE : TRUE;
+    }
+    case 'term':
+      try {
+        return matchTerm(session, node, now, ctx) ? TRUE : FALSE;
+      } catch (err) {
+        if (err === NEEDS_PHRASE) return UNDECIDED;
+        throw err;
+      }
+    default: return TRUE;
+  }
+}
+
+/**
+ * Evaluation state of a parsed filter expression over apiObjects, with its
+ * word sets `bm25Ctx` (buildBm25FilterContext). With `deferPhrases`, sessions whose answer needs a quoted
+ * phrase are left in `pending` (phrase value -> sessions) for the caller to
+ * check into `verified`, then resolvePending() decides them.
+ */
+function filterExprRun(apiObjects, ast, deferPhrases, bm25Ctx) {
+  const now = Date.now();
+  const decided = new Uint8Array(apiObjects.length);
+  const pending = new Map();
+  const verified = new Map();
+  const undecided = [];
+  const askedBy = new Map();
+  let asked = null;
+  const deferredCtx = deferPhrases
+    ? { ...bm25Ctx, phraseCheck: (session, value) => { asked.add(value); throw NEEDS_PHRASE; } }
+    : null;
+  const verifiedCtx = { ...bm25Ctx, phraseCheck: (session, value) => verified.get(value).has(session.path) };
+  let i = 0;
+  return {
+    ast,
+    pending,
+    verified,
+    decided,
+    undecided,
+    askedBy,
+    /** Decide undecided sessions `ks`, whose phrases are all in `verified`. */
+    resolve(ks) {
+      for (const k of ks) decided[k] = evalFilterExpr(apiObjects[k], ast, now, verifiedCtx) ? TRUE : FALSE;
+    },
+    /** Evaluate sessions until `deadline` (ms epoch); true while any remain. */
+    step(deadline) {
+      for (; i < apiObjects.length; i++) {
+        if (deferredCtx) {
+          asked = new Set();
+          decided[i] = evalFilterExprDeferred(apiObjects[i], ast, now, deferredCtx);
+          if (decided[i] === UNDECIDED) {
+            undecided.push(i);
+            askedBy.set(i, asked);
+            for (const value of asked) {
+              if (!pending.has(value)) pending.set(value, []);
+              pending.get(value).push(apiObjects[i]);
+            }
+          }
+        } else {
+          decided[i] = evalFilterExpr(apiObjects[i], ast, now, bm25Ctx) ? TRUE : FALSE;
+        }
+        if (Date.now() >= deadline) {
+          i++;
+          return i < apiObjects.length;
+        }
+      }
+      return false;
+    },
+    /** Decide the pending sessions from `verified`, as sessionHasPhrase would. */
+    resolvePending() {
+      this.resolve(undecided);
+    },
+    /** The matching sessions, in apiObjects order. */
+    filtered() {
+      const out = [];
+      for (let k = 0; k < apiObjects.length; k++) if (decided[k] === TRUE) out.push(apiObjects[k]);
+      return out;
+    },
+  };
+}
+
+/** The session ids (hashes or UUIDs) the expression names, lowercase. */
+function exprIdValues(ast) {
+  return collectTextTermValues(ast)
+    .map((value) => value.toLowerCase())
+    .filter((v) => isSessionHash(v) || SESSION_UUID_RE.test(v));
+}
+
+function finishExprFilter(run, apiObjects, sort) {
   let result = apiObjects;
   let idValues = [];
-  const exprTrimmed = expr && String(expr).trim();
-  if (exprTrimmed) {
-    const ast = parseFilterExpr(exprTrimmed);
-    if (ast) {
-      const now = Date.now();
-      const bm25Ctx = buildBm25FilterContext(ast);
-      const filtered = [];
-      for (let i = 0; i < apiObjects.length; i++) {
-        if (evalFilterExpr(apiObjects[i], ast, now, bm25Ctx)) filtered.push(apiObjects[i]);
-      }
-      result = filtered;
-      idValues = collectTextTermValues(ast)
-        .map((value) => value.toLowerCase())
-        .filter((v) => isSessionHash(v) || SESSION_UUID_RE.test(v));
-    }
+  if (run) {
+    result = run.filtered();
+    idValues = exprIdValues(run.ast);
   }
   sortSessionList(result, sort || "recent");
   // A session named by its id leads the list, ahead of sessions that merely

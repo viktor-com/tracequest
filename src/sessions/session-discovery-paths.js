@@ -144,6 +144,9 @@ export function openOpenCodeDbReadOnly(home = homedir()) {
 export function openOpenCodeDbAtPath(dbPath) {
   const DatabaseSync = loadDatabaseSync();
   const db = new DatabaseSync(dbPath, { readOnly: true });
+  // Readers opening the database at the same moment (search workers) wait for
+  // each other instead of failing with "database is locked".
+  db.exec("PRAGMA busy_timeout = 5000");
   return { db, dbPath };
 }
 

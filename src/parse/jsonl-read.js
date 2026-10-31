@@ -1,4 +1,4 @@
-import { openSync, readSync, closeSync } from "node:fs";
+import { openSync, readSync, closeSync, fstatSync } from "node:fs";
 
 /** Parse one JSONL line; null for empty or malformed input. */
 export function parseJsonlLine(rawLine) {
@@ -112,6 +112,17 @@ export function forEachPartialParsedJsonlLine(filePath, fileSize, onObj, maxByte
  * Return false from onLine to stop reading early. With `opts.keep`, lines are
  * first screened from their leading bytes (see forEachKeptJsonlLineFromFile).
  */
+/** True without `state`, else whether the open file `fd` has `state`'s size and mtime (ns). */
+function fileStillIs(fd, state) {
+  if (!state) return true;
+  try {
+    const st = fstatSync(fd, { bigint: true });
+    return st.size === BigInt(state.size) && st.mtimeNs === BigInt(state.mtimeNs);
+  } catch {
+    return false;
+  }
+}
+
 export function forEachJsonlLineFromFile(filePath, onLine, opts) {
   if (opts?.keep) {
     forEachKeptJsonlLineFromFile(filePath, opts.keep, onLine, opts);
@@ -119,6 +130,9 @@ export function forEachJsonlLineFromFile(filePath, onLine, opts) {
   }
   const deliver = wrapJsonlLineCallback(onLine);
   const fd = openSync(filePath, "r");
+  // opts.start: read from this byte offset, the start of a line, instead of the file's start;
+  // with opts.startIf ({ size, mtimeNs }), only when the opened file still has that size and mtime.
+  let position = opts?.start > 0 && fileStillIs(fd, opts.startIf) ? opts.start : null;
   try {
     let pendingBuf = null;
     let pendingStart = 0;
@@ -127,7 +141,8 @@ export function forEachJsonlLineFromFile(filePath, onLine, opts) {
     let mergeBuf = Buffer.alloc(69632);
 
     while (true) {
-      const n = readSync(fd, readBuf, 0, readBuf.length, null);
+      const n = readSync(fd, readBuf, 0, readBuf.length, position);
+      if (position !== null && n > 0) position += n;
       if (n <= 0) {
         if (pendingBuf && pendingStart < pendingLen) {
           const tail = pendingBuf.toString("utf-8", pendingStart, pendingLen);

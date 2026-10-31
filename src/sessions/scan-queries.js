@@ -12,8 +12,9 @@ import { sessionMtimeMs } from "./session-list.js";
 import { withOpenCodeDb } from "./session-discovery-paths.js";
 import { OPENCODE_TERM_INDEX_PART_TYPES_SQL } from "./session-index-opencode.js";
 import { tokenize } from "./search-tokenizer.js";
-import { getSearchIndex } from "./search-index.js";
+import { buildTrigramSet, getSearchIndex } from "./search-index.js";
 import { isGrokFamily } from "./session-layout.js";
+import { RE_BYTE_CHECKABLE_PHRASE } from "./phrase-bytes.js";
 import { nearCacheEnabled, nearCacheStamp, openNearCache } from "./near-cache.js";
 import { isDshScanLine, readDshText } from "../parse/parse-dsh.js";
 import { sidecarNearScan } from "./near-sidecar.js";
@@ -79,27 +80,9 @@ const FUZZY_MAX_EXPANSIONS = 3;
 const FUZZY_MIN_JACCARD = 0.4;
 
 // ---------------------------------------------------------------------------
-// Trigram helpers (facts 5hi, 1h8)
-// Built lazily once per Vocabulary snapshot; keyed by Vocabulary reference.
+// Trigram helpers (facts 5hi, 1h8): the SearchIndex keeps the trigram index
+// of its vocabulary current as terms come and go.
 // ---------------------------------------------------------------------------
-
-/**
- * Trigram index cache keyed by postings Map reference.
- * Each entry is { generation: number, index: Map<string, Set<string>> }.
- * The cached index is rebuilt when SearchIndex._generation has changed
- * since it was built (fact 1h8).
- * @type {WeakMap<Map<string,*>, { generation: number, index: Map<string, Set<string>> }>}
- */
-const _trigramMapCache = new WeakMap();
-
-function buildTrigramSet(term) {
-  const s = `  ${term}  `;
-  const tgrams = new Set();
-  for (let i = 0; i < s.length - 2; i++) {
-    tgrams.add(s.slice(i, i + 3));
-  }
-  return tgrams;
-}
 
 function trigramJaccard(setA, setB) {
   if (!setA.size || !setB.size) return 0;
@@ -108,34 +91,6 @@ function trigramJaccard(setA, setB) {
     if (setB.has(t)) inter++;
   }
   return inter / (setA.size + setB.size - inter);
-}
-
-/**
- * Build (or return cached) trigram inverted index over Vocabulary terms.
- * Keys: trigram string → Set of vocab terms containing it.
- * Cached via WeakMap on the postings Map reference; invalidated when the
- * SearchIndex generation counter changes (upsert/remove/prune bump it).
- * The cache is rebuilt lazily on the next fuzzy query after any mutation.
- * (fact 5hi, 1h8)
- *
- * @param {import('./search-index.js').SearchIndex} si
- * @returns {Map<string, Set<string>>}
- */
-function getTrigramIndex(si) {
-  const postings = si.postings;
-  const current = si._generation;
-  const entry = _trigramMapCache.get(postings);
-  if (entry && entry.generation === current) return entry.index;
-  const idx = new Map();
-  for (const term of postings.keys()) {
-    for (const tg of buildTrigramSet(term)) {
-      let bucket = idx.get(tg);
-      if (!bucket) { bucket = new Set(); idx.set(tg, bucket); }
-      bucket.add(term);
-    }
-  }
-  _trigramMapCache.set(postings, { generation: current, index: idx });
-  return idx;
 }
 
 /**
@@ -150,7 +105,7 @@ function getTrigramIndex(si) {
 function fuzzyExpand(queryTerm, si) {
   const postings = si.postings;
   if (!postings.size) return [];
-  const trigramIdx = getTrigramIndex(si);
+  const trigramIdx = si.trigramIndex();
   const queryTgrams = buildTrigramSet(queryTerm);
 
   // Candidate vocab terms: only those sharing at least one trigram with queryTerm.
@@ -222,8 +177,11 @@ export function resolveQueryToken(token, isFinal, si) {
   }
   if (isFinal) {
     const prefixTerms = prefixExpand(token, postings);
+    // A Set, not a scan of matches per term: a short prefix expands to thousands of terms.
+    const seen = new Set(matches.map((m) => m.term));
     for (const pt of prefixTerms) {
-      if (!matches.find(m => m.term === pt)) {
+      if (!seen.has(pt)) {
+        seen.add(pt);
         matches.push({ term: pt, weight: 1.0 });
       }
     }
@@ -334,9 +292,97 @@ function bm25Score(tf, docLen, avgDocLen, N, df) {
  * @returns {object[]} result rows sorted by BM25 score descending (re-ranked by rerankCandidates when options.rerank), or by mtime descending when options.sort is recent/date
  */
 export function searchSessions(sessions, index, query, maxResults = 50, options = {}) {
+  const steps = searchSteps(sessions, index, query, maxResults, options);
+  let step = steps.next();
+  // No answer to a step: searchSteps scans each session itself, in order.
+  while (!step.done) step = steps.next();
+  return step.value;
+}
+
+/**
+ * searchSessions with its per-session file work handed to `runStep(step)`
+ * (the search daemon runs it in parallel; search-daemon facts). A step is
+ * { snippetScans: [{ path, session, terms }] }, answered by a Map from path
+ * to snippetScan(request), { phraseScans: [{ path, session, phrases, docTerms }] },
+ * answered by a Map from path to phraseCandidateScan(request), or { nearScans: { args, sessions } }, answered by
+ * nearTermScorer(...args) scores of the sessions (started while the sidecar
+ * scans the rest); anything left unanswered is done in place. Same results as
+ * searchSessions.
+ */
+export async function searchSessionsAsync(sessions, index, query, maxResults, options, runStep) {
+  const steps = searchSteps(sessions, index, query, maxResults, options);
+  let step = steps.next();
+  while (!step.done) {
+    const req = step.value;
+    // A started step runs while the search goes on; awaitNear collects it.
+    if (req.started) step = steps.next(runStep(req));
+    else if (req.awaitNear) step = steps.next(await req.awaitNear);
+    else step = steps.next(await runStep(req));
+  }
+  return step.value;
+}
+
+/** `snippets`, or the session's first prompt when the scans found none (fact n03). */
+function scanSnippetsOrPrompt(snippets, meta) {
+  if (snippets.length) return snippets;
+  const fp = meta.firstPrompt || "";
+  return [{ type: "text", snippet: fp || "(match in session content)" }];
+}
+
+/**
+ * What searchSteps reads from one candidate of a quoted query (facts yd3,
+ * e3y, yq2): whether it holds every phrase (exact substring, scanned in
+ * order until one is missing) and, if so, its snippets: each phrase's first
+ * occurrence, then its matched words'.
+ * @param {{ session: object, phrases: string[], docTerms: string[] }} request
+ * @returns {{ verified: boolean, snippets: object[]|null }}
+ */
+export function phraseCandidateScan({ session, phrases, docTerms }) {
+  const snippets = [];
+  for (const raw of phrases) {
+    const phraseSnips = phraseCannotOccur(session, raw) ? [] : scanSessionForQuery(session, raw, 1);
+    if (!phraseSnips.length) return { verified: false, snippets: null };
+    for (const snip of phraseSnips) if (snippets.length < 3) snippets.push(snip);
+  }
+  const termSnippets = docTerms.length > 1 && snippets.length < 3
+    ? scanSessionForQueries(session, docTerms, 3 - snippets.length)
+    : null;
+  for (const term of docTerms) {
+    if (snippets.length >= 3) break;
+    const s2 = termSnippets?.get(term) ?? scanSessionForQuery(session, term, 3 - snippets.length);
+    for (const snip of s2) {
+      if (snippets.length >= 3) break;
+      snippets.push(snip);
+    }
+  }
+  return { verified: true, snippets };
+}
+
+/**
+ * What searchSteps reads from one result session for its unquoted words:
+ * term -> snippets, as scanSessionForQueries/scanSessionForQuery return them.
+ * @param {{ session: object, terms: string[] }} request
+ */
+export function snippetScan({ session, terms }) {
+  return terms.length > 1
+    ? scanSessionForQueries(session, terms, 3)
+    : new Map([[terms[0], scanSessionForQuery(session, terms[0], 3)]]);
+}
+
+/** Expanded terms of `expandedTerms` whose posting holds `path`. */
+function termsInSession(expandedTerms, postings, path) {
+  const docTerms = [];
+  for (const term of expandedTerms) {
+    const posting = postings.get(term);
+    if (posting && posting.has(path)) docTerms.push(term);
+  }
+  return docTerms;
+}
+
+function* searchSteps(sessions, index, query, maxResults = 50, options = {}) {
   if (!query || !query.trim()) return [];
 
-  const si = getSearchIndex();
+  const si = options.searchIndex ?? getSearchIndex();
   const postings = si.postings;
   const docLens = si.docLens;
   const N = si.docCount;
@@ -449,7 +495,7 @@ export function searchSessions(sessions, index, query, maxResults = 50, options 
     // Quoted phrases keep BM25 order: their bounded verification scan must reach the exact matches.
     // An unquoted query copied word for word is usually a recorded search for it, not the work itself.
     const verbatim = query.toLowerCase().trim().replace(/\s+/g, " ");
-    rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSets, postings, N, finalToken, verbatim, options.currentProject);
+    yield* rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSets, postings, N, finalToken, verbatim, options.currentProject);
   }
 
   if (!candidates.length) return [];
@@ -479,11 +525,51 @@ export function searchSessions(sessions, index, query, maxResults = 50, options 
   const scanCap = scanPhrases ? Math.max(maxResults, phraseScanCap) : maxResults;
   const top = scanPhrases ? candidates : candidates.slice(0, maxResults);
 
+  // Without phrases every result session is known now: its snippet scans may run at once.
+  let scannedSnippets = null;
+  if (wantSnippets && !phrases.length) {
+    const requests = [];
+    for (const { path } of top) {
+      const session = sessionByPath.get(path);
+      if (!session || !index.get(path)) continue;
+      const terms = termsInSession(expandedTerms, postings, path);
+      if (terms.length) requests.push({ path, session, terms });
+    }
+    if (requests.length) scannedSnippets = yield { snippetScans: requests };
+  }
+
   const results = [];
-  let scanned = 0;
+  if (scanPhrases) {
+    // Phrase queries (fact e3y): candidates are checked in BM25 order, a batch at a time,
+    // each answered by phraseCandidateScan (in worker threads when the caller runs steps).
+    const raws = phrases.map(({ raw }) => raw);
+    let scanned = 0;
+    let k = 0;
+    while (k < top.length && results.length < maxResults && scanned < scanCap) {
+      const want = Math.min(scanCap - scanned, Math.max(16, 2 * (maxResults - results.length)));
+      const batch = [];
+      for (; k < top.length && batch.length < want; k++) {
+        const { path } = top[k];
+        const session = sessionByPath.get(path);
+        const meta = session && index.get(path);
+        if (!meta) continue;
+        batch.push({ path, session, meta, phrases: raws, docTerms: termsInSession(expandedTerms, postings, path) });
+      }
+      if (!batch.length) break;
+      const answered = yield { phraseScans: batch.map(({ path, session, phrases: p, docTerms }) => ({ path, session, phrases: p, docTerms })) };
+      for (const request of batch) {
+        if (results.length >= maxResults || scanned >= scanCap) break;
+        scanned++;
+        const scan = answered?.get(request.path) ?? phraseCandidateScan(request);
+        if (!scan.verified) continue;
+        results.push(searchResultRow(request.session, request.meta, scanSnippetsOrPrompt(scan.snippets, request.meta)));
+      }
+    }
+    return results;
+  }
+
   for (const { path } of top) {
     if (results.length >= maxResults) break;
-    if (scanned >= scanCap) break;
 
     const s = sessionByPath.get(path);
     if (!s) continue;
@@ -496,44 +582,14 @@ export function searchSessions(sessions, index, query, maxResults = 50, options 
       continue;
     }
 
-    // Phrase verification: exact substring match via on-demand scan (fact yd3, e3y)
-    // Collect phrase snippets here so they can be reused in the snippet block below.
-    const verifiedPhraseSnips = new Map();
-    if (phrases.length > 0) {
-      scanned++;
-      let phraseVerified = true;
-      for (const { raw } of phrases) {
-        const phraseSnips = scanSessionForQuery(s, raw, 1);
-        if (!phraseSnips.length) { phraseVerified = false; break; }
-        verifiedPhraseSnips.set(raw, phraseSnips);
-      }
-      if (!phraseVerified) continue;
-    }
-
     // Find which expanded terms actually hit this document
-    const docTerms = [];
-    for (const term of expandedTerms) {
-      const posting = postings.get(term);
-      if (posting && posting.has(path)) docTerms.push(term);
-    }
+    const docTerms = termsInSession(expandedTerms, postings, path);
 
     // Snippet extraction via on-demand scan, driven by matched terms (fact n03, cot)
-    let snippets = [];
-
-    // For phrase queries, fill the first slot with the literal phrase occurrence (fact yq2)
-    // Reuse snippets already collected during verification — no second file read.
-    for (const { raw } of phrases) {
-      if (snippets.length >= 3) break;
-      const phraseSnips = verifiedPhraseSnips.get(raw) || [];
-      for (const snip of phraseSnips) {
-        if (snippets.length >= 3) break;
-        snippets.push(snip);
-      }
-    }
-
-    const termSnippets = docTerms.length > 1 && snippets.length < 3
-      ? scanSessionForQueries(s, docTerms, 3 - snippets.length)
-      : null;
+    const snippets = [];
+    const termSnippets = scannedSnippets?.get(path) ?? (docTerms.length > 1
+      ? scanSessionForQueries(s, docTerms, 3)
+      : null);
 
     for (const term of docTerms) {
       if (snippets.length >= 3) break;
@@ -543,13 +599,7 @@ export function searchSessions(sessions, index, query, maxResults = 50, options 
         snippets.push(snip);
       }
     }
-    // Fallback to firstPrompt snippet (fact n03)
-    if (!snippets.length) {
-      const fp = meta.firstPrompt || "";
-      snippets = [{ type: "text", snippet: fp || "(match in session content)" }];
-    }
-
-    results.push(searchResultRow(s, meta, snippets));
+    results.push(searchResultRow(s, meta, scanSnippetsOrPrompt(snippets, meta)));
   }
 
   return results;
@@ -695,10 +745,17 @@ function caseVariants(word) {
  * Returns a callable scorer with `score(session)`, `scoreMany(sessions)` and `flush()`; scoreMany has the
  * sidecar scan session files in parallel and gives the same scores.
  */
-export function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim) {
+export function nearTermScorer(resolvedTerms, weights, distinct, finalToken, verbatim, { useCache = nearCacheEnabled() } = {}) {
   const n = resolvedTerms.length;
   const totalWeight = weights.reduce((a, b) => a + b, 0);
-  if (!totalWeight) return { score: () => 0, scoreMany: (sessions) => sessions.map(() => 0) };
+  if (!totalWeight) {
+    const zero = () => 0;
+    return Object.assign(zero, {
+      score: zero,
+      scoreMany: (sessions) => sessions.map(() => 0),
+      scoreFiles: (sessions) => ({ scores: sessions.map(() => 0), rest: [] }),
+    });
+  }
   // The query's words in order with case and punctuation ignored ("Codex Stop-button"): a run containing them is a copy too.
   const verbatimWords = verbatim ? ` ${verbatim.replace(/[^a-z0-9]+/g, " ").trim()} ` : null;
   // Where each word of the verbatim query starts: a run (of searched words only) is a copy when
@@ -717,7 +774,7 @@ export function nearTermScorer(resolvedTerms, weights, distinct, finalToken, ver
   }
 
   // What a scan keeps depends only on the text and on these needles and rules, so it is cached per session file.
-  const cache = nearCacheEnabled() ? openNearCache(JSON.stringify([
+  const cache = useCache ? openNearCache(JSON.stringify([
     NEAR_GAP, NEAR_SCAN_BYTES, SEARCH_CALL_RE.source, verbatim || "",
     needles.map(({ q, bytes, prefix }) => [q, bytes.toString("latin1"), prefix ? 1 : 0]),
   ])) : null;
@@ -830,6 +887,16 @@ export function nearTermScorer(resolvedTerms, weights, distinct, finalToken, ver
    */
   const scoreOf = (best, runs, searched) => (best / totalWeight) * Math.sqrt(runs) * (searched ? SEARCHER_FACTOR : 1);
   const scoreMany = (sessions) => {
+    const { scores, rest } = scoreFiles(sessions);
+    for (const k of rest) scores[k] = scorer(sessions[k]);
+    return scores;
+  };
+
+  /**
+   * The sidecar's scores of `sessions` (in order), and `rest`: the indices of
+   * the sessions it did not score, which the JS scan (scorer) scores.
+   */
+  const scoreFiles = (sessions) => {
     const files = [];
     const fileAt = [];
     sessions.forEach((session, k) => {
@@ -846,11 +913,14 @@ export function nearTermScorer(resolvedTerms, weights, distinct, finalToken, ver
     const scanned = sidecarNearScan({ needles, weights, verbatim: verbatim || null, verbatimWords, gap: NEAR_GAP, maxBytes: NEAR_SCAN_BYTES }, files);
     const scores = new Array(sessions.length);
     if (scanned) fileAt.forEach((k, j) => { if (scanned[j]) scores[k] = scoreOf(scanned[j][0], scanned[j][1], scanned[j][2]); });
-    return sessions.map((session, k) => scores[k] ?? scorer(session));
+    const rest = [];
+    for (let k = 0; k < sessions.length; k++) if (scores[k] === undefined) rest.push(k);
+    return { scores, rest };
   };
 
   scorer.score = scorer;
   scorer.scoreMany = scoreMany;
+  scorer.scoreFiles = scoreFiles;
   scorer.flush = () => cache?.flush();
   return scorer;
 }
@@ -901,7 +971,7 @@ function rerankPool(candidates, resolvedTerms, weights, distinct, postings) {
  * naming it REPO_MENTIONS times); then those sessions first; BM25 order
  * breaks ties.
  */
-function rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSets, postings, N, finalToken, verbatim, currentProject) {
+function* rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSets, postings, N, finalToken, verbatim, currentProject) {
   const weights = termMatchSets.map((set) => Math.log((N - set.size + 0.5) / (set.size + 0.5) + 1));
   // Common words ("the", "with") barely matter, and searching them dominates the scan cost.
   const rarest = [...weights.keys()].sort((a, b) => weights[b] - weights[a]).slice(0, 3);
@@ -917,7 +987,22 @@ function rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSet
       repoTerms.some((terms) => terms.every((t) => (postings.get(t)?.get(c.path) || 0) >= REPO_MENTIONS)) ? 1 : 0;
   }
   const pool = near ? [...rerankPool(candidates, resolvedTerms, weights, distinct, postings)] : [];
-  const poolScores = near ? near.scoreMany(pool.map((i) => sessionByPath.get(candidates[i].path))) : [];
+  let poolScores = [];
+  if (near) {
+    const sessions = pool.map((i) => sessionByPath.get(candidates[i].path));
+    // Sessions the sidecar does not read (OpenCode, dsh) may be scored elsewhere while it
+    // scans the others (search-daemon facts); the step answers with a promise of their scores.
+    const noFile = [];
+    sessions.forEach((session, k) => { if (!nearTextFile(session)) noFile.push(k); });
+    const noFileScores = noFile.length
+      ? yield { nearScans: { args: [resolvedTerms, weights, distinct, finalToken, verbatim], sessions: noFile.map((k) => sessions[k]) }, started: true }
+      : null;
+    const { scores, rest } = near.scoreFiles(sessions);
+    const elsewhere = noFileScores ? yield { awaitNear: noFileScores } : null;
+    const scoredElsewhere = new Map(noFile.map((k, j) => [k, elsewhere?.[j]]));
+    for (const k of rest) scores[k] = scoredElsewhere.get(k) ?? near(sessions[k]);
+    poolScores = scores;
+  }
   const nearOf = new Map(pool.map((i, k) => [i, poolScores[k]]));
   for (let i = 0; i < candidates.length; i++) {
     const c = candidates[i];
@@ -925,6 +1010,15 @@ function rerankCandidates(candidates, sessionByPath, resolvedTerms, termMatchSet
   }
   near?.flush?.();
   candidates.sort((a, b) => b.near - a.near || b.inProject - a.inProject || b.score - a.score);
+}
+
+/** The text file the sidecar's near scan reads for `session`, or null (as in scoreFiles). */
+function nearTextFile(session) {
+  try {
+    return session ? sessionTextFile(session) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Slice [start, end); collapse newlines only when the slice contains any. */
@@ -972,11 +1066,33 @@ export function extractSnippets(text, query, max = 3, lowerText) {
 }
 
 const MAX_SCAN_CACHE = 50;
+const MAX_SCAN_CACHE_CHARS = 128 * 1024 * 1024;
 const _scanCache = new Map();
 
 function getScanCacheKey(session) {
   const size = session.size || 0;
   return `${session.path}:${size}:${sessionMtimeMs(session)}`;
+}
+
+let _scanCacheMax = MAX_SCAN_CACHE;
+/** Most characters of cached lines in all (fact mem1): a few large sessions cannot hold gigabytes. */
+let _scanCacheMaxChars = MAX_SCAN_CACHE_CHARS;
+/** key -> characters of its cached lines. */
+const _scanCacheChars = new Map();
+let _scanCacheTotalChars = 0;
+
+function evictOldestScanLines() {
+  const oldest = _scanCache.keys().next().value;
+  _scanCache.delete(oldest);
+  _scanCacheTotalChars -= _scanCacheChars.get(oldest) || 0;
+  _scanCacheChars.delete(oldest);
+}
+
+/** Keep the lines of at most `n` sessions and `maxChars` characters in memory (search workers hold fewer each). */
+export function setScanLineCacheSize(n, maxChars = _scanCacheMaxChars) {
+  _scanCacheMax = n;
+  _scanCacheMaxChars = maxChars;
+  while (_scanCache.size > n || _scanCacheTotalChars > maxChars) evictOldestScanLines();
 }
 
 function getCachedScanLines(session) {
@@ -991,12 +1107,19 @@ function getCachedScanLines(session) {
 }
 
 function setCachedScanLines(session, lines) {
+  if (!_scanCacheMax) return;
+  let chars = 0;
+  for (const line of lines) chars += line.length;
+  if (chars > _scanCacheMaxChars) return;
   const key = getScanCacheKey(session);
-  if (_scanCache.size >= MAX_SCAN_CACHE) {
-    const oldest = _scanCache.keys().next().value;
-    _scanCache.delete(oldest);
+  if (_scanCache.has(key)) {
+    _scanCache.delete(key);
+    _scanCacheTotalChars -= _scanCacheChars.get(key) || 0;
   }
+  while (_scanCache.size && (_scanCache.size >= _scanCacheMax || _scanCacheTotalChars + chars > _scanCacheMaxChars)) evictOldestScanLines();
   _scanCache.set(key, lines);
+  _scanCacheChars.set(key, chars);
+  _scanCacheTotalChars += chars;
 }
 
 /** Walk JSONL lines from a string or cached line array without joining for cache hits. */
@@ -1407,6 +1530,102 @@ export function scanSessionForQuery(session, query, max = 3) {
     const loc = session.path || session.file || session.sessionId || "unknown";
     finishScanQueryCatch("scanSessionForQuery", loc, err);
     return [];
+  }
+}
+
+const RE_JSON_U_ESCAPE = /\\u([0-9a-fA-F]{4})/g;
+/** UTF-8 of U+0130 and U+212A read as latin1: they lowercase to "i̇" and "k". */
+const RE_LATIN1_LOWERS_TO_ASCII = /\xc4\xb0|\xe2\x84\xaa/;
+const PHRASE_CHECK_CHUNK = 1 << 20;
+
+/**
+ * False only when the JSONL file cannot hold `phrase` (lowercase) anywhere
+ * scanSessionForQuery looks: not in a line lowercased, not in a JSON-decoded
+ * command or error. For a phrase of byte-checkable characters a decoded or
+ * lowercased match needs the phrase's bytes in the file (ASCII case ignored),
+ * a \uXXXX escape of one of its characters, or a character that lowercases
+ * to "i" or "k"; any of those, or any other phrase, answers true.
+ */
+export function phraseMayOccurInFile(filePath, phrase) {
+  if (!RE_BYTE_CHECKABLE_PHRASE.test(phrase)) return true;
+  const pattern = new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+  const chars = new Set(phrase);
+  const lowersToAscii = chars.has("i") || chars.has("k");
+  const overlap = Math.max(phrase.length - 1, 5);
+  const buf = Buffer.allocUnsafe(PHRASE_CHECK_CHUNK);
+  const fd = openSync(filePath, "r");
+  try {
+    let carry = "";
+    for (;;) {
+      const n = readSync(fd, buf, 0, buf.length, null);
+      if (n <= 0) return false;
+      const text = carry + buf.latin1Slice(0, n);
+      if (pattern.test(text)) return true;
+      if (lowersToAscii && RE_LATIN1_LOWERS_TO_ASCII.test(text)) return true;
+      if (text.includes("\\u")) {
+        RE_JSON_U_ESCAPE.lastIndex = 0;
+        for (let m; (m = RE_JSON_U_ESCAPE.exec(text)) !== null;) {
+          const code = parseInt(m[1], 16);
+          if (chars.has(String.fromCharCode(code).toLowerCase()) || (lowersToAscii && (code === 0x130 || code === 0x212a))) return true;
+        }
+      }
+      carry = text.slice(-overlap);
+    }
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * scanSessionForQuery(session, phrase, 1).length > 0, answering false without
+ * the line scan when the session file cannot hold the phrase (phraseMayOccurInFile).
+ * `from` >= 0: the caller's byte test (the sidecar's phrase command, fact flt7)
+ * found the file may hold it and that no line before byte offset `from` can,
+ * for the file at `fileState` ({ size, mtimeNs }); a file found otherwise is
+ * scanned from its start.
+ */
+export function sessionHasPhrase(session, phrase, from = -1, fileState = null) {
+  if (from < 0 && phraseCannotOccur(session, phrase)) return false;
+  const source = session.source || "claude";
+  if (source === "opencode" || source === "dsh" || isGrokFamily(source) || getCachedScanLines(session) !== null) {
+    return scanSessionForQuery(session, phrase, 1).length > 0;
+  }
+  try {
+    return jsonlFileHasQuery(session.path, phrase, scanSkipLineForSource(source), from, fileState);
+  } catch (err) {
+    finishScanQueryCatch("scanSessionForQuery", session.path, err);
+    return false;
+  }
+}
+
+/**
+ * Whether scanJsonlFileForQuery(filePath, query, 1) finds a snippet: true at
+ * the first line with the query in its text or in a command, file or error
+ * field, without reading the rest of the file.
+ */
+function jsonlFileHasQuery(filePath, query, skipLine, from = 0, fileState = null) {
+  const state = createJsonlQueryScanState(query);
+  let found = false;
+  forEachJsonlLineFromFile(filePath, (text, start, end) => {
+    if (skipLine?.(text, start, end)) return true;
+    const fields = createLineFields(text.slice(start, end));
+    collectStructuredSnippetsFromFields(fields, query, state.snippets, 1, state.seenCmds, state.seenFiles);
+    found = state.snippets.length > 0 || fields.line.includes(query) || lineIncludesLower(fields, query, state);
+    return !found;
+  }, from > 0 ? { start: from, startIf: fileState } : undefined);
+  return found;
+}
+
+/** True when a JSONL session read from its own file provably lacks `phrase`. */
+function phraseCannotOccur(session, phrase) {
+  const source = session.source || "claude";
+  if (source === "opencode" || source === "dsh" || isGrokFamily(source) || !session.path) return false;
+  if (getCachedScanLines(session) !== null) return false;
+  try {
+    return !phraseMayOccurInFile(session.path, phrase);
+  } catch {
+    // Unreadable here: the scan reports it as before.
+    return false;
   }
 }
 

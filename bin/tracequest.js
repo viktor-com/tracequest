@@ -64,6 +64,12 @@ function loadSearchCommands() {
   return import("../src/cli/cli-search.js");
 }
 
+/** A search the resident search process answers, before the search modules load (search-daemon facts). */
+async function answerFromResidentSearch(positionals, values) {
+  const { answerFromSearchDaemon } = await import("../src/cli/search-request.js");
+  return answerFromSearchDaemon(positionals, values);
+}
+
 // --- Main dispatch ---
 
 // Apply explicit configuration before loading commands and strip global options
@@ -192,6 +198,7 @@ async function dispatch() {
       },
       allowPositionals: true,
     });
+    if (await answerFromResidentSearch(positionals, values)) break;
     const { cmdSearch } = await loadSearchCommands();
     await cmdSearch(positionals, values);
     break;
@@ -207,6 +214,7 @@ async function dispatch() {
       },
       allowPositionals: true,
     });
+    if (await answerFromResidentSearch(positionals, { ...values, format: "handoff", handoffEntryCommand: "handoff" })) break;
     const { cmdHandoff } = await loadSearchCommands();
     await cmdHandoff(positionals, values);
     break;

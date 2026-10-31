@@ -7,7 +7,10 @@ import {
   getSessionMeta,
   sessionToApiObject,
 } from "../server/server-helpers.js";
-import { applyExprToApiObjects, FilterParseError } from "../filter/filter.js";
+import { applyExprFirstResultsAsync, FilterParseError } from "../filter/filter.js";
+import { verifyPhraseOffThread } from "../server/phrase-check.js";
+import { searchStepRunner } from "../server/search-steps.js";
+import { searchSessionsAsync } from "../sessions/scan-queries.js";
 import { detectLiveSessions, liveSessionsCacheTime } from "../sessions/live-sessions.js";
 import { sessionRows, sessionRowsStats, stampRowsLive } from "./session-rows.js";
 import { warmLiveSessions } from "../sessions/live-sessions-async.js";
@@ -76,6 +79,7 @@ export async function handleApiSessions(_req, res, url, _deps = null) {
     endIndexDiskMtimeCoalesce();
   }
   ({ sessions, index, allSessions } = await resolveSessionsAndIndexAsync(filter, deps));
+  if (res.destroyed) return;
   const peekSession = deps.peekSession ?? (await hotModules()).peekSession;
 
   const sessionsForLive = allSessions ?? sessions;
@@ -95,8 +99,17 @@ export async function handleApiSessions(_req, res, url, _deps = null) {
   const rows = sessionRows(sessions, index, peekSession);
   stampRowsLive(rows.objects, liveSet);
   let allObjects;
+  // first=1: answer as soon as this page's rows are known (fact flt5).
+  const firstResults = url.searchParams.get("first") === "1" && exprParam.trim() ? page * pageSize : 0;
   try {
-    allObjects = applyExprToApiObjects(rows.objects.slice(), exprParam, sort);
+    const answer = await filterFirstOffThread(res, rows.objects.slice(), exprParam, sort, firstResults);
+    if (!answer) return;
+    if (answer.partial) {
+      const pageItems = answer.objects.slice((page - 1) * pageSize);
+      send(res, 200, JSON.stringify({ sessions: pageItems, total: null, partial: true, page, pageSize, liveSessions }), "application/json; charset=utf-8");
+      return;
+    }
+    allObjects = answer.objects;
   } catch (err) {
     if (err instanceof FilterParseError) {
       send(res, 400, JSON.stringify({ error: err.message }), "application/json; charset=utf-8");
@@ -124,6 +137,32 @@ export async function handleApiSessions(_req, res, url, _deps = null) {
     body,
   );
   send(res, 200, body, "application/json; charset=utf-8");
+}
+
+/**
+ * applyExprToApiObjects for a request (facts flt1, flt3): evaluated in slices,
+ * quoted phrases checked in worker threads, stopped (null) once the client
+ * has gone, as when it typed on and closed the request.
+ */
+export async function filterOffThread(res, apiObjects, expr, sort) {
+  const answer = await filterFirstOffThread(res, apiObjects, expr, sort, 0);
+  return answer && answer.objects;
+}
+
+/**
+ * filterOffThread that, with `firstResults` > 0, may answer
+ * `{ objects, partial: true }` with only the first `firstResults` rows (fact
+ * flt5); otherwise `{ objects, partial: false }` with all of them.
+ */
+export async function filterFirstOffThread(res, apiObjects, expr, sort, firstResults) {
+  const gone = new AbortController();
+  if (res.destroyed) gone.abort();
+  else if (typeof res.once === "function") res.once("close", () => { if (!res.writableEnded) gone.abort(); });
+  // Typing sends one request per keystroke and aborts the one before: let a
+  // pending close arrive before the expression's word sets are built.
+  await new Promise((resolve) => setImmediate(resolve));
+  if (gone.signal.aborted) return null;
+  return applyExprFirstResultsAsync(apiObjects, expr, sort, { signal: gone.signal, verifyPhrase: verifyPhraseOffThread, firstResults });
 }
 
 export function parseApiSearchLimit(raw) {
@@ -262,6 +301,9 @@ export async function handleApiSearch(_req, res, url, _deps = null) {
     endIndexDiskMtimeCoalesce();
   }
   ({ sessions, index } = await resolveSessionsAndIndexAsync(filter, deps));
+  // A query the client replaced (it closed this request) is not searched (fact flt3).
+  await new Promise((resolve) => setImmediate(resolve));
+  if (res.destroyed) return;
   const peekSession = deps.peekSession ?? (await hotModules()).peekSession;
   const searchSessionsFn = deps.searchSessions ?? (await hotModules()).searchSessions;
 
@@ -274,7 +316,9 @@ export async function handleApiSearch(_req, res, url, _deps = null) {
       return obj;
     });
     try {
-      scopedSessions = applyExprToApiObjects(apiObjects, exprTrimmed, "recent").map((obj) => obj._origSession);
+      const kept = await filterOffThread(res, apiObjects, exprTrimmed, "recent");
+      if (!kept) return;
+      scopedSessions = kept.map((obj) => obj._origSession);
     } catch (err) {
       if (err instanceof FilterParseError) {
         send(res, 400, JSON.stringify({ error: err.message }), "application/json; charset=utf-8");
@@ -284,7 +328,18 @@ export async function handleApiSearch(_req, res, url, _deps = null) {
     }
   }
 
-  const results = searchSessionsFn(scopedSessions, index, q, limit, { snippets });
+  // The search's file work runs in worker threads (fact hsw1); an injected searchSessions runs as given.
+  let results;
+  try {
+    results = _deps?.searchSessions
+      ? searchSessionsFn(scopedSessions, index, q, limit, { snippets })
+      : await searchSessionsAsync(scopedSessions, index, q, limit, { snippets }, searchStepRunner(() => res.destroyed));
+  } catch (err) {
+    // A query the client replaced stops at its next step (fact flt3).
+    if (res.destroyed) return;
+    throw err;
+  }
+  if (res.destroyed) return;
 
   const body = JSON.stringify({ results });
   storeApiResponseBody(cacheKey, responseSubKey, body);
@@ -322,7 +377,9 @@ export async function handleApiSearchCatalog(_req, res, url, deps) {
       return obj;
     });
     try {
-      scopedSessions = applyExprToApiObjects(apiObjects, exprTrimmed, "recent").map((obj) => obj._origSession);
+      const kept = await filterOffThread(res, apiObjects, exprTrimmed, "recent");
+      if (!kept) return;
+      scopedSessions = kept.map((obj) => obj._origSession);
     } catch (err) {
       if (err instanceof FilterParseError) {
         send(res, 400, JSON.stringify({ error: err.message }), "application/json; charset=utf-8");

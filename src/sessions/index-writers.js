@@ -480,9 +480,9 @@ export function runSidecar(op, args, parseSuccess, spawnExtra = {}) {
  * the time limit is SIGKILLed and the caller gets null (JS fallback, fact hsa2).
  * Resolves to parseSuccess(result) or null; never rejects.
  */
-export function runSidecarAsync(op, args, parseSuccess, { input = null, timeoutMs, env } = {}) {
+export function runSidecarAsync(op, args, parseSuccess, { input = null, timeoutMs, env, signal } = {}) {
   const sidecar = detectSidecar();
-  if (!sidecar) return Promise.resolve(null);
+  if (!sidecar || signal?.aborted) return Promise.resolve(null);
   const limit = timeoutMs ?? sidecarTimeoutMs(op);
   return new Promise((resolve) => {
     let child;
@@ -501,8 +501,15 @@ export function runSidecarAsync(op, args, parseSuccess, { input = null, timeoutM
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
       resolve(value);
     };
+    // An aborted call (its request went away) stops the child at once and resolves to null.
+    const onAbort = () => {
+      child.kill("SIGKILL");
+      settle(null);
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
     const timer = setTimeout(() => {
       warnSidecarTimeout(op, limit);
       child.kill("SIGKILL");
@@ -1045,6 +1052,55 @@ function jsSearchTerms(paths, sessions) {
   return stale.map((s) => [s.path, termFreqsFromMeta(indexed[s.path] || indexStaleChunkSerial([s])[s.path])]);
 }
 
+/**
+ * jsSearchTerms for serve (fact sidx3): read in a worker thread, so the event
+ * loop keeps answering; one session at a time between yields if the worker fails.
+ */
+async function jsSearchTermsAsync(paths, sessions) {
+  if (!paths.length) return [];
+  const wanted = new Set(paths);
+  const stale = sessions.filter((s) => wanted.has(s.path));
+  let indexed = null;
+  if (!workersBrokenExecArgv()) {
+    try {
+      indexed = await indexInWorker(stale);
+    } catch {
+      // Read here instead, below.
+    }
+  }
+  const out = [];
+  for (const s of stale) {
+    out.push([s.path, termFreqsFromMeta(indexed?.[s.path] ?? indexStaleChunkSerial([s])[s.path])]);
+    if (!indexed) await new Promise((resolve) => setImmediate(resolve));
+  }
+  return out;
+}
+
+/** The index-worker results for `sessions`, read in one worker thread without blocking. */
+function indexInWorker(sessions) {
+  return new Promise((resolve, reject) => {
+    const ch = new MessageChannel();
+    const worker = new Worker(indexWorkerUrl(), {
+      workerData: { sessions, sab: new SharedArrayBuffer(4), workerIndex: 0, port: ch.port1 },
+      transferList: [ch.port1],
+    });
+    let settled = false;
+    const settle = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      ch.port2.close();
+      terminateIndexWorker(worker);
+      fn(value);
+    };
+    ch.port2.once("message", (results) => {
+      if (results && results._error) settle(reject, new Error(results._error));
+      else settle(resolve, results);
+    });
+    worker.once("error", (err) => settle(reject, err));
+    worker.once("exit", (code) => settle(reject, new Error(`index worker exited with code ${code}`)));
+  });
+}
+
 function stripLegacySearchText(data) {
   if (data && Object.hasOwn(data, "searchText")) delete data.searchText;
 }
@@ -1201,6 +1257,21 @@ function* buildIndexSteps(sessions, opts = {}) {
       staleSessions.push({ session: s, mtime });
     }
   }
+
+  // A search that just started the resident search, which indexes these
+  // sessions next, answers from the index as it is (fact sd2): changed
+  // sessions as last indexed, new ones not yet. An index holding fewer
+  // sessions than are missing from it, and format upgrades, are built here.
+  if (opts.deferStale && staleSessions.length && staleSessions.length < cached && !partial && !siNeedsRebuild && !codexStale && !spansStale &&
+    !activeStale && !openCodeErrorsStale && !rereadOpenCode.length) {
+    for (const { session } of staleSessions) {
+      if (cache[session.path] && si.has(session.path)) result.set(session.path, cache[session.path]);
+    }
+    const n = staleSessions.length;
+    indexStatus(`tracequest: ${n} new or changed session${n !== 1 ? "s" : ""} indexed next, searching the index as it is (${sessions.length} sessions)`);
+    result.deferredStale = n;
+    return result;
+  }
   const codexReindex = [];
   if (codexReindexHits.length) {
     // Off the cache (so a crash before they are re-indexed leaves them stale,
@@ -1310,25 +1381,27 @@ function* buildIndexSteps(sessions, opts = {}) {
     const sidecarIndex = yield { args: sidecarArgs, input: stdinPayload, staleCount: staleSessions.length + searchStale.length };
     if (delta) rmSync(sidecarIndexPath, { force: true });
     if (sidecarIndex) {
+      // termFreqs marks an entry the sidecar parsed again (fresh or search-stale).
+      const rereadPaths = [];
+      for (const [path, data] of sidecarIndex) if (data.termFreqs && typeof data.termFreqs === "object") rereadPaths.push(path);
+      // The SearchIndex terms of the entries it re-read come from the JS indexer (fact ln2);
+      // serve reads them and readies the SearchIndex change in slices (fact sidx3).
+      const siBatch = rereadPaths.length ? yield { searchTerms: rereadPaths, sessions } : [];
+      if (siBatch.length) yield { prepareUpsert: rereadPaths };
       // An async build yielded the event loop: merge into whatever cache is
       // current now, not the object captured before the sidecar ran.
       if (_indexFileCache !== null && _indexFileCache !== cache) cache = _indexFileCache;
       // Merge sidecar entries into metadata cache and SearchIndex (facts 8rj, wyt).
-      // The SearchIndex terms of the entries it re-read come from the JS indexer (fact ln2).
-      const reread = [];
       for (const [path, data] of sidecarIndex) {
         if (!Object.hasOwn(cache, path)) _indexCachePathCount++;
-        // termFreqs marks an entry the sidecar parsed again (fresh or search-stale).
-        // It omits them for mtime-cache-reused entries, whose SI postings stay:
+        // Entries without termFreqs were reused from the mtime cache; their SI postings stay:
         // removal is pruneRemovedSessions' responsibility (fact 03w).
-        if (data.termFreqs && typeof data.termFreqs === "object") reread.push(path);
         delete data.termFreqs;
         stripLegacySearchText(data);
         cache[path] = data;
         result.set(path, data);
       }
       // One pass over the vocabulary for every re-indexed session.
-      const siBatch = jsSearchTerms(reread, sessions);
       si.upsertMany(siBatch);
       const sidecarSearchMutated = siBatch.length > 0;
 
@@ -1449,6 +1522,8 @@ export function buildIndex(sessions, opts = {}) {
   let step = steps.next();
   while (!step.done) {
     const req = step.value;
+    if (req.searchTerms) { step = steps.next(jsSearchTerms(req.searchTerms, req.sessions)); continue; }
+    if (req.prepareUpsert) { step = steps.next(); continue; }
     step = steps.next(req.codexHeal ? readCodexModels(req.codexHeal) : req.spanHeal ? readClaudeSpanTrims(req.spanHeal) : runSidecar("index", req.args, parseIndexOutput, {
       input: req.input,
       timeout: sidecarTimeoutMs("index", req.staleCount),
@@ -1471,11 +1546,20 @@ export function buildIndexForFilteredSearch(sessions, matching) {
   const result = buildIndex(sessions);
   if (_writeTimer) flushDeferredIndexWrites();
   _narrowedForFilteredSearch = true;
+  return result;
+}
+
+/**
+ * The search index a filtered search of `matching` ranks with, after
+ * buildIndexForFilteredSearch: the index narrowed to `matching` (a view, so
+ * nothing is decoded or pruned in place), or the whole index when the cache
+ * holds no more sessions than the filter kept (pruneIndexCache's guard).
+ */
+export function filteredSearchIndex(matching) {
   const validPaths = new Set();
   for (const s of matching) validPaths.add(s.path);
-  // pruneIndexCache's guard: a cache no larger than the subset is not pruned.
-  if (_indexCachePathCount > validPaths.size) getSearchIndex().pruneRemovedSessions(validPaths);
-  return result;
+  const si = getSearchIndex();
+  return _indexCachePathCount > validPaths.size ? si.narrowedTo(validPaths) : si;
 }
 
 /** Async builds run one at a time: each sees the cache the previous one left. */
@@ -1491,6 +1575,8 @@ export function buildIndexAsync(sessions, opts = {}) {
     let step = steps.next();
     while (!step.done) {
       const req = step.value;
+      if (req.searchTerms) { step = steps.next(await jsSearchTermsAsync(req.searchTerms, req.sessions)); continue; }
+      if (req.prepareUpsert) { await getSearchIndex().prepareUpsertAsync(req.prepareUpsert); step = steps.next(); continue; }
       step = steps.next(req.codexHeal ? await readCodexModelsAsync(req.codexHeal) : req.spanHeal ? await readClaudeSpanTrimsAsync(req.spanHeal) : await runSidecarAsync("index", req.args, parseIndexOutput, {
         input: req.input,
         timeoutMs: sidecarTimeoutMs("index", req.staleCount),

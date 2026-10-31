@@ -122,5 +122,15 @@ export function createWorkerPool({ url, slots = 3, maxHeavy = slots - 1, version
     return { promise, cancel, isCancelled: () => job.cancelled };
   }
 
-  return { run };
+  /** Terminate idle workers (a later run starts new ones). */
+  function closeIdle() {
+    for (const slot of _slots) {
+      if (slot.job || !slot.worker) continue;
+      const worker = slot.worker;
+      slot.worker = null;
+      worker.terminate();
+    }
+  }
+
+  return { run, closeIdle };
 }

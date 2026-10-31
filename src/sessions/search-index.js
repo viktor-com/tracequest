@@ -52,6 +52,29 @@ const MAX_REMEMBERED_DOCS = 256;
 /** Batches larger than this (a bulk re-index) do not remember term lists. */
 const REMEMBER_BATCH_MAX = 64;
 
+/** Trigrams of a vocabulary term, padded with two spaces each side (facts 5hi, 1h8). */
+export function buildTrigramSet(term) {
+  const s = `  ${term}  `;
+  const tgrams = new Set();
+  for (let i = 0; i < s.length - 2; i++) {
+    tgrams.add(s.slice(i, i + 3));
+  }
+  return tgrams;
+}
+
+/** Event-loop time a sliced index step may take before it yields. */
+const SLICE_MS = 8;
+
+function sliceClock(sliceMs) {
+  let start = Date.now();
+  return async () => {
+    if (Date.now() - start < sliceMs) return false;
+    await new Promise((resolve) => setImmediate(resolve));
+    start = Date.now();
+    return true;
+  };
+}
+
 function searchIdxLog(...args) {
   if (process.env.TRACEQUEST_VERBOSE === "1") console.log(...args);
 }
@@ -80,6 +103,21 @@ export class SearchIndex {
      * @type {Map<string, string[]>}
      */
     this._docTerms = new Map();
+    /**
+     * Trigram -> vocabulary terms containing it, for fuzzy expansion; built on
+     * first use and kept current as terms come and go, in the order a rebuild
+     * over the vocabulary would give (facts 5hi, 1h8).
+     * @type {Map<string, Set<string>>|null}
+     */
+    this._trigrams = null;
+    /**
+     * A sliced trigram build in progress: { terms, next, index, log }. Terms
+     * that come and go while it runs are logged ([added, term]) and replayed
+     * when it ends, so a change never restarts it.
+     */
+    this._trigramBuild = null;
+    /** Terms of replaced sessions found by prepareUpsertAsync, valid for one generation. */
+    this._planned = null;
   }
 
   get docCount() {
@@ -124,6 +162,7 @@ export class SearchIndex {
     }
     this._removePostingsOf(scan);
     this._generation++;
+    this._planned = null;
     const remember = byPath.size <= REMEMBER_BATCH_MAX;
     for (const [path, termFreqs] of byPath) this._insertPostings(path, termFreqs, remember);
   }
@@ -142,6 +181,8 @@ export class SearchIndex {
       if (!posting) {
         posting = new Map();
         this._postings.set(term, posting);
+        if (this._trigrams) this._trigramAdd(term);
+        else this._trigramBuild?.log.push([true, term]);
       }
       posting.set(path, tf);
       docLen += tf;
@@ -180,19 +221,21 @@ export class SearchIndex {
     }
     this._removePostingsOf(scan);
     for (const path of gone) this._docLen.delete(path);
+    this._planned = null;
     this._generation++;
   }
 
   /** Remove the postings of a session whose terms are remembered; false when they are not. */
   _removeKnownPostings(path) {
-    const known = this._docTerms.get(path);
+    const known = this._docTerms.get(path) ||
+      (this._planned?.generation === this._generation ? this._planned.terms.get(path) : undefined);
     if (!known) return false;
     this._docTerms.delete(path);
     for (const term of known) {
       const posting = this._postings.get(term);
       if (!posting) continue;
       posting.delete(path);
-      if (!posting.size) this._postings.delete(term);
+      if (!posting.size) this._dropTerm(term);
     }
     return true;
   }
@@ -212,8 +255,165 @@ export class SearchIndex {
       } else {
         for (const path of paths) posting.delete(path);
       }
-      if (!posting.size) this._postings.delete(term);
+      if (!posting.size) this._dropTerm(term);
     }
+  }
+
+  _dropTerm(term) {
+    this._postings.delete(term);
+    if (this._trigrams) this._trigramRemove(term);
+    else this._trigramBuild?.log.push([false, term]);
+  }
+
+  /**
+   * A read-only view of this index restricted to the sessions in `paths`:
+   * what pruneRemovedSessions(paths) would leave (posting and vocabulary
+   * orders included), built term by term as a search reads it instead of by
+   * decoding and pruning the whole index (fact bks).
+   * @param {Set<string>} paths
+   */
+  narrowedTo(paths) {
+    const base = this;
+    const postings = new NarrowedPostings(this._postings, paths);
+    const docLen = new Map();
+    for (const [path, n] of this._docLen) if (paths.has(path)) docLen.set(path, n);
+    let trigrams = null;
+    return {
+      postings,
+      docLens: docLen,
+      docCount: docLen.size,
+      get avgDocLen() {
+        if (!docLen.size) return 0;
+        let total = 0;
+        for (const v of docLen.values()) total += v;
+        return total / docLen.size;
+      },
+      _generation: this._generation,
+      trigramIndex() {
+        if (!trigrams) {
+          const full = base.trigramIndex();
+          const narrowed = new Map();
+          trigrams = {
+            get(tg) {
+              if (!narrowed.has(tg)) {
+                const bucket = full.get(tg);
+                const kept = bucket ? new Set([...bucket].filter((term) => postings.has(term))) : null;
+                narrowed.set(tg, kept && kept.size ? kept : undefined);
+              }
+              return narrowed.get(tg);
+            },
+          };
+        }
+        return trigrams;
+      },
+    };
+  }
+
+  /** The trigram index of the current vocabulary (see _trigrams). */
+  trigramIndex() {
+    if (!this._trigrams) {
+      // A sliced build in progress is finished here, not started over.
+      const build = this._trigramBuild ?? this._newTrigramBuild();
+      this._trigrams = build.index;
+      while (build.next < build.terms.length) this._trigramAdd(build.terms[build.next++]);
+      this._finishTrigramBuild(build);
+    }
+    return this._trigrams;
+  }
+
+  _newTrigramBuild() {
+    return { terms: [...this._postings.keys()], next: 0, index: new Map(), log: [] };
+  }
+
+  /** Make `build` the trigram index: its terms are in it; replay the terms that came and went meanwhile. */
+  _finishTrigramBuild(build) {
+    this._trigrams = build.index;
+    this._trigramBuild = null;
+    for (const [added, term] of build.log) {
+      if (added) this._trigramAdd(term);
+      else this._trigramRemove(term);
+    }
+  }
+
+  /** trigramIndex() built in slices that yield the event loop (serve builds it ahead of the first fuzzy query). */
+  buildTrigramsAsync(sliceMs = SLICE_MS) {
+    if (this._trigrams) return Promise.resolve();
+    this._trigramsBuilding ??= this._buildTrigramsSliced(sliceMs).finally(() => { this._trigramsBuilding = null; });
+    return this._trigramsBuilding;
+  }
+
+  async _buildTrigramsSliced(sliceMs) {
+    const pause = sliceClock(sliceMs);
+    const build = this._newTrigramBuild();
+    this._trigramBuild = build;
+    while (build.next < build.terms.length) {
+      const term = build.terms[build.next++];
+      for (const tg of buildTrigramSet(term)) {
+        let bucket = build.index.get(tg);
+        if (!bucket) { bucket = new Set(); build.index.set(tg, bucket); }
+        bucket.add(term);
+      }
+      // Finished meanwhile by trigramIndex(): nothing left to do.
+      if (await pause() && this._trigramBuild !== build) return;
+    }
+    if (this._trigramBuild === build) this._finishTrigramBuild(build);
+  }
+
+  _trigramAdd(term) {
+    for (const tg of buildTrigramSet(term)) {
+      let bucket = this._trigrams.get(tg);
+      if (!bucket) { bucket = new Set(); this._trigrams.set(tg, bucket); }
+      bucket.add(term);
+    }
+  }
+
+  _trigramRemove(term) {
+    for (const tg of buildTrigramSet(term)) {
+      const bucket = this._trigrams.get(tg);
+      if (!bucket) continue;
+      bucket.delete(term);
+      if (!bucket.size) this._trigrams.delete(tg);
+    }
+  }
+
+  /**
+   * Do the slow parts of upsertMany(entries of `paths`) in slices that yield
+   * the event loop (fact sidx3): decode an index opened from search.bin, and
+   * find the terms of replaced sessions whose terms are not remembered. The
+   * upsertMany that follows in the same generation then changes the index in
+   * one short step, to exactly the state it reaches unprepared.
+   */
+  async prepareUpsertAsync(paths, sliceMs = SLICE_MS) {
+    const pause = sliceClock(sliceMs);
+    if (this._postings instanceof LazyPostings) {
+      const lazy = this._postings;
+      const terms = lazy.allTerms();
+      const map = new Map();
+      for (let lo = 0; lo < terms.length; lo += 4096) {
+        const hi = Math.min(terms.length, lo + 4096);
+        lazy._ranges = [];
+        lazy._prefetch(lo, hi);
+        for (let i = lo; i < hi; i++) map.set(terms[i], lazy._postingAt(i, terms[i]));
+        if (await pause() && this._postings !== lazy) return;
+      }
+      lazy._ranges = [];
+      this._postings = map;
+      lazy.close();
+    }
+    const scan = new Set();
+    for (const path of paths) if (this._docLen.has(path) && !this._docTerms.has(path)) scan.add(path);
+    if (!scan.size) return;
+    const gen = this._generation;
+    const found = new Map([...scan].map((path) => [path, []]));
+    for (const [term, posting] of [...this._postings]) {
+      if (posting.size <= scan.size) {
+        for (const path of posting.keys()) if (scan.has(path)) found.get(path).push(term);
+      } else {
+        for (const path of scan) if (posting.has(path)) found.get(path).push(term);
+      }
+      if (await pause() && this._generation !== gen) return;
+    }
+    if (this._generation === gen) this._planned = { generation: gen, terms: found };
   }
 
   /**
@@ -275,7 +475,7 @@ export class SearchIndex {
     if (gone.length) this.removeMany(gone);
     // Drop empty posting lists (may be left over from removes above)
     for (const [term, posting] of this._postings) {
-      if (!posting.size) this._postings.delete(term);
+      if (!posting.size) this._dropTerm(term);
     }
     // _generation already bumped by removeMany() above.
   }
@@ -438,6 +638,50 @@ export class SearchIndex {
     // New state from disk, as in deserialize() (fact 1h8).
     idx._generation++;
     return idx;
+  }
+}
+
+/** Map-like postings of SearchIndex.narrowedTo: each posting filtered to the kept sessions on first read. */
+class NarrowedPostings {
+  constructor(base, paths) {
+    this._base = base;
+    this._paths = paths;
+    this._read = new Map();
+  }
+
+  /** Nonzero while the index has terms (callers only test it for emptiness). */
+  get size() {
+    return this._paths.size ? this._base.size : 0;
+  }
+
+  get(term) {
+    let posting = this._read.get(term);
+    if (posting === undefined) {
+      posting = null;
+      const full = this._base.get(term);
+      if (full) {
+        const kept = new Map();
+        for (const [path, tf] of full) if (this._paths.has(path)) kept.set(path, tf);
+        if (kept.size) posting = kept;
+      }
+      this._read.set(term, posting);
+    }
+    return posting ?? undefined;
+  }
+
+  has(term) {
+    return this.get(term) !== undefined;
+  }
+
+  termsWithPrefix(prefix) {
+    const terms = typeof this._base.termsWithPrefix === "function"
+      ? this._base.termsWithPrefix(prefix)
+      : [...this._base.keys()].filter((term) => term.startsWith(prefix));
+    return terms.filter((term) => this.has(term));
+  }
+
+  *keys() {
+    for (const term of this._base.keys()) if (this.has(term)) yield term;
   }
 }
 

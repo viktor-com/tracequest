@@ -3,13 +3,12 @@
  * here, so these commands start without loading the renderer, server, share,
  * standup or import modules (fact id4); --filter loads cli-filter.js on demand.
  */
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { homedir } from "node:os";
-import { resolve, basename, dirname, join } from "node:path";
 import { findSessions as discoverCliSessions, buildIndex, searchSessions } from "../sessions.js";
-import { buildIndexForFilteredSearch } from "../sessions/index-writers.js";
+import { buildIndexForFilteredSearch, filteredSearchIndex } from "../sessions/index-writers.js";
 import { getSearchIndex } from "../sessions/search-index.js";
 import { captureStderr, openSearchResultCache } from "./search-result-cache.js";
+import { currentRepoNames, isHandoffRecentSortOf, searchRequest } from "./search-request.js";
+import { residentSearchStarted } from "./search-daemon.js";
 // normalizeProjectFolder (not projectLabel) is the single project-normalisation
 // used by every CLI printer, so `list` / `find` / `latest` / `search` render the
 // exact same project string that /api/sessions returns for the same record.
@@ -67,37 +66,6 @@ function normalizeHandoffSort(sort) {
   if (!value || value === "relevance" || value === "score") return "relevance";
   if (value === "recent" || value === "date") return value;
   die(`Invalid handoff sort: ${sort}\nSupported sorts: relevance, recent, date`);
-}
-
-/**
- * Names of the git repository enclosing the cwd (not a dotfiles repo at HOME), or null: its origin
- * remote's name, so a worktree in a differently named folder still names its repository, and its folder.
- */
-function currentRepoNames() {
-  const home = homedir();
-  let dir = process.cwd();
-  while (!existsSync(join(dir, ".git"))) {
-    const parent = dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
-  }
-  if (dir === home) return null;
-  const names = [basename(dir)];
-  try {
-    let gitDir = join(dir, ".git");
-    if (statSync(gitDir).isFile()) {
-      // Worktree: ".git" points at <repo>/.git/worktrees/<name>, whose commondir leads back to <repo>/.git.
-      gitDir = resolve(dir, readFileSync(gitDir, "utf8").match(/^gitdir:\s*(.+)$/m)[1].trim());
-      const common = join(gitDir, "commondir");
-      if (existsSync(common)) gitDir = resolve(gitDir, readFileSync(common, "utf8").trim());
-    }
-    const url = readFileSync(join(gitDir, "config"), "utf8").match(/\[remote "origin"\][^[]*?\burl\s*=\s*(.+)/i)?.[1];
-    const origin = url?.trim().replace(/^["']|["']$/g, "").replace(/\/+$/, "").replace(/(\/\.git|\.git)$/, "").split(/[/:]/).pop();
-    if (origin && !names.includes(origin)) names.unshift(origin);
-  } catch {
-    // Unreadable git metadata: the folder name alone.
-  }
-  return names;
 }
 
 function sortSearchHandoffResults(results, sort) {
@@ -200,47 +168,32 @@ export async function cmdSearch(positionals, values) {
   }
   const handoffSort = isHandoff ? normalizeHandoffSort(values.sort) : "relevance";
   const asJson = Boolean(values.json) && !isHandoff;
-  const status = (isHandoff || asJson) ? console.error : console.log;
   const rawLimit = values.limit ? Number(values.limit) : 20;
   const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 20;
-  status(k.dim("Discovering sessions..."));
+  const p = searchRequest(positionals, values);
+  const io = searchIo(p, {
+    log: (line) => console.log(line),
+    err: (line) => console.error(line),
+    write: (text) => process.stdout.write(text),
+  });
+  io.status(k.dim("Discovering sessions..."));
   const discovered = findSessions(null);
   let sessions = discovered;
   if (!sessions.length) {
-    if (isHandoff) {
-      process.stdout.write(formatSearchHandoff(query, [], {
-        limit,
-        entryCommand: values.handoffEntryCommand,
-        filter: values.filter || "",
-        sort: handoffSort,
-      }) + "\n");
-      process.exit(0);
-    }
-    status(k.yellow("No sessions found."));
-    if (asJson) emitJson([]);
+    printNoSessions(p, io, "No sessions found.");
     process.exit(0);
   }
   if (values.filter) {
-    status(k.dim("Filtering sessions..."));
+    io.status(k.dim("Filtering sessions..."));
     const { applyExprFilter } = await import("./cli-filter.js");
     sessions = applyExprFilter(sessions, values.filter, "recent");
     if (!sessions.length) {
-      if (isHandoff) {
-        process.stdout.write(formatSearchHandoff(query, [], {
-          limit,
-          entryCommand: values.handoffEntryCommand,
-          filter: values.filter || "",
-          sort: handoffSort,
-        }) + "\n");
-        process.exit(0);
-      }
-      status(k.yellow("No sessions match the filter expression."));
-      if (asJson) emitJson([]);
+      printNoSessions(p, io, "No sessions match the filter expression.");
       process.exit(0);
     }
   }
-  status(k.dim(`Building index for ${sessions.length} sessions...`));
-  const isHandoffRecentSort = isHandoff && (handoffSort === "recent" || handoffSort === "date");
+  io.status(k.dim(`Building index for ${sessions.length} sessions...`));
+  const isHandoffRecentSort = isHandoffRecentSortOf(p);
   const currentProject = isHandoffRecentSort ? null : currentRepoNames();
   // Exact repeats on an unchanged corpus replay the remembered results (search-perf facts).
   const resultCache = values.filter ? null
@@ -250,31 +203,61 @@ export async function cmdSearch(positionals, values) {
     process.stderr.write(resultCache.hit.stderr);
   } else {
     const stopCapture = resultCache ? captureStderr() : null;
-    const index = values.filter ? buildIndexForFilteredSearch(discovered, sessions) : buildIndex(sessions);
-    const rawResults = searchSessions(
-      sessions,
-      index,
-      query,
-      limit,
-      isHandoffRecentSort
-        ? { sort: handoffSort }
-        : { rerank: true, currentProject },
-    );
-    results = isHandoff
-      ? sortSearchHandoffResults(rawResults, handoffSort).slice(0, limit)
-      : rawResults;
-    if (resultCache) resultCache.remember(results, stopCapture(), getSearchIndex()._generation === 1);
+    const index = values.filter ? buildIndexForFilteredSearch(discovered, sessions)
+      : buildIndex(sessions, residentSearchStarted() ? { deferStale: true } : undefined);
+    results = searchResults(p, sessions, index, currentProject, values.filter ? filteredSearchIndex(sessions) : undefined);
+    // An answer from an index left stale for the resident search is never replayed.
+    if (resultCache) resultCache.remember(results, stopCapture(), getSearchIndex()._generation === 1 && !residentSearchStarted());
   }
-  if (isHandoff) {
-    process.stdout.write(formatSearchHandoff(query, results, {
-      limit,
-      entryCommand: values.handoffEntryCommand,
-      filter: values.filter || "",
-      sort: handoffSort,
-    }) + "\n");
-    process.exit(0);
+  printSearchResults(p, results, sessions, io);
+  process.exit(0);
+}
+
+/**
+ * Output channels of one search: `status` is where progress lines go (stdout
+ * for the text format, stderr when stdout carries JSON or a handoff).
+ */
+export function searchIo(p, { log, err, write }) {
+  return { log, err, write, status: p.isHandoff || p.asJson ? err : log };
+}
+
+/** The result rows of search/handoff `p` over `sessions` and their metadata `index`. */
+export function searchResults(p, sessions, index, currentProject, searchIndex) {
+  const options = searchOptions(p, currentProject);
+  if (searchIndex) options.searchIndex = searchIndex;
+  return finishSearchResults(p, searchSessions(sessions, index, p.query, p.limit, options));
+}
+
+/** searchSessions options of search/handoff `p`. */
+export function searchOptions(p, currentProject) {
+  return isHandoffRecentSortOf(p) ? { sort: p.handoffSort } : { rerank: true, currentProject };
+}
+
+/** searchSessions rows as search/handoff `p` lists them. */
+export function finishSearchResults(p, rawResults) {
+  return p.isHandoff
+    ? sortSearchHandoffResults(rawResults, p.handoffSort).slice(0, p.limit)
+    : rawResults;
+}
+
+/** What search/handoff print when no session is left to search. */
+export function printNoSessions(p, io, message) {
+  if (p.isHandoff) {
+    io.write(formatSearchHandoff(p.query, [], { limit: p.limit, entryCommand: p.entryCommand, filter: p.filter, sort: p.handoffSort }) + "\n");
+    return;
   }
-  if (asJson) {
+  io.status(k.yellow(message));
+  if (p.asJson) io.write(JSON.stringify([]) + "\n");
+}
+
+/** Print search/handoff results in the requested format. */
+export function printSearchResults(p, results, sessions, io) {
+  const { query, limit } = p;
+  if (p.isHandoff) {
+    io.write(formatSearchHandoff(query, results, { limit, entryCommand: p.entryCommand, filter: p.filter, sort: p.handoffSort }) + "\n");
+    return;
+  }
+  if (p.asJson) {
     const sizeByPath = new Map(sessions.map((s) => [s.path, s.size]));
     const records = results.map((r) => ({
       date: new Date(r.mtime).toISOString().slice(0, 16).replace("T", " "),
@@ -287,32 +270,31 @@ export async function cmdSearch(positionals, values) {
       prompt: r.prompt || "",
       matches: (r.matches || []).map((m) => ({ field: m.type, snippet: m.snippet })),
     }));
-    status(k.dim(`Found ${records.length} result${records.length === 1 ? "" : "s"} for "${query}"`));
-    emitJson(records);
-    process.exit(0);
+    io.status(k.dim(`Found ${records.length} result${records.length === 1 ? "" : "s"} for "${query}"`));
+    io.write(JSON.stringify(records) + "\n");
+    return;
   }
   if (!results.length) {
-    console.log(k.yellow(`No sessions match query: "${query}"`));
-    process.exit(0);
+    io.log(k.yellow(`No sessions match query: "${query}"`));
+    return;
   }
-  console.log(k.bold(`Found ${results.length} result${results.length === 1 ? "" : "s"} for "${query}":\n`));
+  io.log(k.bold(`Found ${results.length} result${results.length === 1 ? "" : "s"} for "${query}":\n`));
   for (const r of results) {
     const date = new Date(r.mtime).toISOString().slice(0, 16).replace("T", " ");
     const src = formatSourceColumn(r).padEnd(8);
     const proj = normalizeProjectFolder(r.project);
     const prompt = r.prompt ? r.prompt.slice(0, 80).replace(/\n/g, " ") : "";
-    console.log(`  ${k.dim(date)}  ${k.cyan(src)}  ${k.bold(r.id || r.sessionHash || sessionHash(r.path))}  ${k.bold(proj.padEnd(24))}  ${k.dim(r.path)}`);
+    io.log(`  ${k.dim(date)}  ${k.cyan(src)}  ${k.bold(r.id || r.sessionHash || sessionHash(r.path))}  ${k.bold(proj.padEnd(24))}  ${k.dim(r.path)}`);
     if (prompt) {
-      console.log(`    ${k.dim("prompt:")} ${prompt}${r.prompt.length > 80 ? "..." : ""}`);
+      io.log(`    ${k.dim("prompt:")} ${prompt}${r.prompt.length > 80 ? "..." : ""}`);
     }
     for (const m of r.matches) {
       const tag = m.type === "text" ? "match" : m.type;
       const color = m.type === "error" ? k.red : m.type === "file" ? k.cyan : m.type === "command" ? k.yellow : k.dim;
-      console.log(`    ${k.dim(tag + ":")} ${color(m.snippet)}`);
+      io.log(`    ${k.dim(tag + ":")} ${color(m.snippet)}`);
     }
-    console.log("");
+    io.log("");
   }
-  process.exit(0);
 }
 
 export function cmdHandoff(positionals, values) {
