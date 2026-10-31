@@ -50,6 +50,25 @@ function listStateRows(rows, livePaths, expr, sort) {
   }
 }
 
+/**
+ * listStateRows for serve (fact flt4): the ?expr= rows filtered by `filterAsync`
+ * (the off-thread filter: no session file is read on the event loop), for
+ * browserPage's listPage.state. Null when the request was abandoned.
+ * @param {(objects: object[], expr: string, sort: string) => Promise<object[]|null>} filterAsync
+ */
+export async function listStateRowsOffThread(sessions, index, sessionsForLive, listPage, filterAsync) {
+  const rows = sessionRows(sessions, index, peekSession);
+  stampRowsLive(rows.objects, detectLiveSessions(sessionsForLive));
+  try {
+    const objects = await filterAsync(rows.objects.slice(), listPage.expr, listPage.sort || "recent");
+    if (!objects) return null;
+    return { objects, stats: computeStats(objects), error: null };
+  } catch (err) {
+    if (!(err instanceof FilterParseError)) throw err;
+    return { objects: [], stats: {}, error: `HTTP 400: ${JSON.stringify({ error: err.message }).slice(0, 120)}` };
+  }
+}
+
 export function browserPage(sessions, index, initialFilter = null, sessionsForLive = sessions, listPage = null, runs = null, runActiveAt = null) {
   const livePaths = detectLiveSessions(sessionsForLive);
   const PAGE_SIZE = listPage?.pageSize || 50;
@@ -62,7 +81,9 @@ export function browserPage(sessions, index, initialFilter = null, sessionsForLi
   // keeps the snapshot order.
   const sort = listPage?.sort || "recent";
   const expr = listPage?.expr || "";
-  const state = expr || sort !== "recent" ? listStateRows(rows, livePaths, expr, sort) : null;
+  // A state the caller already filtered off the event loop (listStateRowsOffThread) is used as is.
+  if (listPage?.state && expr) stampRowsLive(rows.objects, livePaths);
+  const state = listPage?.state ?? (expr || sort !== "recent" ? listStateRows(rows, livePaths, expr, sort) : null);
   const listed = state ? state.objects : rows.objects;
   const total = listed.length;
   const page = Math.min(Math.max(1, listPage?.page || 1), Math.max(1, Math.ceil(total / PAGE_SIZE)));

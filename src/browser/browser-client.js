@@ -515,6 +515,8 @@ var _fetchError = null;
 // True while the first render waits for /api/sessions: the URL's list state
 // is not the one the page embedded, so no other state's rows are shown.
 var _listPending = false;
+// True while the rows shown are a partial first page and the count is a lower bound.
+var _countPending = false;
 var _staleRefreshError = null;
 
 function setFilterInvalid(message) {
@@ -527,39 +529,102 @@ function setFilterInvalid(message) {
   }
 }
 
+// The newest user request wins: typing cancels the request in flight (the
+// server stops its work) and sends the new expression at once. A background
+// refresh never aborts or hides a user's search; it waits for it instead.
+var _fetchBackground = false;
+var _queuedFetch = null;
+var _fetchParams = '';
+
+function setListLoading(on) {
+  if (typeof document !== 'undefined' && document.body) document.body.classList.toggle('runs-loading', on);
+  filterBar.classList.toggle('is-loading', on);
+  if (on) filterInput.setAttribute('aria-busy', 'true');
+  else filterInput.removeAttribute('aria-busy');
+}
+
 function fetchSessions(callback, options) {
   options = options || {};
   var preserveStaleOnError = options.preserveStaleOnError === true;
   var typing = options.typing === true;
-  var httpStatus = 0;
-  if (_fetchController) { try { _fetchController.abort(); } catch (_e) { /* already aborted */ } }
-  _fetchController = new AbortController();
+  if (_fetching && !_fetchBackground && preserveStaleOnError) {
+    if (!_queuedFetch) _queuedFetch = { callback: callback, options: options };
+    return;
+  }
+  if (_fetching && _fetchBackground && preserveStaleOnError) return;
   var params = new URLSearchParams();
   if (currentPage > 1) params.set('page', currentPage);
   if (PAGE_SIZE !== 50) params.set('pageSize', PAGE_SIZE);
   if (currentSort && currentSort !== 'recent') params.set('sort', currentSort);
   var expr = filterInput.value.trim();
   if (expr) params.set('expr', expr);
+  // Enter (or a repeated input event) on the expression already being fetched keeps that request.
+  if (_fetching && !_fetchBackground && params.toString() === _fetchParams) return;
+  _queuedFetch = null;
+  var httpStatus = 0;
+  if (_fetchController) { try { _fetchController.abort(); } catch (_e) { /* already aborted */ } }
+  var controller = new AbortController();
+  _fetchController = controller;
+  _fetchParams = params.toString();
   _fetching = true;
+  _fetchBackground = preserveStaleOnError;
   _fetchError = null;
   _staleRefreshError = null;
   setRefreshStatus('pending', 'refreshing');
-  if (!preserveStaleOnError && typeof document !== 'undefined' && document.body) document.body.classList.add('runs-loading');
-  fetch('/api/sessions?' + params.toString(), { signal: _fetchController.signal })
-    .then(function(r) {
-      if (!r.ok) {
-        return r.text().then(function(body) {
-          var msg = 'HTTP ' + r.status;
-          if (body) msg += ': ' + body.slice(0, 120);
-          httpStatus = r.status;
-          throw new Error(msg);
-        });
-      }
-      return r.json();
-    })
+  if (!preserveStaleOnError) setListLoading(true);
+  // Done with this answer: false when a newer request owns the list. A
+  // background refresh queued meanwhile runs after it.
+  function settle() {
+    if (_fetchController !== controller) return false;
+    _fetching = false;
+    var next = _queuedFetch;
+    _queuedFetch = null;
+    setListLoading(false);
+    if (next) setTimeout(function() { fetchSessions(next.callback, next.options); }, 0);
+    return true;
+  }
+  // A user's filter asks for its first page first (fact rf3): the rows show
+  // as soon as the server knows them, the complete answer follows.
+  var firstParams = new URLSearchParams(params);
+  if (expr && !preserveStaleOnError) firstParams.set('first', '1');
+  function request(query) {
+    return fetch('/api/sessions?' + query, { signal: controller.signal })
+      .then(readSessions)
+      .then(function(data) {
+        if (!data.partial) return data;
+        if (_fetchController !== controller) return data;
+        _listPending = false;
+        setFilterInvalid(null);
+        ALL = data.sessions;
+        // Known so far: the count reads "N+" until the complete answer.
+        SERVER_TOTAL = (data.page - 1) * (data.pageSize || PAGE_SIZE) + data.sessions.length;
+        _countPending = true;
+        _liveSessions = data.liveSessions || [];
+        _livePaths = new Set(_liveSessions.filter(function(s) { return s.live === true; }).map(function(s) { return s.path; }));
+        currentPage = data.page;
+        // The caller's own follow-up (scrolling, restoring a panel) waits for the complete answer.
+        render();
+        return request(params.toString());
+      });
+  }
+  function readSessions(r) {
+    if (!r.ok) {
+      return r.text().then(function(body) {
+        var msg = 'HTTP ' + r.status;
+        var detail = body;
+        // The server's own message ({ error }) reads better than its JSON.
+        try { var parsed = JSON.parse(body); if (parsed && typeof parsed.error === 'string') detail = parsed.error; } catch (_e) { /* plain text */ }
+        if (detail) msg += ': ' + detail.slice(0, 120);
+        httpStatus = r.status;
+        throw new Error(msg);
+      });
+    }
+    return r.json();
+  }
+  request(firstParams.toString())
     .then(function(data) {
-      _fetching = false;
-      if (typeof document !== 'undefined' && document.body) document.body.classList.remove('runs-loading');
+      if (!settle()) return;
+      _countPending = false;
       _listPending = false;
       _fetchError = null;
       _staleRefreshError = null;
@@ -574,9 +639,8 @@ function fetchSessions(callback, options) {
       if (callback) callback();
     })
     .catch(function(err) {
-      _fetching = false;
-      if (typeof document !== 'undefined' && document.body) document.body.classList.remove('runs-loading');
-      if (err.name === 'AbortError') return;
+      if (err.name === 'AbortError' || !settle()) return;
+      _countPending = false;
       _listPending = false;
       var message = err.message || String(err);
       if (typing && httpStatus === 400) {
@@ -1177,7 +1241,7 @@ function render() {
   for (var li = 0; li < externalLive.length; li++) runsHtml += externalLiveRowHtml(externalLive[li]);
   if (runsHtml) sentinel.insertAdjacentHTML('beforebegin', runsHtml);
   renderPageBatch();
-  document.getElementById('count').textContent = Number(SERVER_TOTAL).toLocaleString('en-US') + ' run' + (SERVER_TOTAL !== 1 ? 's' : '');
+  document.getElementById('count').textContent = Number(SERVER_TOTAL).toLocaleString('en-US') + (_countPending ? '+' : '') + ' run' + (SERVER_TOTAL !== 1 || _countPending ? 's' : '');
   // The same origin-agnostic running counter the chat pages' app bar shows.
   var appLiveEl = document.getElementById('appLive');
   if (appLiveEl) {
@@ -2707,7 +2771,8 @@ compareClearEl.addEventListener('click', function() {
 
 var _refreshTimer = null;
 window._refreshData = function() {
-  if (_refreshTimer) return;
+  // A half-typed expression the server rejected stays flagged, not replaced by a failed refresh.
+  if (_refreshTimer || filterInput.getAttribute('aria-invalid') === 'true') return;
   _refreshTimer = setTimeout(function() {
     _refreshTimer = null;
     fetchSessions(function() { render(); }, { preserveStaleOnError: true });

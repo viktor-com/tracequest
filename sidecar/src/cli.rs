@@ -2,6 +2,7 @@
 
 use crate::indexer::{build_index, write_index_cache};
 use crate::near::{near, NearRequest};
+use crate::phrase::{phrase_first_lines, PhraseRequest};
 use crate::scan::scan;
 use crate::types::Session;
 use clap::{Parser, Subcommand};
@@ -51,6 +52,10 @@ pub enum Commands {
     /// Scan session files for query words together (the CLI's near-words re-rank).
     /// Reads one JSON request on stdin; prints `[[best, runs, searched] | null, ...]`.
     Near,
+    /// Which session files may hold a quoted phrase (the byte test of phraseMayOccurInFile).
+    /// Reads `{ phrase, files }` on stdin; prints per file `[-1 (cannot) or the offset of the
+    /// first line that can hold it, size, mtime ns]`.
+    Phrase,
 }
 
 pub fn run() {
@@ -65,6 +70,22 @@ pub fn run() {
             let result = serde_json::from_str::<NearRequest>(&raw)
                 .map_err(|e| e.to_string())
                 .and_then(|req| near(&req));
+            match result {
+                Ok(results) => println!("{}", serde_json::to_string(&results).unwrap()),
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(2);
+                }
+            }
+        }
+        Commands::Phrase => {
+            let mut raw = String::new();
+            std::io::stdin()
+                .read_to_string(&mut raw)
+                .expect("failed to read phrase request from stdin");
+            let result = serde_json::from_str::<PhraseRequest>(&raw)
+                .map_err(|e| e.to_string())
+                .and_then(|req| phrase_first_lines(&req));
             match result {
                 Ok(results) => println!("{}", serde_json::to_string(&results).unwrap()),
                 Err(e) => {

@@ -140,7 +140,12 @@ body.cmdk-open { overflow: hidden; }
   border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: 10.5px; color: var(--text-3);
   background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-2);
 }
-.tq-search:focus-within .tq-search-kbd { opacity: 0; }
+.tq-search:focus-within .tq-search-kbd, .tq-search.is-loading .tq-search-kbd { opacity: 0; }
+.tq-search-spinner {
+  position: absolute; right: 10px; width: 14px; height: 14px; border-radius: 50%; pointer-events: none;
+  border: 1.5px solid var(--line-3); border-top-color: var(--text); animation: cmdk-spin 0.8s linear infinite;
+}
+.tq-search-spinner[hidden] { display: none; }
 .tq-search-list {
   position: absolute; top: calc(100% + 6px); right: 0; width: min(440px, 92vw); max-height: min(60vh, 440px); overflow: auto;
   padding: 4px; background: var(--surface-pop); border-radius: var(--radius-lg); box-shadow: var(--shadow-pop);
@@ -193,6 +198,7 @@ body.cmdk-open { overflow: hidden; }
 export const WORKSPACE_SEARCH_HTML = `<div class="tq-search" id="workspaceSearchWrap">
   <input class="tq-search-input" id="workspaceSearch" type="search" role="combobox" aria-label="Search sessions" aria-autocomplete="list" aria-controls="workspaceSearchList" aria-expanded="false" placeholder="Search runs" autocomplete="off" autocorrect="off" spellcheck="false" data-hotkey="s,/" aria-keyshortcuts="s /">
   <span class="tq-search-kbd" aria-hidden="true"><kbd>S</kbd><kbd>/</kbd></span>
+  <span class="tq-search-spinner" id="workspaceSearchSpinner" hidden aria-hidden="true"></span>
   <div class="tq-search-list" id="workspaceSearchList" role="listbox" aria-label="Search results" hidden></div>
 </div>`;
 
@@ -1146,8 +1152,6 @@ export const COMMAND_PALETTE_CLIENT_JS = `
   ${isInViewJumpQuery.toString()}
   ${capChapterItems.toString()}
 
-  var searchTimer = 0;
-  var searchAbort = null;
   var lastSearchKey = "";
   var lastSearchHits = null;
   var recentCache = { at: 0, sessions: [], liveSessions: [] };
@@ -1193,8 +1197,6 @@ export const COMMAND_PALETTE_CLIENT_JS = `
       return recentCache;
     });
   }
-  var searchWaiters = [];
-  var searchPendingQ = "";
   function paletteSearchUrl(q) {
     return "/api/search?q=" + encodeURIComponent(q) + "&limit=8&snippets=0";
   }
@@ -1241,33 +1243,39 @@ export const COMMAND_PALETTE_CLIENT_JS = `
     });
     return catalogCache.pending;
   }
+  // Sent at once; a newer query aborts the request in flight, so the server
+  // skips a query that was typed over (fact ws1). Failed hits carry .error.
+  var searchAbort = null;
   function debounceSearch(q) {
     return new Promise(function (resolve) {
       if (lastSearchKey === q && lastSearchHits) {
         resolve(lastSearchHits);
         return;
       }
-      searchWaiters.push(resolve);
-      searchPendingQ = q;
-      if (searchTimer) clearTimeout(searchTimer);
-      searchTimer = setTimeout(function () {
-        searchTimer = 0;
-        var waiters = searchWaiters;
-        var want = searchPendingQ;
-        searchWaiters = [];
-        if (searchAbort) {
-          try { searchAbort.abort(); } catch (e) {}
-        }
-        searchAbort = typeof AbortController === "function" ? new AbortController() : null;
-        var signal = searchAbort && searchAbort.signal;
-        fetchJson(paletteSearchUrl(want), signal)
-          .then(function (data) {
-            var hits = (data && data.results) || [];
-            lastSearchKey = want;
-            lastSearchHits = hits;
-            for (var i = 0; i < waiters.length; i++) waiters[i](hits);
-          });
-      }, 80);
+      if (searchAbort) {
+        try { searchAbort.abort(); } catch (e) {}
+      }
+      var controller = typeof AbortController === "function" ? new AbortController() : null;
+      searchAbort = controller;
+      var opts = { headers: { Accept: "application/json" } };
+      if (controller) opts.signal = controller.signal;
+      fetch(paletteSearchUrl(q), opts)
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          var hits = (data && data.results) || [];
+          lastSearchKey = q;
+          lastSearchHits = hits;
+          resolve(hits);
+        }, function (err) {
+          // A query typed over resolves nothing: its caller is already outdated.
+          if (err && err.name === "AbortError") return;
+          var failed = [];
+          failed.error = (err && err.message) || "search failed";
+          resolve(failed);
+        });
     });
   }
   function hitsToSessionItems(hits, q) {
@@ -1607,7 +1615,7 @@ export const COMMAND_PALETTE_CLIENT_JS = `
       kind: "search",
       title: q ? "Search sessions for \\u201c" + q + "\\u201d" : "Search sessions\\u2026",
       icon: "search",
-      href: q ? "/sessions?filter=" + encodeURIComponent(q) : "/sessions",
+      href: q ? "/sessions?expr=" + encodeURIComponent(q) : "/sessions",
       keywords: ["find", "index", "query"]
     });
     out.push({
@@ -2071,9 +2079,18 @@ export const COMMAND_PALETTE_CLIENT_JS = `
     if (!wrap || !bar || !list) return;
     mountWorkspaceSearch();
     var wsItems = [];
+    // The query wsItems answer: Enter opens a hit only when it answers what is typed now.
+    var wsItemsQ = "";
     var wsActive = 0;
-    var wsTimer = 0;
     var wsGen = 0;
+    var spinner = document.getElementById("workspaceSearchSpinner");
+
+    function setWsLoading(on) {
+      wrap.classList.toggle("is-loading", on);
+      if (on) bar.setAttribute("aria-busy", "true");
+      else bar.removeAttribute("aria-busy");
+      if (spinner) spinner.hidden = !on;
+    }
 
     function setExpanded(on) {
       bar.setAttribute("aria-expanded", on ? "true" : "false");
@@ -2106,9 +2123,13 @@ export const COMMAND_PALETTE_CLIENT_JS = `
     }
     function renderWsHits(hits, q) {
       wsItems = hitsToSessionItems(hits || [], q);
+      wsItemsQ = q;
       wsActive = 0;
       if (!wsItems.length) {
-        list.innerHTML = '<div class="tq-search-empty">' + (q ? "No sessions match \u201c" + escText(q) + "\u201d" : "Type to search sessions") + "</div>";
+        var empty = hits && hits.error
+          ? "Search failed: " + escText(hits.error)
+          : (q ? "No sessions match \u201c" + escText(q) + "\u201d" : "Type to search sessions");
+        list.innerHTML = '<div class="tq-search-empty"' + (hits && hits.error ? ' role="alert"' : "") + ">" + empty + "</div>";
         setExpanded(true);
         bar.removeAttribute("aria-activedescendant");
         return;
@@ -2153,19 +2174,21 @@ export const COMMAND_PALETTE_CLIENT_JS = `
       var ae = document.activeElement;
       return !!(ae && ae !== bar && list.contains(ae));
     }
-    function runWsActive() {
+    function runWsActive(clicked) {
+      var q = String(bar.value || "").trim();
       var it = wsItems[wsActive];
-      if (it && it.href) {
+      if (it && it.href && (clicked || wsItemsQ === q)) {
         location.href = it.href;
         return;
       }
-      var q = String(bar.value || "").trim();
-      location.href = q ? "/sessions?filter=" + encodeURIComponent(q) : "/sessions";
+      // Hits for an earlier query, or none yet: open the Runs list for what is typed.
+      location.href = q ? "/sessions?expr=" + encodeURIComponent(q) : "/sessions";
     }
     function refreshWs() {
       var q = String(bar.value || "").trim();
       var my = ++wsGen;
       if (!q) {
+        setWsLoading(false);
         fetchRecentSessions().then(function (pack) {
           if (my !== wsGen) return;
           var ranked = (pack.liveSessions || []).concat(pack.sessions || []);
@@ -2173,14 +2196,12 @@ export const COMMAND_PALETTE_CLIENT_JS = `
         });
         return;
       }
-      if (wsTimer) clearTimeout(wsTimer);
-      wsTimer = setTimeout(function () {
-        wsTimer = 0;
-        debounceSearch(q).then(function (hits) {
-          if (my !== wsGen) return;
-          renderWsHits(hits, q);
-        });
-      }, 40);
+      setWsLoading(true);
+      debounceSearch(q).then(function (hits) {
+        if (my !== wsGen) return;
+        setWsLoading(false);
+        renderWsHits(hits, q);
+      });
     }
 
     bar.addEventListener("focus", function () { refreshWs(); });
@@ -2257,7 +2278,7 @@ export const COMMAND_PALETTE_CLIENT_JS = `
       e.preventDefault();
       var idx = parseInt(item.getAttribute("data-idx"), 10);
       if (!isNaN(idx)) wsActive = idx;
-      runWsActive();
+      runWsActive(true);
     });
     document.addEventListener("mousedown", function (e) {
       if (!wrap.contains(e.target)) closeWsList();

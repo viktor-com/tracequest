@@ -5,6 +5,7 @@ import {
   indexDiskMtimeMs,
 } from "../sessions/index-writers.js";
 import { isIndexDiskExpectedErr } from "../utils/fs-expected-err.js";
+import { getSearchIndex } from "../sessions/search-index.js";
 import { discoveryRoots } from "../sessions/session-discovery.js";
 import { sessionChangeJournalActive, takeDataChanges, watchedDataRoots } from "../sessions/session-changes.js";
 import { applySessionChanges, createSessionBase } from "../sessions/session-incremental.js";
@@ -12,6 +13,7 @@ import { sessionMtimeMs } from "../sessions/session-list.js";
 import { isSessionHash, resolveSessionHandle } from "../sessions/session-hash.js";
 import { resolveHostsRoot } from "../sessions/session-discovery-paths.js";
 import {
+  broadcastLr,
   dataChangeSeq,
   dataUpdateGeneration,
   dataWatching,
@@ -51,6 +53,8 @@ export function clearRouteCache() {
 }
 
 export function peekApiResponseBody(cacheKey, subKey) {
+  // TRACEQUEST_NO_RESPONSE_CACHE=1 answers every API request afresh (timing repeated queries).
+  if (process.env.TRACEQUEST_NO_RESPONSE_CACHE === "1") return undefined;
   if (!_routeCache || _routeCache.key !== cacheKey) return undefined;
   if (!isRouteCacheTopMtimesValid(_routeCache)) return undefined;
   return _routeCache.responseBodies?.get(subKey);
@@ -160,6 +164,12 @@ export function resolveSessionsAndIndex(filter, deps, opts = {}) {
   }
 }
 
+/** A refresh still running after this long is not waited for (fact sidx4). */
+const STALE_AFTER_MS = 50;
+
+/** Refreshes some request was answered ahead of (fact sidx4). */
+const _staleServed = new Set();
+
 /** In-flight async refreshes by route-cache key: concurrent requests share one (fact hsa4). */
 const _inflight = new Map();
 
@@ -225,6 +235,7 @@ async function discoverGlobalSessions(deps) {
 /** @internal — tests only */
 export function _resetDiscoveryBaseForTests() {
   _discoveryBase = null;
+  _lastGlobalResult = null;
 }
 
 /** Global refreshes run one at a time: each patches the list the previous one left. */
@@ -242,7 +253,19 @@ async function refreshGlobalNow(deps) {
   const watching = dataWatching();
   const rootsBefore = buildRouteCacheKey(null, getDataRoots(), 0);
   const sessions = await discoverGlobalSessions(deps);
-  const index = await deps.buildIndexAsync(sessions);
+  // The first list of a watched server is served from the index as it is on
+  // disk; what changed since it was written is indexed right after (fact sidx4).
+  const first = !_lastGlobalResult && watching;
+  const index = await deps.buildIndexAsync(sessions, first ? { deferStale: true } : undefined);
+  if (index?.deferredStale) {
+    getSearchIndex().buildTrigramsAsync().catch(() => {});
+    _lastGlobal = sessions;
+    _lastGlobalResult = { sessions, index, allSessions: sessions };
+    setImmediate(() => resolveSessionsAndIndexAsync(null, deps).catch(() => {}));
+    return _lastGlobalResult;
+  }
+  // Ready for the first fuzzy query without stalling one (fact sidx3).
+  getSearchIndex().buildTrigramsAsync().catch(() => {});
   // Key AFTER the build: an index run may rewrite index.json, and the next
   // request computes its key from the disk mtime it finds then. Store only
   // when nothing changed while the refresh ran (while watched: no data-update
@@ -255,8 +278,12 @@ async function refreshGlobalNow(deps) {
     storeRouteCache(buildRouteCacheKey(null, getDataRoots(), indexMtimeMs), sessions, index);
   }
   _lastGlobal = sessions;
-  return { sessions, index, allSessions: sessions };
+  _lastGlobalResult = { sessions, index, allSessions: sessions };
+  return _lastGlobalResult;
 }
+
+/** The last complete global refresh, answered while a newer one runs (fact sidx4). */
+let _lastGlobalResult = null;
 
 /** Newest global session list any refresh produced (for hash-handle lookup). */
 let _lastGlobal = null;
@@ -283,13 +310,29 @@ function asyncDeps(deps) {
  * and never rebuilds or prunes it. Deps without async capabilities (tests)
  * fall back to the synchronous resolver.
  */
-export async function resolveSessionsAndIndexAsync(filter, depsIn) {
+export async function resolveSessionsAndIndexAsync(filter, depsIn, { staleAfterMs = STALE_AFTER_MS } = {}) {
   const deps = asyncDeps(depsIn);
   if (!deps) return resolveSessionsAndIndex(filter, depsIn);
   const globalKey = coalescedRouteKey(null);
   let global = peekRouteCache(globalKey);
   if (global) global = { ...global, allSessions: global.sessions };
-  else global = await singleFlight(`global:${globalKey}`, () => refreshGlobal(deps));
+  else if (_lastGlobalResult && dataWatching()) {
+    // Watched data changed: a refresh that takes longer than STALE_AFTER_MS is
+    // not waited for; the sessions and index already built answer meanwhile
+    // (fact sidx4), and pages are told to refetch once it lands.
+    const last = _lastGlobalResult;
+    const refresh = singleFlight(`global:${globalKey}`, () => refreshGlobal(deps));
+    let timer;
+    global = await Promise.race([refresh, new Promise((resolve) => { timer = setTimeout(resolve, staleAfterMs, null); })]);
+    clearTimeout(timer);
+    if (!global) {
+      global = { ...last, stale: true };
+      if (!_staleServed.has(refresh)) {
+        _staleServed.add(refresh);
+        refresh.then(() => broadcastLr("data: data-update\n\n"), () => {}).finally(() => _staleServed.delete(refresh));
+      }
+    }
+  } else global = await singleFlight(`global:${globalKey}`, () => refreshGlobal(deps));
   if (!filter) return global;
 
   const filteredKey = coalescedRouteKey(filter);

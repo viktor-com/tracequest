@@ -2,7 +2,8 @@ import { FAVICON_LINKS } from "../ui/brand.js";
 import { statSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve, basename } from "node:path";
-import { browserPage as _browserPage, listPageFromParams } from "../browser/browser-page.js";
+import { browserPage as _browserPage, listPageFromParams, listStateRowsOffThread } from "../browser/browser-page.js";
+import { filterOffThread } from "./route-handlers-api.js";
 import { compareLoadErrorPage, comparePage } from "../browser/compare-page.js";
 import { chatHomePage as _chatHomePage, liveSessionPage as _liveSessionPage, runPage as _runPage } from "../browser/run-page.js";
 import { available as _muxAvailable, listWindows as _listWindows } from "../mux/tmux.js";
@@ -385,8 +386,16 @@ export async function handleSessions(_req, res, url, _deps = null) {
   // The runs /api/runs answers now, so the rows pinned above the list are in
   // the first paint, not inserted by the client's first poll (fact hnr13).
   const runs = await launchedRuns(null, sessionsForLive, runTable);
+  // A ?expr= list is filtered as /api/sessions filters it: in slices, quoted
+  // phrases in workers, stopped if the client leaves (fact flt4).
+  const listPage = listPageFromParams(url.searchParams);
+  if (listPage.expr) {
+    listPage.state = await listStateRowsOffThread(sessions, index, sessionsForLive, listPage,
+      (objects, expr, sort) => filterOffThread(res, objects, expr, sort));
+    if (!listPage.state) return;
+  }
   const page = await withUsageStrip(
-    browserPage(sessions, index, filter, sessionsForLive, listPageFromParams(url.searchParams), runs, runsActiveAt(runs)),
+    browserPage(sessions, index, filter, sessionsForLive, listPage, runs, runsActiveAt(runs)),
     mods,
     usage,
   );

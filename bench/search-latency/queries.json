@@ -1,0 +1,57 @@
+{
+  "original26": [
+    "codex stop button",
+    "interrupt generation with one Stop",
+    "cursor support",
+    "runs page sorting",
+    "fix runs page sorting and search box",
+    "open the failed call from what went wrong",
+    "what went wrong failed call",
+    "standup and handoff features",
+    "ui style design guidelines",
+    "harbor wordmark on dither canvas",
+    "harness hacks slide presentation",
+    "pre-wiring explainer video",
+    "more space between lines yes or no state",
+    "test agent store as an end user",
+    "readme diagram images redesign before after",
+    "draft render queued 40 minutes ago",
+    "\"cannot contain whitespace\"",
+    "parseSession",
+    "sidecar timeout",
+    "ssh import backoff",
+    "usage limits",
+    "insights stall",
+    "worktree origin remote",
+    "error handling",
+    "grok vktr"
+  ],
+  "original26_filtered": [
+    {
+      "query": "cursor support",
+      "filter": "project:tracequest"
+    }
+  ],
+  "common": [
+    "you're absolutely right",
+    "absolutely right",
+    "let me",
+    "I'll",
+    "the",
+    "now let me check"
+  ],
+  "long": [
+    "why does the sidecar near scan give a different score than the javascript scorer for codex sessions",
+    "make the runs page side panel stop blocking clicks on the list behind it when it is open"
+  ],
+  "rare": [
+    "zstd",
+    "fsevents",
+    "flock"
+  ],
+  "quoted": [
+    "\"you're absolutely right\"",
+    "\"let me\"",
+    "\"absolutely right\""
+  ]
+}

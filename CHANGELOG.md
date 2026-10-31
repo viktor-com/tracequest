@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.10] - 2026-10-31
+
+### Fixed
+
+- Search no longer freezes the hub. A quoted phrase typed into the Runs filter used to queue one whole-corpus file scan per keystroke on the server's only thread, stalling every page for up to minutes (81 s for `"you're absolutely right"` on 7,500 sessions). The filter now runs in slices, checks quoted phrases in worker threads (skipping files that cannot hold the phrase and stopping at the first match), and drops a query you typed over, with the same results. The Runs list shows a quoted phrase's first page as soon as it is known, with the count reading "50+" until every session is checked, and the sidecar rules out session files that cannot hold the phrase before any line is scanned: `"let me"` shows its first page in about 0.2 s instead of 1.7 s on 16,800 sessions; rare phrases such as `"now let me"` still take about half a second.
+- A short last word such as the `re` of `you're` no longer costs a search hundreds of milliseconds: its thousands of prefix matches are collected in linear time, with the same results.
+- The top-bar search reads session files for its snippets and checks quoted phrases in worker threads, side by side, instead of one after another on the hub's only thread, and a session change while a fresh hub prepares typo matching no longer makes the next search redo that work from scratch.
+- Cached session lines are capped by size as well as count, so a few very large sessions no longer keep gigabytes in memory.
+- While sessions are being indexed or pulled, the hub answers from the index it has and refreshes the page when the new one lands; a fresh hub serves its first page from the saved index.
+- The top-bar search box answers as you type: no fixed delay before a search, a newer query cancels the one in flight, a spinner shows from the keystroke until results or an error, and Enter before the results arrive opens the Runs list for what is typed instead of an earlier hit. The Runs filter shows a spinner while its rows load, and a background refresh no longer cancels or hides your search.
+- `tracequest search` and `tracequest handoff` answer from a resident search process that the first search starts: the same output, in roughly a third of the time on a 17,000-session hub. It keeps its index current from the session folders, says when it answers from an index older than the latest changes, and exits after 30 minutes without a search; `TRACEQUEST_NO_SEARCH_DAEMON=1` searches in-process.
+
+### Known issues
+
+- A quoted common phrase in the Runs filter shows its first page quickly, but the full count takes about 1.2 s (for example `"let me"` on 16,800 sessions).
+- 21 of 39 measured warm `tracequest search` queries still take more than 150 ms.
+- The first search right after a fresh hub start can take about 1.6 s before results appear.
+- The background search process that answers `tracequest search` holds about 3.8 GB of memory.
+
 ## [0.5.9] - 2026-10-29
 
 ### Added

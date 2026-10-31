@@ -42,6 +42,12 @@ html, body { min-height: 100%; }
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M2.5 4h11M4.5 8h7M6.5 12h3'/%3E%3C/svg%3E") center / contain no-repeat;
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M2.5 4h11M4.5 8h7M6.5 12h3'/%3E%3C/svg%3E") center / contain no-repeat;
 }
+.filter-bar.is-loading { padding-right: 36px; }
+.filter-bar.is-loading::after {
+  content: ""; position: absolute; right: 13px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%;
+  border: 1.5px solid var(--line-3); border-top-color: var(--text); animation: runs-spin 0.8s linear infinite;
+}
+@keyframes runs-spin { to { transform: rotate(360deg); } }
 .filter-bar:hover { box-shadow: inset 0 0 0 1px var(--line-3); }
 .filter-bar:focus-within { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--focus); }
 .filter-input {

@@ -90,6 +90,67 @@
 - label: the search result cache only stores results from a run that left index.json and search.idx untouched, and a session whose file changed (size or mtime), a new or removed session, another query, limit, format, sort or repository, or a rewritten index misses the cache, so the next search prints what an uncached search prints; --filter searches, TRACEQUEST_VERBOSE=1 and TRACEQUEST_NO_RESULT_CACHE=1 never use it
   command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'result cache invalidation' test/bin/search-result-cache.test.js
   tags: [spec, cli-search, handoff, search-perf, implemented]
+- label: serve applies a changed or new session to the search index without a long event-loop stall: the JS terms of the sessions the sidecar re-read, the decoding of an index opened from search.bin and the lookup of a replaced session's old terms run in slices that yield the event loop, and the index then changes in one short step to exactly the state the unsliced change gives; the fuzzy-match trigram index is kept current as terms come and go instead of being rebuilt after every change, and serve builds it in slices after loading
+  id: sidx3
+  tags: [spec, search-perf, serve]
+- label: while serve refreshes its session list and index after watched data changed, a request waits at most 50 ms for the refresh and otherwise answers from the session list and index built before it; once that refresh lands, open pages get a data-update event and refetch
+  id: sidx4
+  tags: [spec, search-perf, serve]
+- label: a session change while serve builds the fuzzy-match trigram index in slices does not restart the build or make the next fuzzy query build it again on the event loop; the terms that came and went meanwhile are applied when the build ends, giving the index a rebuild gives
+  id: sidx5
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'sidx5' test/bin/search-latency.test.js
+  tags: [spec, search-perf, serve, implemented]
+- label: GET /api/sessions?expr= (and /api/search with expr) evaluates the filter expression in slices of a few ms that yield the event loop, reads no session file on the event loop (quoted phrases are checked in worker threads), stops when the client disconnects, and returns exactly the sessions the synchronous evaluation returns
+  id: flt1
+  tags: [spec, search-perf, serve, runs-ui]
+- label: verifying that a session contains a quoted phrase (the Runs filter and quoted search) skips the line scan of a JSONL session file whose bytes cannot hold the phrase (a printable-ASCII phrase without quote, slash or backslash whose bytes, ignoring ASCII case, are absent, with no \\u escape of one of its characters and no character that lowercases to i or k) and stops at the first matching line, giving exactly the answer of a full scanSessionForQuery
+  id: flt2
+  tags: [spec, search-perf]
+- label: tracequest search and tracequest handoff without --filter are answered by a resident search process when one runs for the same code, HOME, cache directory and TRACEQUEST_* environment: stdout and stderr are byte for byte what the in-process search prints; the first such search starts it (detached) and searches in-process; it keeps sessions and index current through the data-root watchers, answers from the index it has while a refresh runs, runs result snippet scans and OpenCode/dsh near-word scoring in worker threads, and exits after 30 minutes without a search or when its code changes; TRACEQUEST_NO_SEARCH_DAEMON=1 or TRACEQUEST_SKIP_LR_WATCH=1 or Windows searches in-process
+  id: sd1
+  tags: [spec, search-perf, cli-search, handoff]
+- label: the top-bar search box sends its query as soon as it is typed and a newer query aborts the request in flight, shows a spinner and aria-busy from the keystroke until results or an error show, and Enter opens a hit only when the hits answer the text typed now, else the Runs list for it at /sessions?expr=<query>; Cmd+K's Search sessions item opens /sessions?expr= too
+  id: ws1
+  tags: [spec, search-perf, command-palette, ui]
+- label: the Runs filter sends each typed expression at once and aborts the request it replaces (Enter on the expression already in flight keeps that request), shows a spinner in the filter bar and runs-loading from the request until rows or an error show, and a background data refresh never aborts or hides a user's request but waits for it
+  id: rf1
+  tags: [spec, search-perf, runs-ui, ui]
+- label: while the Runs filter holds an expression the server rejected (marked invalid), background data refreshes do not refetch the list, and a rejected request shows the server's error message rather than its JSON
+  id: rf2
+  tags: [spec, runs-ui, ui]
+- label: a search that finds no resident search and starts one answers from the index as it is on disk when sessions changed since it was written (changed sessions as last indexed, new ones not yet), writes nothing and remembers no result; the resident search indexes them next; when fewer sessions are indexed than are new or changed, on format upgrades, with a missing or unreadable search index and with --filter it indexes in-process; serve's first session list is served the same way, with the changes indexed right after
+  id: sd2
+  tags: [spec, search-perf, cli-search]
+- label: a search sent to the resident search keeps its connection open until the answer comes, so when the searching process exits or is interrupted the resident search notices its end and stops that search at its next step
+  id: sd3
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'sd3' test/bin/search-latency.test.js
+  tags: [spec, search-perf, cli-search, implemented]
+- label: a Runs-filter request whose client went away stops its work: its queued quoted-phrase checks are not run (each worker finishes at most its current few sessions) and a search request whose client already closed is not searched; a first pass decides every session that does not need a quoted phrase, and only the rest are checked
+  id: flt3
+  tags: [spec, search-perf, serve, implemented]
+- label: GET /sessions?expr= embeds the rows /api/sessions answers for that expression, filtered the same off-thread way (in slices, quoted phrases checked in worker threads, stopped if the client leaves); a phrase check whose worker fails is retried once in a fresh worker and otherwise fails the request, so no session file is read on the event loop and no answer is guessed
+  id: flt4
+  tags: [spec, search-perf, serve, implemented]
+- label: GET /api/sessions?expr=...&first=1 for a recent (or duration, tokens, errors, files, commits or chapters) sort whose expression needs quoted-phrase checks and names no session id checks those sessions in list order and answers as soon as the requested page is decided, with partial true, total null, no stats and exactly the rows the complete answer has on that page; when every session is decided by then, or for any other request, it answers completely as before
+  id: flt5
+  tags: [spec, search-perf, serve, runs-ui, implemented]
+- label: with the sidecar available, a quoted-phrase check first runs phraseMayOccurInFile's byte test for the JSONL session files in the sidecar's phrase command, in parallel and byte for byte the same answer, and only the files that may hold the phrase are line-scanned in worker threads, starting at the first line that can hold it (the line of the first match ignoring ASCII case when no \\u escape of a phrase character and no character that lowercases to i or k comes before that line) when the file still has the size and mtime the byte test saw, else at its start, with the answer a scan from the file's start gives; a request that goes away stops the sidecar at once; an unavailable or failing sidecar leaves the test to the workers
+  id: flt7
+  tags: [spec, search-perf, serve, implemented]
+- label: GET /api/search runs the search's result snippet scans, a quoted query's phrase checks of its candidates (in BM25 order, a batch at a time) and OpenCode/dsh near-words scoring in the search worker threads, as the resident CLI search does, side by side in batches of about equal file size, with the same results as the in-process search; a batch whose worker fails or leaves a session unanswered is retried once in a fresh worker and otherwise fails the request, so no session file is read on the event loop, and a request whose client closed stops at its next step
+  id: hsw1
+  tags: [spec, search-perf, serve, implemented]
+- label: the scan-line cache that serves repeated snippet scans holds at most 50 sessions and 128 M characters of lines in a process, and at most 16 sessions and 48 M characters in each search worker; a session larger than that is scanned from its file and not kept, and evicting never changes a scan's answer
+  id: mem1
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'mem1' test/bin/search-latency.test.js
+  tags: [spec, search-perf, implemented]
+- label: resolving the last word of a query or filter to its prefix matches takes time linear in the number of matching terms and gives the same matches in the same order as before, so a short last word such as the re of you're (thousands of terms) adds milliseconds, not hundreds
+  id: rq1
+  command: TRACEQUEST_SKIP_LR_WATCH=1 node --test --test-concurrency=1 --test-name-pattern 'rq1' test/bin/search-latency.test.js
+  tags: [spec, search-perf, cli-search, serve, implemented]
+- label: the Runs filter asks for the first page with first=1; a partial answer shows its rows at once with the count read as the rows known so far plus "+", stats keep their previous values, and the filter spinner and runs-loading stay on, and the complete answer for the same expression then replaces it; a newer expression aborts both
+  id: rf3
+  tags: [spec, search-perf, runs-ui, ui, implemented]
 
 ## standup
 - label: tracequest standup help and CLI reference examples show prompt-agent configuration and --print-input auditing before LLM execution
@@ -341,6 +402,10 @@
   id: rel059
   command: node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const p=JSON.parse(fs.readFileSync("package.json")), l=JSON.parse(fs.readFileSync("package-lock.json")); assert.equal(p.version,"0.5.9"); assert.equal(l.version,p.version); assert.equal(l.packages[""].version,p.version); assert.ok(fs.readFileSync("CHANGELOG.md","utf8").includes("## [0.5.9] - 2026-10-29"));'
   tags: [release-0-5-9, implemented]
+- label: tracequest search speed release metadata uses version 0.5.10 consistently in the package, lockfile and dated changelog entry
+  id: rel0510
+  command: node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const p=JSON.parse(fs.readFileSync("package.json")), l=JSON.parse(fs.readFileSync("package-lock.json")); assert.equal(p.version,"0.5.10"); assert.equal(l.version,p.version); assert.equal(l.packages[""].version,p.version); assert.ok(fs.readFileSync("CHANGELOG.md","utf8").includes("## [0.5.10] - 2026-10-31"));'
+  tags: [release-0-5-10, implemented]
 
 # branding
 - The TraceQuest horizontal wordmark uses expressive flared serif lettering with readable shared-stroke ligatures @logo-design @implemented

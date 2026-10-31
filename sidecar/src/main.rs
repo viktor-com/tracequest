@@ -2,6 +2,7 @@ mod cli;
 mod fx_dsh;
 mod indexer;
 mod near;
+mod phrase;
 mod scan;
 mod types;
 mod token_accounting;
